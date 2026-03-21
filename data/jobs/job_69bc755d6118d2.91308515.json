@@ -1,0 +1,25 @@
+{
+  "id": "job_69bc755d6118d2.91308515",
+  "url": "https://www.hayatakarken.com/iki-kesis-hikayesi#comment-4257",
+  "template": "short_haber",
+  "scriptId": "",
+  "videoWidth": 1080,
+  "videoHeight": 1920,
+  "subtitleStyle": {
+    "label": "Klasik",
+    "FontSize": 24,
+    "PrimaryColour": "#FFFFFF",
+    "OutlineColour": "#000000",
+    "Outline": 2,
+    "MarginV": 60,
+    "Bold": 1,
+    "preset": "classic"
+  },
+  "status": "done",
+  "created_at": "2026-03-19 23:14:53",
+  "previewUrl": "/output/job_69bc755d6118d2.91308515/final_video.mp4",
+  "subtitles": "1\n00:00:00,000 --> 00:00:02,496\nHayatınızda taşıdığınız en ağır yük\n\n2\n00:00:02,496 --> 00:00:04,993\nne biliyor musunuz? Başkalarının hataları\n\n3\n00:00:04,993 --> 00:00:07,490\ndeğil, kendi zihninizde taşıdığınız geçmiş!\n\n4\n00:00:07,490 --> 00:00:09,696\nİki keşiş nehir kenarında yürürken,\n\n5\n00:00:09,696 --> 00:00:11,903\nkarşıya geçmek isteyen çaresiz bir\n\n6\n00:00:11,903 --> 00:00:14,110\nkadınla karşılaştılar.\n\n7\n00:00:14,110 --> 00:00:17,070\nGenç keşiş inançları gereği kadına\n\n8\n00:00:17,070 --> 00:00:20,030\ndokunamayacağını söyledi. Ama yaşlı keşiş,\n\n9\n00:00:20,030 --> 00:00:22,990\nkadını sırtına alıp karşıya geçirdi.\n\n10\n00:00:22,990 --> 00:00:25,023\nYol boyunca genç keşiş, yaşlı\n\n11\n00:00:25,023 --> 00:00:27,056\nolanın kuralı bozduğuna dair söylenip\n\n12\n00:00:27,056 --> 00:00:29,089\ndurdu.\n\n13\n00:00:29,089 --> 00:00:31,254\nYaşlı keşiş sonunda dayanamadı ve\n\n14\n00:00:31,254 --> 00:00:33,419\nsordu: 'Ben o kadını bir\n\n15\n00:00:33,419 --> 00:00:35,584\nmil geride bıraktım, sen neden\n\n16\n00:00:35,584 --> 00:00:37,749\nhala sırtında taşıyorsun?'\n\n17\n00:00:37,749 --> 00:00:41,359\nGeçmişte yaşananlara takılıp kalmak sadece\n\n18\n00:00:41,359 --> 00:00:44,969\nsizin yükünüzü artırır. Bırakın gitsin.\n\n19\n00:00:44,969 --> 00:00:47,153\nGeçmişi bırak, şimdiye odaklan! Yeni\n\n20\n00:00:47,153 --> 00:00:49,336\nhikayeler için abone olmayı ve\n\n21\n00:00:49,336 --> 00:00:51,519\nbeğenmeyi unutma.\n",
+  "error": "",
+  "title": "Iki-kesis-hikayesi",
+  "ttsProvider": "elevenlabs"
+}

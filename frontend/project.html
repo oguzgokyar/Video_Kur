@@ -1,0 +1,6 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><script>
+const params = new URLSearchParams(window.location.search);
+const id = params.get('id');
+window.location.replace('project.php' + (id ? '?id=' + id : ''));
+</script></head><body></body></html>
