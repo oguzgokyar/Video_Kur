@@ -93,15 +93,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $videosWithDetails = [];
                 foreach ($queue['videos'] ?? [] as $video) {
                     $job = loadJob($video['job_id']);
+                    $jobId = $video['job_id'];
+                    
+                    // Thumbnail URL'sini bul
+                    $thumbnailUrl = null;
+                    $outputDir = __DIR__ . '/../output/' . $jobId;
+                    if (file_exists($outputDir . '/thumbnail.png')) {
+                        $thumbnailUrl = '/output/' . $jobId . '/thumbnail.png';
+                    } elseif (file_exists($outputDir . '/thumbnail.jpg')) {
+                        $thumbnailUrl = '/output/' . $jobId . '/thumbnail.jpg';
+                    } elseif (file_exists($outputDir . '/hook.png')) {
+                        $thumbnailUrl = '/output/' . $jobId . '/hook.png';
+                    }
+                    
                     $videosWithDetails[] = array_merge($video, [
                         'title' => $job['title'] ?? 'Video',
                         'previewUrl' => $job['previewUrl'] ?? null,
-                        'created_at' => $job['created_at'] ?? null
+                        'thumbnailUrl' => $thumbnailUrl,
+                        'created_at' => $job['created_at'] ?? null,
+                        'queue_name' => $queue['name'] ?? null,
+                        'scheduled_at' => $video['scheduled_at'] ?? null
                     ]);
                 }
                 $queue['videos'] = $videosWithDetails;
                 echo json_encode(['success' => true, 'queue' => $queue]);
-            } else {
+            }else {
                 echo json_encode(['success' => false, 'error' => 'Kuyruk bulunamadı']);
             }
             break;
