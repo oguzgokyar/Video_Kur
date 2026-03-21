@@ -49,10 +49,46 @@
         platforms: [],
         scheduleType: 'interval',
         intervalHours: 2,
-        specificTimes: ['09:00', '15:00', '21:00']
+        specificTimes: ['09:00', '15:00', '21:00'],
+        // Video ayarları
+        dimensionPreset: 'vertical',
+        customWidth: 1080,
+        customHeight: 1920,
+        subtitleMode: 'config',
+        subtitlePreset: 'classic',
+        customSubtitle: { FontName: 'Arial', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 2, MarginV: 60, Bold: 1 }
       },
       
+      // Config'den yüklenen varsayılan altyazı
+      configSubtitle: { FontName: 'Arial', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 2, MarginV: 60, Bold: 1 },
+      
       submitting: false,
+      
+      // Video ebat presetleri
+      dimensionPresets: {
+        vertical: { label: '📱 Dikey (9:16)', width: 1080, height: 1920, desc: 'Shorts/Reels/TikTok' },
+        square: { label: '⬛ Kare (1:1)', width: 1080, height: 1080, desc: 'Instagram Post' },
+        horizontal: { label: '🖥️ Yatay (16:9)', width: 1920, height: 1080, desc: 'YouTube/TV' },
+        custom: { label: '✏️ Özel', width: null, height: null, desc: 'Manuel giriş' }
+      },
+      
+      // Altyazı presetleri
+      subtitlePresets: {
+        classic: { label: 'Klasik', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 2, MarginV: 60, Bold: 1 },
+        neon: { label: 'Neon', FontSize: 26, PrimaryColour: '#00FF00', OutlineColour: '#000000', Outline: 2, MarginV: 60, Bold: 1 },
+        cinematic: { label: 'Sinematik', FontSize: 22, PrimaryColour: '#F5F5DC', OutlineColour: '#2C2C2C', Outline: 1, MarginV: 80, Bold: 0 },
+        bold: { label: 'Kalın', FontSize: 28, PrimaryColour: '#FFD700', OutlineColour: '#000000', Outline: 3, MarginV: 50, Bold: 1 },
+        minimal: { label: 'Minimal', FontSize: 20, PrimaryColour: '#FFFFFF', OutlineColour: '#333333', Outline: 1, MarginV: 70, Bold: 0 },
+        news: { label: 'Haber', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#CC0000', Outline: 2, MarginV: 55, Bold: 1 }
+      },
+      
+      // Computed video dimensions
+      get formVideoWidth() { 
+        return this.form.dimensionPreset === 'custom' ? this.form.customWidth : this.dimensionPresets[this.form.dimensionPreset]?.width || 1080; 
+      },
+      get formVideoHeight() { 
+        return this.form.dimensionPreset === 'custom' ? this.form.customHeight : this.dimensionPresets[this.form.dimensionPreset]?.height || 1920; 
+      },
       
       platformOptions: [
         { id: 'youtube', name: 'YouTube', icon: '📺', color: 'red' },

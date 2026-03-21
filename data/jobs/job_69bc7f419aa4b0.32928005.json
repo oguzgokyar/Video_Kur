@@ -43,5 +43,11 @@
             "category_id": "28",
             "privacy_status": "public"
         }
+    },
+    "queue_status": {
+        "queue_id": "youtube-testr-8737ec",
+        "queue_name": "Youtube Testr",
+        "status": "queued",
+        "added_at": "2026-03-21T14:31:03+01:00"
     }
 }

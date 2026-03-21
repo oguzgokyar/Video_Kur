@@ -6,6 +6,14 @@ $active_page = $active_page ?? 'videos';
 <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
   class="fixed md:static inset-y-0 left-0 z-30 w-60 bg-white border-r transform transition-transform duration-200 ease-in-out pt-16 md:pt-0">
   <nav class="flex flex-col p-4 gap-1">
+    <a href="create.php" class="flex items-center gap-3 px-3 py-2.5 rounded-lg <?= $active_page === 'create' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-100' ?>">
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Yeni Video
+    </a>
+    <a href="content.php" class="flex items-center gap-3 px-3 py-2.5 rounded-lg <?= $active_page === 'content' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-100' ?>">
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+      İçerikler
+    </a>
     <a href="dashboard.php" class="flex items-center gap-3 px-3 py-2.5 rounded-lg <?= $active_page === 'videos' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-100' ?>">
       <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
       Videolar
@@ -13,10 +21,6 @@ $active_page = $active_page ?? 'videos';
     <a href="queues.php" class="flex items-center gap-3 px-3 py-2.5 rounded-lg <?= $active_page === 'queues' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-100' ?>">
       <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
       Kuyruklar
-    </a>
-    <a href="create.php" class="flex items-center gap-3 px-3 py-2.5 rounded-lg <?= $active_page === 'create' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-100' ?>">
-      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-      Yeni Video
     </a>
     <a href="scripts.php" class="flex items-center gap-3 px-3 py-2.5 rounded-lg <?= $active_page === 'scripts' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-100' ?>">
       <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>

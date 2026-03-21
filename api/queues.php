@@ -66,6 +66,97 @@ function generateId($name) {
     return $slug . '-' . substr(uniqid(), -6);
 }
 
+// Config'den varsayılan video ayarlarını al
+function getDefaultVideoSettings() {
+    global $dataDir;
+    $configFile = $dataDir . '/config.json';
+    
+    $defaults = [
+        'dimensionPreset' => 'vertical',
+        'videoWidth' => 1080,
+        'videoHeight' => 1920,
+        'subtitleMode' => 'config',
+        'subtitlePreset' => 'classic',
+        'customSubtitle' => null
+    ];
+    
+    if (file_exists($configFile)) {
+        $config = json_decode(file_get_contents($configFile), true);
+        if ($config && isset($config['subtitleStyle'])) {
+            $defaults['configSubtitle'] = $config['subtitleStyle'];
+        }
+    }
+    
+    return $defaults;
+}
+
+// Kuyruktan video ayarlarını çöz (subtitle style dahil)
+function resolveVideoSettings($queue) {
+    global $dataDir;
+    
+    $settings = $queue['video_settings'] ?? getDefaultVideoSettings();
+    
+    // Varsayılan değerler
+    $videoWidth = $settings['videoWidth'] ?? 1080;
+    $videoHeight = $settings['videoHeight'] ?? 1920;
+    
+    // Altyazı stilini çöz
+    $subtitleStyle = null;
+    $subtitleMode = $settings['subtitleMode'] ?? 'config';
+    
+    if ($subtitleMode === 'config') {
+        // Config'den al
+        $configFile = $dataDir . '/config.json';
+        if (file_exists($configFile)) {
+            $config = json_decode(file_get_contents($configFile), true);
+            if ($config && isset($config['subtitleStyle'])) {
+                $subtitleStyle = $config['subtitleStyle'];
+                $subtitleStyle['preset'] = 'config';
+            }
+        }
+    } elseif ($subtitleMode === 'preset') {
+        // Hazır preset
+        $presets = [
+            'classic' => ['FontName' => 'Arial', 'FontSize' => 24, 'PrimaryColour' => '#FFFFFF', 'OutlineColour' => '#000000', 'Outline' => 2, 'MarginV' => 60, 'Bold' => 1],
+            'neon' => ['FontName' => 'Arial', 'FontSize' => 26, 'PrimaryColour' => '#00FF00', 'OutlineColour' => '#000000', 'Outline' => 2, 'MarginV' => 60, 'Bold' => 1],
+            'cinematic' => ['FontName' => 'Arial', 'FontSize' => 22, 'PrimaryColour' => '#F5F5DC', 'OutlineColour' => '#2C2C2C', 'Outline' => 1, 'MarginV' => 80, 'Bold' => 0],
+            'bold' => ['FontName' => 'Arial', 'FontSize' => 28, 'PrimaryColour' => '#FFD700', 'OutlineColour' => '#000000', 'Outline' => 3, 'MarginV' => 50, 'Bold' => 1],
+            'minimal' => ['FontName' => 'Arial', 'FontSize' => 20, 'PrimaryColour' => '#FFFFFF', 'OutlineColour' => '#333333', 'Outline' => 1, 'MarginV' => 70, 'Bold' => 0],
+            'news' => ['FontName' => 'Arial', 'FontSize' => 24, 'PrimaryColour' => '#FFFFFF', 'OutlineColour' => '#CC0000', 'Outline' => 2, 'MarginV' => 55, 'Bold' => 1]
+        ];
+        $presetName = $settings['subtitlePreset'] ?? 'classic';
+        $subtitleStyle = $presets[$presetName] ?? $presets['classic'];
+        $subtitleStyle['preset'] = $presetName;
+    } elseif ($subtitleMode === 'custom') {
+        // Özel ayar
+        $subtitleStyle = $settings['customSubtitle'] ?? null;
+        if ($subtitleStyle) {
+            $subtitleStyle['preset'] = 'custom';
+        }
+    }
+    
+    // Fallback
+    if (!$subtitleStyle) {
+        $subtitleStyle = [
+            'FontName' => 'Arial',
+            'FontSize' => 24,
+            'PrimaryColour' => '#FFFFFF',
+            'OutlineColour' => '#000000',
+            'Outline' => 2,
+            'Shadow' => 1,
+            'MarginV' => 60,
+            'Bold' => 1,
+            'preset' => 'classic'
+        ];
+    }
+    
+    return [
+        'videoWidth' => $videoWidth,
+        'videoHeight' => $videoHeight,
+        'subtitleStyle' => $subtitleStyle
+    ];
+}
+
 // GET istekleri
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? 'list';
@@ -73,9 +164,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     
     switch ($action) {
         case 'list':
+            // Her kuyruk için video detaylarını ekle
+            $queuesWithDetails = [];
+            foreach ($data['queues'] as $queue) {
+                $videosWithDetails = [];
+                foreach ($queue['videos'] ?? [] as $video) {
+                    $job = loadJob($video['job_id']);
+                    $jobId = $video['job_id'];
+                    
+                    // Thumbnail URL'sini bul
+                    $thumbnailUrl = null;
+                    $outputDir = __DIR__ . '/../output/' . $jobId;
+                    
+                    if (file_exists($outputDir . '/images/hook.png')) {
+                        $thumbnailUrl = '/output/' . $jobId . '/images/hook.png';
+                    } elseif (file_exists($outputDir . '/thumbnail.png')) {
+                        $thumbnailUrl = '/output/' . $jobId . '/thumbnail.png';
+                    }
+                    
+                    $videosWithDetails[] = array_merge($video, [
+                        'title' => $job['title'] ?? 'İsimsiz Video',
+                        'thumbnailUrl' => $thumbnailUrl,
+                        'job_status' => $job['status'] ?? 'pending'
+                    ]);
+                }
+                $queue['videos'] = $videosWithDetails;
+                $queuesWithDetails[] = $queue;
+            }
+            
             echo json_encode([
                 'success' => true,
-                'queues' => $data['queues']
+                'queues' => $queuesWithDetails
             ]);
             break;
             
@@ -148,6 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name = trim($input['name'] ?? '');
             $platforms = $input['platforms'] ?? [];
             $schedule = $input['schedule'] ?? ['type' => 'interval', 'interval_hours' => 2];
+            $videoSettings = $input['video_settings'] ?? null;
             
             if (empty($name)) {
                 echo json_encode(['success' => false, 'error' => 'Kuyruk ismi gerekli']);
@@ -159,11 +279,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
             
+            // Video ayarları yoksa config'den varsayılanları al
+            if (!$videoSettings) {
+                $videoSettings = getDefaultVideoSettings();
+            }
+            
             $queue = [
                 'id' => generateId($name),
                 'name' => $name,
                 'platforms' => $platforms,
                 'schedule' => $schedule,
+                'video_settings' => $videoSettings,
                 'videos' => [],
                 'created_at' => date('c'),
                 'last_publish' => null,
@@ -187,6 +313,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (isset($updates['platforms'])) $queue['platforms'] = $updates['platforms'];
                     if (isset($updates['schedule'])) $queue['schedule'] = $updates['schedule'];
                     if (isset($updates['is_active'])) $queue['is_active'] = $updates['is_active'];
+                    if (isset($updates['video_settings'])) $queue['video_settings'] = $updates['video_settings'];
                     $found = true;
                     break;
                 }
@@ -297,7 +424,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
         case 'remove_video':
             $queueId = $input['queue_id'] ?? '';
-            $jobId = $input['job_id'] ?? '';
+            $jobId = $input['job_id'] ?? $input['video_id'] ?? '';
             
             $found = false;
             foreach ($data['queues'] as &$queue) {

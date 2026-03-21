@@ -5,6 +5,7 @@ $page_titles = [
   'videos' => '📹 Videolar',
   'queues' => '📦 Kuyruklar',
   'create' => '➕ Yeni Video',
+  'content' => '📥 İçerikler',
   'settings' => '⚙️ Ayarlar',
   'accounts' => '🔗 Hesaplar'
 ];
@@ -36,6 +37,22 @@ $current_title = $page_titles[$active_page ?? ''] ?? 'Dashboard';
     >
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
       <span class="hidden sm:inline">Yeni Kuyruk</span>
+    </button>
+    <?php endif; ?>
+    <?php if ($active_page === 'content'): ?>
+    <button 
+      @click="openAddUrlModal()"
+      class="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition"
+    >
+      <span>➕</span>
+      <span class="hidden sm:inline">URL Ekle</span>
+    </button>
+    <button 
+      @click="openManageSourcesModal()"
+      class="inline-flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium text-sm transition"
+    >
+      <span>📡</span>
+      <span class="hidden sm:inline">RSS Kaynakları</span>
     </button>
     <?php endif; ?>
     <?php if ($show_status): ?>

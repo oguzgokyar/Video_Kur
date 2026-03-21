@@ -1,0 +1,24 @@
+{
+    "sources": [
+        {
+            "id": "source_bfce7b29fbfc",
+            "name": "onedio-teknolji",
+            "url": "https:\/\/onedio.com\/Publisher\/publisher-teknoloji.rss",
+            "type": "rss",
+            "category": "teknoloji",
+            "enabled": true,
+            "check_interval_minutes": 30,
+            "last_checked": null,
+            "keywords": [],
+            "auto_approve": false,
+            "created_at": "2026-03-21T17:25:32Z",
+            "updated_at": "2026-03-21T17:25:55Z"
+        }
+    ],
+    "metadata": {
+        "created_at": "2026-03-21T15:40:00Z",
+        "last_updated": "2026-03-21T17:25:55Z",
+        "total_sources": 1,
+        "version": "1.0"
+    }
+}

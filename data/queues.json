@@ -18,16 +18,65 @@
             },
             "videos": [
                 {
-                    "job_id": "job_69bd66143544c1.20546059",
-                    "added_at": "2026-03-20T23:12:12+01:00",
+                    "job_id": "job_69be9d81488911.65994191",
+                    "added_at": "2026-03-21T14:38:10+01:00",
                     "status": "queued",
                     "platform_status": {
                         "youtube": "pending"
                     },
                     "position": 0
+                },
+                {
+                    "job_id": "job_69bc7f419aa4b0.32928005",
+                    "added_at": "2026-03-21T14:31:03+01:00",
+                    "status": "queued",
+                    "platform_status": {
+                        "youtube": "pending"
+                    },
+                    "position": 1
+                },
+                {
+                    "job_id": "job_20260321213648_670380",
+                    "added_at": "2026-03-21T21:36:48+01:00",
+                    "status": "queued",
+                    "platform_status": {
+                        "youtube": "pending"
+                    },
+                    "position": 2
+                },
+                {
+                    "job_id": "job_20260321214221_d00c56",
+                    "added_at": "2026-03-21T21:42:21+01:00",
+                    "status": "queued",
+                    "platform_status": {
+                        "youtube": "pending"
+                    },
+                    "position": 3
                 }
             ],
             "created_at": "2026-03-20T23:10:00+01:00",
+            "last_publish": null,
+            "is_active": true
+        },
+        {
+            "id": "testet-421e56",
+            "name": "testet",
+            "platforms": [
+                "youtube",
+                "tiktok"
+            ],
+            "schedule": {
+                "type": "interval",
+                "interval_hours": 2,
+                "specific_times": [
+                    "09:00",
+                    "15:00",
+                    "21:00"
+                ],
+                "timezone": "Europe\/Istanbul"
+            },
+            "videos": [],
+            "created_at": "2026-03-21T14:52:20+01:00",
             "last_publish": null,
             "is_active": true
         }
