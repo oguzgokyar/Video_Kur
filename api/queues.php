@@ -95,21 +95,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     $job = loadJob($video['job_id']);
                     $jobId = $video['job_id'];
                     
-                    // Thumbnail URL'sini bul
+                    // Thumbnail URL'sini bul (hook.png öncelikli - video kapağı)
                     $thumbnailUrl = null;
                     $outputDir = __DIR__ . '/../output/' . $jobId;
-                    if (file_exists($outputDir . '/thumbnail.png')) {
+                    
+                    // Önce hook.png'yi kontrol et (montaj kapağı)
+                    if (file_exists($outputDir . '/images/hook.png')) {
+                        $thumbnailUrl = '/output/' . $jobId . '/images/hook.png';
+                    } elseif (file_exists($outputDir . '/thumbnail.png')) {
                         $thumbnailUrl = '/output/' . $jobId . '/thumbnail.png';
                     } elseif (file_exists($outputDir . '/thumbnail.jpg')) {
                         $thumbnailUrl = '/output/' . $jobId . '/thumbnail.jpg';
-                    } elseif (file_exists($outputDir . '/hook.png')) {
-                        $thumbnailUrl = '/output/' . $jobId . '/hook.png';
+                    }
+                    
+                    // Video URL'sini bul
+                    $videoUrl = null;
+                    if (file_exists($outputDir . '/final_video.mp4')) {
+                        $videoUrl = '/output/' . $jobId . '/final_video.mp4';
                     }
                     
                     $videosWithDetails[] = array_merge($video, [
                         'title' => $job['title'] ?? 'Video',
                         'previewUrl' => $job['previewUrl'] ?? null,
                         'thumbnailUrl' => $thumbnailUrl,
+                        'videoUrl' => $videoUrl,
                         'created_at' => $job['created_at'] ?? null,
                         'queue_name' => $queue['name'] ?? null,
                         'scheduled_at' => $video['scheduled_at'] ?? null

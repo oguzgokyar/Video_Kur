@@ -572,7 +572,7 @@
               <div class="grid grid-cols-1 lg:grid-cols-12 gap-4" x-show="selectedQueue">
                 
                 <!-- Left: Videos List -->
-                <div class="lg:col-span-4">
+                <div class="lg:col-span-6">
                   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
                     <div class="p-3 border-b border-gray-100 dark:border-slate-700">
                       <div class="flex items-center justify-between">
@@ -651,7 +651,7 @@
                 </div>
                 
                 <!-- Center: Video Preview + Metadata -->
-                <div class="lg:col-span-8">
+                <div class="lg:col-span-6">
                   <template x-if="!selectedVideo">
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-12 text-center h-full flex flex-col items-center justify-center">
                       <svg class="w-16 h-16 mb-4 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
@@ -681,17 +681,33 @@
                         <!-- Left: Video Player with Platform Overlay -->
                         <div class="flex justify-center">
                           <div class="phone-frame w-48 shadow-2xl">
-                            <div class="phone-screen aspect-[9/16] relative">
+                            <div class="phone-screen aspect-[9/16] relative" x-data="{ playing: false }">
                               <!-- Video Player -->
                               <template x-if="selectedVideo?.videoUrl">
-                                <video 
-                                  :src="selectedVideo.videoUrl" 
-                                  class="absolute inset-0 w-full h-full object-cover"
-                                  controls
-                                  muted
-                                  loop
-                                  playsinline
-                                ></video>
+                                <div class="absolute inset-0">
+                                  <video 
+                                    x-ref="videoPlayer"
+                                    :src="selectedVideo.videoUrl" 
+                                    :poster="selectedVideo.thumbnailUrl"
+                                    class="absolute inset-0 w-full h-full object-cover cursor-pointer"
+                                    muted
+                                    loop
+                                    playsinline
+                                    @click="playing = !playing; playing ? $refs.videoPlayer.play() : $refs.videoPlayer.pause()"
+                                    @play="playing = true"
+                                    @pause="playing = false"
+                                  ></video>
+                                  <!-- Play Button Overlay -->
+                                  <div 
+                                    x-show="!playing" 
+                                    @click="playing = true; $refs.videoPlayer.play()"
+                                    class="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer transition"
+                                  >
+                                    <div class="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-xl">
+                                      <svg class="w-8 h-8 text-indigo-600 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                    </div>
+                                  </div>
+                                </div>
                               </template>
                               <template x-if="!selectedVideo?.videoUrl && selectedVideo?.thumbnailUrl">
                                 <img :src="selectedVideo.thumbnailUrl" class="absolute inset-0 w-full h-full object-cover">
