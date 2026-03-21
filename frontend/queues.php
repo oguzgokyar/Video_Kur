@@ -41,6 +41,7 @@
       editModal: false,
       detailModal: false,
       moveModal: false,
+      queueSettingsModal: false,
       
       // Form data
       form: {
@@ -118,6 +119,7 @@
         this.editModal = false;
         this.detailModal = false;
         this.moveModal = false;
+        this.queueSettingsModal = false;
       },
       
       // Select queue tab
@@ -158,7 +160,20 @@
         this.editingQueue = !this.editingQueue;
       },
       
-      // Save queue settings inline
+      // Open queue settings modal
+      openQueueSettingsModal() {
+        if (!this.selectedQueue) return;
+        this.form = {
+          name: this.selectedQueue.name,
+          platforms: [...(this.selectedQueue.platforms || [])],
+          scheduleType: this.selectedQueue.schedule?.type || 'interval',
+          intervalHours: this.selectedQueue.schedule?.interval_hours || 2,
+          specificTimes: this.selectedQueue.schedule?.specific_times || ['09:00', '15:00', '21:00']
+        };
+        this.queueSettingsModal = true;
+      },
+      
+      // Save queue settings from modal
       async saveQueueSettings() {
         this.submitting = true;
         try {
@@ -182,7 +197,7 @@
           });
           const result = await response.json();
           if (result.success) {
-            this.editingQueue = false;
+            this.queueSettingsModal = false;
             await this.loadQueues();
             await this.selectQueueTab({ id: this.selectedQueue.id });
           } else {
@@ -499,17 +514,6 @@
 
       <main class="flex-1 overflow-y-auto p-4 md:p-6">
         <div class="max-w-[1600px] mx-auto">
-          
-          <!-- Top Actions -->
-          <div class="flex items-center justify-end mb-4">
-            <button 
-              @click="openCreateModal()"
-              class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition shadow-sm"
-            >
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-              Yeni Kuyruk
-            </button>
-          </div>
 
           <!-- Loading -->
           <template x-if="loading">
@@ -568,11 +572,17 @@
               <div class="grid grid-cols-1 lg:grid-cols-12 gap-4" x-show="selectedQueue">
                 
                 <!-- Left: Videos List -->
-                <div class="lg:col-span-3">
+                <div class="lg:col-span-4">
                   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
                     <div class="p-3 border-b border-gray-100 dark:border-slate-700">
-                      <div class="flex items-center justify-between mb-2">
-                        <h3 class="font-semibold text-gray-800 dark:text-white text-sm">Videolar</h3>
+                      <div class="flex items-center justify-between">
+                        <button 
+                          @click="openQueueSettingsModal()"
+                          class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition"
+                        >
+                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                          Kuyruğu Düzenle
+                        </button>
                         <select x-model="filterStatus" @change="filterVideos()" class="text-xs border border-gray-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 dark:text-white">
                           <option value="all">Tümü</option>
                           <option value="pending">⏳ Bekleyen</option>
@@ -600,13 +610,28 @@
                             <div class="drag-handle cursor-grab text-gray-300 dark:text-slate-500 hover:text-gray-500">
                               <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6-12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
                             </div>
-                            <div class="w-10 h-8 rounded overflow-hidden bg-gray-200 dark:bg-slate-700 flex-shrink-0">
-                              <template x-if="video.thumbnailUrl">
+                            <div class="w-12 h-16 rounded overflow-hidden bg-gray-200 dark:bg-slate-700 flex-shrink-0 relative group">
+                              <template x-if="video.videoUrl">
+                                <video 
+                                  :src="video.videoUrl" 
+                                  :poster="video.thumbnailUrl"
+                                  class="w-full h-full object-cover cursor-pointer"
+                                  muted
+                                  playsinline
+                                  @click.stop="$event.target.paused ? $event.target.play() : $event.target.pause()"
+                                  @mouseenter="$event.target.play()"
+                                  @mouseleave="$event.target.pause(); $event.target.currentTime = 0;"
+                                ></video>
+                              </template>
+                              <template x-if="!video.videoUrl && video.thumbnailUrl">
                                 <img :src="video.thumbnailUrl" class="w-full h-full object-cover">
                               </template>
-                              <template x-if="!video.thumbnailUrl">
+                              <template x-if="!video.videoUrl && !video.thumbnailUrl">
                                 <div class="w-full h-full flex items-center justify-center text-gray-400 text-xs" x-text="idx + 1"></div>
                               </template>
+                              <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition pointer-events-none" x-show="video.videoUrl">
+                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                              </div>
                             </div>
                             <div class="flex-1 min-w-0">
                               <p class="text-xs font-medium text-gray-800 dark:text-white truncate" x-text="video.title || 'Video'"></p>
@@ -626,7 +651,7 @@
                 </div>
                 
                 <!-- Center: Video Preview + Metadata -->
-                <div class="lg:col-span-6">
+                <div class="lg:col-span-8">
                   <template x-if="!selectedVideo">
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-12 text-center h-full flex flex-col items-center justify-center">
                       <svg class="w-16 h-16 mb-4 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
@@ -814,112 +839,6 @@
                       </div>
                     </div>
                   </template>
-                </div>
-                
-                <!-- Right: Queue Settings -->
-                <div class="lg:col-span-3">
-                  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
-                    <div class="p-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
-                      <h3 class="font-semibold text-gray-800 dark:text-white text-sm">⚙️ Kuyruk Ayarları</h3>
-                      <template x-if="!editingQueue">
-                        <button @click="toggleQueueEdit()" class="text-xs text-indigo-600 hover:underline">Düzenle</button>
-                      </template>
-                    </div>
-                    
-                    <div class="p-3 space-y-3">
-                      <template x-if="!editingQueue">
-                        <div class="space-y-3">
-                          <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Kuyruk Adı</label>
-                            <p class="text-sm text-gray-800 dark:text-white font-medium" x-text="selectedQueue?.name"></p>
-                          </div>
-                          <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Platformlar</label>
-                            <div class="flex flex-wrap gap-1">
-                              <template x-for="p in selectedQueue?.platforms" :key="p">
-                                <span class="px-2 py-1 text-xs rounded-full" 
-                                      :class="{
-                                        'bg-red-100 dark:bg-red-900/30 text-red-700': p === 'youtube',
-                                        'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700': p === 'tiktok',
-                                        'bg-pink-100 dark:bg-pink-900/30 text-pink-700': p === 'instagram',
-                                        'bg-blue-100 dark:bg-blue-900/30 text-blue-700': p === 'facebook'
-                                      }"
-                                      x-text="p === 'youtube' ? '📺 YouTube' : p === 'tiktok' ? '🎵 TikTok' : p === 'instagram' ? '📸 Instagram' : '📘 Facebook'"></span>
-                              </template>
-                            </div>
-                          </div>
-                          <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Zamanlama</label>
-                            <p class="text-sm text-gray-800 dark:text-white" x-text="getScheduleText(selectedQueue)"></p>
-                          </div>
-                          <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Durum</label>
-                            <span class="px-2 py-1 text-xs rounded-full" 
-                                  :class="selectedQueue?.is_active !== false ? 'bg-green-100 dark:bg-green-900/30 text-green-700' : 'bg-gray-100 dark:bg-slate-700 text-gray-500'"
-                                  x-text="selectedQueue?.is_active !== false ? '✓ Aktif' : 'Pasif'"></span>
-                          </div>
-                          <div class="pt-2 border-t border-gray-100 dark:border-slate-700">
-                            <div class="flex justify-between text-xs">
-                              <span class="text-gray-500 dark:text-gray-400">Bekleyen:</span>
-                              <span class="font-medium text-gray-800 dark:text-white" x-text="getPendingCount(selectedQueue)"></span>
-                            </div>
-                            <div class="flex justify-between text-xs mt-1">
-                              <span class="text-gray-500 dark:text-gray-400">Yayınlanan:</span>
-                              <span class="font-medium text-green-600" x-text="getPublishedCount(selectedQueue)"></span>
-                            </div>
-                          </div>
-                          <button @click="deleteQueue(selectedQueue)" class="w-full mt-2 px-3 py-2 text-xs bg-red-50 dark:bg-red-900/30 text-red-600 rounded-lg hover:bg-red-100 transition">
-                            🗑️ Kuyruğu Sil
-                          </button>
-                        </div>
-                      </template>
-                      
-                      <template x-if="editingQueue">
-                        <div class="space-y-3">
-                          <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Kuyruk Adı</label>
-                            <input type="text" x-model="form.name" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-slate-600 rounded-lg">
-                          </div>
-                          <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Platformlar</label>
-                            <div class="grid grid-cols-2 gap-2">
-                              <template x-for="p in platformOptions" :key="p.id">
-                                <button 
-                                  @click="togglePlatform(p.id)"
-                                  class="px-2 py-1.5 text-xs rounded-lg border-2 transition"
-                                  :class="form.platforms.includes(p.id) ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-slate-600'"
-                                >
-                                  <span x-text="p.icon + ' ' + p.name"></span>
-                                </button>
-                              </template>
-                            </div>
-                          </div>
-                          <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Zamanlama</label>
-                            <select x-model="form.scheduleType" class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-slate-600 rounded-lg">
-                              <option value="now">⚡ Hemen</option>
-                              <option value="interval">⏰ Aralıklı</option>
-                              <option value="specific">📅 Belirli Saat</option>
-                            </select>
-                            <template x-if="form.scheduleType === 'interval'">
-                              <select x-model="form.intervalHours" class="w-full mt-2 px-3 py-2 text-sm border border-gray-200 dark:border-slate-600 rounded-lg">
-                                <option value="1">Her 1 saat</option>
-                                <option value="2">Her 2 saat</option>
-                                <option value="4">Her 4 saat</option>
-                                <option value="6">Her 6 saat</option>
-                              </select>
-                            </template>
-                          </div>
-                          <div class="flex gap-2 pt-2">
-                            <button @click="toggleQueueEdit()" class="flex-1 px-3 py-2 text-xs bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg">İptal</button>
-                            <button @click="saveQueueSettings()" :disabled="submitting" class="flex-1 px-3 py-2 text-xs bg-indigo-600 text-white rounded-lg disabled:opacity-50">
-                              <span x-text="submitting ? '...' : 'Kaydet'"></span>
-                            </button>
-                          </div>
-                        </div>
-                      </template>
-                    </div>
-                  </div>
                 </div>
                 
               </div>
@@ -1226,6 +1145,177 @@
           >
             İptal
           </button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Queue Settings Modal -->
+  <template x-if="queueSettingsModal">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click.self="closeModals()">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-xl mx-4 overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xl font-bold text-white">⚙️ Kuyruk Ayarları</h3>
+            <button @click="closeModals()" class="text-white/80 hover:text-white">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+        
+        <div class="p-6 space-y-4">
+          <!-- Queue Name -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kuyruk Adı</label>
+            <input 
+              type="text" 
+              x-model="form.name"
+              placeholder="Örn: Komedi Videoları"
+              class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+            >
+          </div>
+          
+          <!-- Platforms -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Platformlar</label>
+            <div class="grid grid-cols-2 gap-3">
+              <template x-for="platform in platformOptions" :key="platform.id">
+                <label 
+                  class="flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition"
+                  :class="form.platforms.includes(platform.id) ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-slate-600 hover:border-gray-300'"
+                >
+                  <input 
+                    type="checkbox" 
+                    :checked="form.platforms.includes(platform.id)"
+                    @change="togglePlatform(platform.id)"
+                    class="w-5 h-5 text-indigo-600 rounded"
+                  >
+                  <div>
+                    <div class="font-medium text-gray-800 dark:text-white" x-text="platform.icon + ' ' + platform.name"></div>
+                  </div>
+                </label>
+              </template>
+            </div>
+          </div>
+          
+          <!-- Schedule Type -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Paylaşım Zamanlaması</label>
+            <div class="space-y-2">
+              <template x-for="option in scheduleOptions" :key="option.id">
+                <label 
+                  class="flex items-start gap-3 p-3 border-2 rounded-xl cursor-pointer transition"
+                  :class="form.scheduleType === option.id ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-slate-600 hover:border-gray-300'"
+                >
+                  <input 
+                    type="radio" 
+                    name="scheduleType"
+                    :value="option.id"
+                    x-model="form.scheduleType"
+                    class="w-5 h-5 text-indigo-600 mt-0.5"
+                  >
+                  <div>
+                    <div class="font-medium text-gray-800 dark:text-white" x-text="option.name"></div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400" x-text="option.desc"></div>
+                  </div>
+                </label>
+              </template>
+            </div>
+          </div>
+          
+          <!-- Interval Hours -->
+          <template x-if="form.scheduleType === 'interval'">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kaç Saatte Bir?</label>
+              <select 
+                x-model="form.intervalHours"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+              >
+                <option value="1">Her 1 saatte bir</option>
+                <option value="2">Her 2 saatte bir</option>
+                <option value="3">Her 3 saatte bir</option>
+                <option value="4">Her 4 saatte bir</option>
+                <option value="6">Her 6 saatte bir</option>
+                <option value="8">Her 8 saatte bir</option>
+                <option value="12">Her 12 saatte bir</option>
+                <option value="24">Günde bir</option>
+              </select>
+            </div>
+          </template>
+          
+          <!-- Specific Times -->
+          <template x-if="form.scheduleType === 'specific'">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Paylaşım Saatleri</label>
+              <div class="flex flex-wrap gap-2">
+                <template x-for="(time, idx) in form.specificTimes" :key="idx">
+                  <div class="flex items-center gap-1 bg-gray-100 dark:bg-slate-700 rounded-lg px-3 py-1.5">
+                    <input 
+                      type="time" 
+                      x-model="form.specificTimes[idx]"
+                      class="bg-transparent border-none text-sm font-medium focus:outline-none dark:text-white"
+                    >
+                    <button 
+                      @click="form.specificTimes.splice(idx, 1)"
+                      class="text-gray-400 hover:text-red-500"
+                      x-show="form.specificTimes.length > 1"
+                    >
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                </template>
+                <button 
+                  @click="form.specificTimes.push('12:00')"
+                  class="px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition"
+                >
+                  + Saat Ekle
+                </button>
+              </div>
+            </div>
+          </template>
+          
+          <!-- Stats -->
+          <div class="pt-4 border-t border-gray-200 dark:border-slate-700">
+            <div class="grid grid-cols-3 gap-4">
+              <div class="text-center p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                <div class="text-2xl font-bold text-gray-800 dark:text-white" x-text="selectedQueue?.videos?.length || 0"></div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Toplam Video</div>
+              </div>
+              <div class="text-center p-3 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg">
+                <div class="text-2xl font-bold text-yellow-600" x-text="getPendingCount(selectedQueue)"></div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Bekleyen</div>
+              </div>
+              <div class="text-center p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                <div class="text-2xl font-bold text-green-600" x-text="getPublishedCount(selectedQueue)"></div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Yayınlanan</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Actions -->
+          <div class="flex gap-3 pt-4">
+            <button 
+              @click="deleteQueue(selectedQueue)" 
+              class="px-5 py-3 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 rounded-xl font-semibold transition"
+            >
+              🗑️ Kuyruğu Sil
+            </button>
+            <div class="flex-1"></div>
+            <button 
+              @click="closeModals()" 
+              class="px-5 py-3 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold transition"
+            >
+              İptal
+            </button>
+            <button 
+              @click="saveQueueSettings()" 
+              :disabled="submitting"
+              class="px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold transition disabled:opacity-50"
+            >
+              <span x-show="!submitting">✓ Kaydet</span>
+              <span x-show="submitting">⏳ Kaydediliyor...</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

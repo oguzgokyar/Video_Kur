@@ -29,6 +29,15 @@ $current_title = $page_titles[$active_page ?? ''] ?? 'Dashboard';
     </div>
   </div>
   <div class="flex items-center gap-3">
+    <?php if ($active_page === 'queues'): ?>
+    <button 
+      @click="openCreateModal()"
+      class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition shadow-sm"
+    >
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+      <span class="hidden sm:inline">Yeni Kuyruk</span>
+    </button>
+    <?php endif; ?>
     <?php if ($show_status): ?>
     <template x-if="job">
       <div class="flex items-center gap-2">
