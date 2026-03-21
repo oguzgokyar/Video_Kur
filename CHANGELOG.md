@@ -4,6 +4,28 @@ Bu dosya, projedeki tüm önemli değişiklikleri kronolojik sırayla takip eder
 
 ---
 
+## [2.1.0] - 2026-01-18 - Modern Kuyruk UI Tasarımı
+
+### ✨ Eklenenler
+- **Kuyruk tab sistemi:** Kuyruklar arası hızlı geçiş
+- **Üç kolonlu layout:** Video listesi, önizleme, ayarlar paneli
+- **Video player önizleme:** Platform özel overlay'ler (TikTok, YouTube, Instagram, Facebook)
+- **Düzenlenebilir metadata:** Başlık, açıklama, etiketler inline düzenlenebilir
+- **Inline kuyruk ayarları:** İsim, platformlar, zamanlama anlık düzenleme
+- **Dinamik sayfa başlıkları:** Header'da tüm sayfa isimleri görünür
+- **Dark mode persistence:** localStorage + sistem tercih desteği
+- **Genişletilmiş dark mode:** Tüm bileşenler için kapsamlı CSS
+
+### 🔧 Değişiklikler
+- `frontend/queues.php` - Komple UI yeniden tasarımı
+- `frontend/components/_header.php` - Dinamik sayfa başlıkları
+- `frontend/components/_dark_mode.php` - Genişletilmiş CSS, persistence
+- Main content max-width 1600px'e genişletildi
+- Drag & drop sıralama eklendi
+- Responsive tasarım iyileştirmeleri
+
+---
+
 ## [2.0.0] - 2026-03-19 - Custom Script Sistemi
 
 ### ✨ Eklenenler
