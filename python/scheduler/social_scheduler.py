@@ -73,10 +73,10 @@ class SocialMediaScheduler:
         # Initialize uploaders
         self.uploaders = self._init_uploaders()
         
-        print(f"📅 Social Media Scheduler başlatıldı")
-        print(f"⏱️  Kontrol aralığı: {check_interval} saniye")
-        print(f"📂 Base directory: {base_dir}")
-        print(f"🔌 Aktif platformlar: {', '.join(self.uploaders.keys())}")
+        print(f"[SOCIAL] Scheduler başlatıldı")
+        print(f"[SOCIAL] Kontrol aralığı: {check_interval} saniye")
+        print(f"[SOCIAL] Base directory: {base_dir}")
+        print(f"[SOCIAL] Aktif platformlar: {', '.join(self.uploaders.keys())}")
     
     def _load_config(self) -> Dict:
         """Load application config"""
@@ -96,36 +96,36 @@ class SocialMediaScheduler:
         # YouTube (always available if configured)
         try:
             uploaders['youtube'] = YouTubeUploader(str(self.youtube_creds))
-            print("  ✅ YouTube uploader hazır")
+            print("  [OK] YouTube uploader hazır")
         except Exception as e:
-            print(f"  ⚠️  YouTube uploader başlatılamadı: {e}")
+            print(f"  [WARN] YouTube uploader başlatılamadı: {e}")
         
         # TikTok
         if TIKTOK_AVAILABLE:
             try:
                 tiktok_creds = self.creds_dir / 'tiktok'
                 uploaders['tiktok'] = TikTokUploader(str(tiktok_creds))
-                print("  ✅ TikTok uploader hazır")
+                print("  [OK] TikTok uploader hazır")
             except Exception as e:
-                print(f"  ⚠️  TikTok uploader başlatılamadı: {e}")
+                print(f"  [WARN] TikTok uploader başlatılamadı: {e}")
         
         # Instagram
         if INSTAGRAM_AVAILABLE:
             try:
                 ig_creds = self.creds_dir / 'instagram'
                 uploaders['instagram'] = InstagramUploader(str(ig_creds))
-                print("  ✅ Instagram uploader hazır")
+                print("  [OK] Instagram uploader hazır")
             except Exception as e:
-                print(f"  ⚠️  Instagram uploader başlatılamadı: {e}")
+                print(f"  [WARN] Instagram uploader başlatılamadı: {e}")
         
         # Facebook
         if FACEBOOK_AVAILABLE:
             try:
                 fb_creds = self.creds_dir / 'facebook'
                 uploaders['facebook'] = FacebookUploader(str(fb_creds))
-                print("  ✅ Facebook uploader hazır")
+                print("  [OK] Facebook uploader hazır")
             except Exception as e:
-                print(f"  ⚠️  Facebook uploader başlatılamadı: {e}")
+                print(f"  [WARN] Facebook uploader başlatılamadı: {e}")
         
         return uploaders
     
@@ -139,7 +139,7 @@ class SocialMediaScheduler:
                 time.sleep(self.check_interval)
                 
         except KeyboardInterrupt:
-            print("\n\n⏹️  Scheduler durduruldu")
+            print("\n\n[STOP] Scheduler durduruldu")
         except Exception as e:
             print(f"\n❌ Scheduler hatası: {e}")
             raise
@@ -165,7 +165,7 @@ class SocialMediaScheduler:
         video_path = item['video_path']
         
         print(f"\n{'='*60}")
-        print(f"📤 Processing: {queue_id}")
+        print(f"[PROCESS] Queue item: {queue_id}")
         print(f"🎬 Job ID: {job_id}")
         
         # Check video file exists
@@ -219,7 +219,7 @@ class SocialMediaScheduler:
                     use_ai=True
                 )
             except Exception as e:
-                print(f"   ⚠️  Metadata optimizasyonu başarısız: {e}")
+                print(f"   [WARN] Metadata optimizasyonu başarısız: {e}")
                 platform_meta = {
                     'caption': base_metadata.get('description', base_metadata.get('title', '')),
                     'hashtags': base_metadata.get('tags', [])
@@ -243,7 +243,7 @@ class SocialMediaScheduler:
                         result['video_id'],
                         result['video_url']
                     )
-                    print(f"   ✅ YouTube başarılı: {result['video_url']}")
+                    print(f"   [OK] YouTube başarılı: {result['video_url']}")
                 else:
                     error = result.get('error', 'Unknown error') if result else 'Upload failed'
                     self.queue_manager.mark_platform_failed(queue_id, platform, error)
@@ -263,7 +263,7 @@ class SocialMediaScheduler:
                         result.post_id,
                         result.post_url
                     )
-                    print(f"   ✅ {platform.title()} başarılı: {result.post_url}")
+                    print(f"   [OK] {platform.title()} başarılı: {result.post_url}")
                 else:
                     self.queue_manager.mark_platform_failed(
                         queue_id, platform, result.error,
@@ -305,7 +305,7 @@ class SocialMediaScheduler:
                     json.dump(job, f, ensure_ascii=False, indent=2)
         
         except Exception as e:
-            print(f"   ⚠️  Job güncelleme hatası: {e}")
+            print(f"   [WARN] Job güncelleme hatası: {e}")
 
 
 def main():

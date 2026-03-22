@@ -79,12 +79,103 @@ $active_page = 'settings';
       },
       tabs: [
         { id:'genel', label:'Genel', icon:'⚙️' },
+        { id:'scheduler', label:'Zamanlayıcı', icon:'⏰' },
         { id:'script', label:'Script', icon:'📝' },
         { id:'gorsel', label:'Görsel', icon:'🖼️' },
         { id:'ses', label:'Ses', icon:'🔊' },
         { id:'altyazi', label:'Altyazı', icon:'💬' },
         { id:'video', label:'Video', icon:'🎬' }
       ],
+      
+      // Scheduler state
+      schedulerStatus: {
+        production: { running: false, pid: null, started_at: null },
+        social: { running: false, pid: null, started_at: null }
+      },
+      schedulerLogs: [],
+      schedulerLoading: false,
+      
+      // Scheduler methods
+      async loadSchedulerStatus() {
+        try {
+          const r = await fetch('/api/scheduler_control.php?action=status');
+          const d = await r.json();
+          if (d.success) {
+            this.schedulerStatus = d.status;
+          }
+        } catch(e) {
+          console.error('Scheduler durumu yüklenemedi:', e);
+        }
+      },
+      
+      async loadSchedulerLogs() {
+        try {
+          const r = await fetch('/api/scheduler_control.php?action=logs&lines=50');
+          
+          // Check if response is ok and has content
+          if (!r.ok) {
+            console.warn('Logs API failed:', r.status);
+            this.schedulerLogs = [];
+            return;
+          }
+          
+          const text = await r.text();
+          if (!text.trim()) {
+            console.warn('Empty response from logs API');
+            this.schedulerLogs = [];
+            return;
+          }
+          
+          const d = JSON.parse(text);
+          if (d.success) {
+            this.schedulerLogs = d.logs || [];
+          } else {
+            console.warn('Logs API returned error:', d.error);
+            this.schedulerLogs = [];
+          }
+        } catch(e) {
+          console.warn('Log yükleme hatası (normal):', e.message);
+          this.schedulerLogs = [];
+        }
+      },
+      
+      async toggleScheduler(type) {
+        this.schedulerLoading = true;
+        const isRunning = this.schedulerStatus[type]?.running;
+        const action = isRunning ? 'stop' : 'start';
+        
+        try {
+          const r = await fetch('/api/scheduler_control.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, type })
+          });
+          const d = await r.json();
+          
+          if (d.success) {
+            await this.loadSchedulerStatus();
+            await this.loadSchedulerLogs();
+          } else {
+            alert('Hata: ' + (d.error || 'Bilinmeyen hata'));
+          }
+        } catch(e) {
+          alert('Hata: ' + e.message);
+        }
+        this.schedulerLoading = false;
+      },
+      
+      async clearSchedulerLogs() {
+        try {
+          await fetch('/api/scheduler_control.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'clear_logs' })
+          });
+          this.schedulerLogs = [];
+        } catch(e) {
+          console.error('Log temizleme hatası:', e);
+        }
+      },
       toggleDark() {
         this.darkMode = !this.darkMode;
         localStorage.setItem('darkMode', this.darkMode ? '1' : '0');
@@ -132,6 +223,10 @@ $active_page = 'settings';
             };
           }
         }).catch(() => {});
+        
+        // Scheduler durumu yükle
+        this.loadSchedulerStatus();
+        this.loadSchedulerLogs();
       },
       saveConfig() {
         this.saveMsg = ''; this.saveError = false;
@@ -335,6 +430,115 @@ $active_page = 'settings';
                   <div class="text-xs mt-1 px-1 font-medium" :class="checks.ffmpeg.result.valid ? 'text-green-600' : 'text-red-600'" x-text="checks.ffmpeg.result.message"></div>
                 </template>
               </div>
+            </div>
+
+            <!-- ═══════════ TAB: SCHEDULER ═══════════ -->
+            <div x-show="activeTab === 'scheduler'" x-transition>
+              
+              <!-- Production Scheduler -->
+              <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white">🎬 Üretim Zamanlayıcısı</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Kuyruktaki videoları sırayla üretir</p>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span class="text-sm font-medium" :class="schedulerStatus.production?.running ? 'text-green-600' : 'text-gray-400'">
+                      <template x-if="schedulerStatus.production?.running">
+                        <span>🟢 Çalışıyor</span>
+                      </template>
+                      <template x-if="!schedulerStatus.production?.running">
+                        <span>🔴 Durduruldu</span>
+                      </template>
+                    </span>
+                    <button 
+                      @click="toggleScheduler('production')"
+                      :disabled="schedulerLoading"
+                      class="px-4 py-2 rounded-lg font-medium transition"
+                      :class="schedulerStatus.production?.running 
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400' 
+                        : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'"
+                    >
+                      <span x-text="schedulerStatus.production?.running ? '⏹️ Durdur' : '▶️ Başlat'"></span>
+                    </button>
+                  </div>
+                </div>
+                
+                <template x-if="schedulerStatus.production?.started_at">
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Başlangıç: <span x-text="new Date(schedulerStatus.production.started_at).toLocaleString('tr-TR')"></span>
+                    <template x-if="schedulerStatus.production?.pid">
+                      <span class="ml-2">(PID: <span x-text="schedulerStatus.production.pid"></span>)</span>
+                    </template>
+                  </p>
+                </template>
+              </div>
+              
+              <!-- Social Scheduler -->
+              <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white">📤 Paylaşım Zamanlayıcısı</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Üretilmiş videoları sosyal medyaya paylaşır</p>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span class="text-sm font-medium" :class="schedulerStatus.social?.running ? 'text-green-600' : 'text-gray-400'">
+                      <template x-if="schedulerStatus.social?.running">
+                        <span>🟢 Çalışıyor</span>
+                      </template>
+                      <template x-if="!schedulerStatus.social?.running">
+                        <span>🔴 Durduruldu</span>
+                      </template>
+                    </span>
+                    <button 
+                      @click="toggleScheduler('social')"
+                      :disabled="schedulerLoading"
+                      class="px-4 py-2 rounded-lg font-medium transition"
+                      :class="schedulerStatus.social?.running 
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400' 
+                        : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'"
+                    >
+                      <span x-text="schedulerStatus.social?.running ? '⏹️ Durdur' : '▶️ Başlat'"></span>
+                    </button>
+                  </div>
+                </div>
+                
+                <template x-if="schedulerStatus.social?.started_at">
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Başlangıç: <span x-text="new Date(schedulerStatus.social.started_at).toLocaleString('tr-TR')"></span>
+                    <template x-if="schedulerStatus.social?.pid">
+                      <span class="ml-2">(PID: <span x-text="schedulerStatus.social.pid"></span>)</span>
+                    </template>
+                  </p>
+                </template>
+              </div>
+              
+              <!-- Logs -->
+              <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h2 class="text-lg font-semibold text-gray-800 dark:text-white">📋 Scheduler Logları</h2>
+                  <div class="flex gap-2">
+                    <button 
+                      @click="loadSchedulerLogs()"
+                      class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition"
+                    >🔄 Yenile</button>
+                    <button 
+                      @click="clearSchedulerLogs()"
+                      class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition"
+                    >🗑️ Temizle</button>
+                  </div>
+                </div>
+                
+                <div class="bg-gray-900 rounded-lg p-4 max-h-80 overflow-y-auto font-mono text-xs text-green-400">
+                  <template x-if="schedulerLogs.length === 0">
+                    <p class="text-gray-500">Log kaydı yok</p>
+                  </template>
+                  <template x-for="(log, idx) in schedulerLogs" :key="idx">
+                    <div class="whitespace-pre-wrap mb-1" x-text="log"></div>
+                  </template>
+                </div>
+              </div>
+              
             </div>
 
             <!-- ═══════════ TAB: SCRIPT ═══════════ -->

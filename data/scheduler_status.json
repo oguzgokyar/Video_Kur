@@ -1,0 +1,13 @@
+{
+    "production": {
+        "running": true,
+        "pid": 6392,
+        "started_at": "2026-03-22T01:56:45+01:00"
+    },
+    "social": {
+        "running": true,
+        "pid": 25976,
+        "started_at": "2026-03-22T01:56:47+01:00"
+    },
+    "last_updated": "2026-03-22T02:26:23+01:00"
+}

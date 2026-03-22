@@ -111,43 +111,64 @@ class SocialQueueManager:
     
     def get_pending_items(self, platform: str = None) -> List[Dict]:
         """
-        Get all pending items that are ready to upload
-        
+        Get all pending items that are ready to upload.
+        Also picks up items stuck in 'processing' state (after scheduler restart).
+
         Args:
             platform: Filter by specific platform (optional)
-            
+
         Returns:
             List of pending queue items
         """
         queue = self._load_queue()
         now = datetime.now(timezone.utc)
-        
+
+        # Base dir for resolving relative video paths
+        base_dir = self.data_dir.parent
+
         pending = []
         for item in queue['queue']:
             # Check if scheduled time has passed
-            scheduled = datetime.fromisoformat(item['scheduled_time'].replace('Z', '+00:00'))
-            if now < scheduled:
-                continue
-            
-            # Check if item has pending platforms
+            try:
+                scheduled = datetime.fromisoformat(item['scheduled_time'].replace('Z', '+00:00'))
+                if now < scheduled:
+                    continue
+            except Exception:
+                pass  # If parse fails, treat as ready
+
+            # Fix relative video_path to absolute
+            video_path = item.get('video_path', '')
+            if video_path and not os.path.isabs(video_path):
+                item['video_path'] = str(base_dir / video_path)
+
+            # Check if item has pending OR stuck-processing platforms
+            ACTIVE_STATUSES = ('pending', 'processing')
             if platform:
-                # Filter by specific platform
                 if platform in item['platform_status']:
-                    if item['platform_status'][platform]['status'] == 'pending':
+                    if item['platform_status'][platform]['status'] in ACTIVE_STATUSES:
+                        if item['platform_status'][platform]['status'] == 'processing':
+                            item['platform_status'][platform]['status'] = 'pending'
                         pending.append(item)
             else:
-                # Any pending platform
-                has_pending = any(
-                    ps['status'] == 'pending' 
+                has_active = any(
+                    ps['status'] in ACTIVE_STATUSES
                     for ps in item['platform_status'].values()
                 )
-                if has_pending:
+                if has_active:
+                    # Reset stuck 'processing' back to 'pending'
+                    for ps in item['platform_status'].values():
+                        if ps['status'] == 'processing':
+                            ps['status'] = 'pending'
                     pending.append(item)
-        
+
+        # Persist any status resets we made
+        self._save_queue(queue)
+
         # Sort by priority (high to low) then by scheduled time
         pending.sort(key=lambda x: (-x['priority'], x['scheduled_time']))
-        
+
         return pending
+
     
     def get_item(self, queue_id: str) -> Optional[Dict]:
         """Get specific queue item"""

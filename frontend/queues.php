@@ -11,6 +11,33 @@
     .phone-frame { background: linear-gradient(145deg, #1a1a1a, #0a0a0a); border-radius: 24px; padding: 4px; }
     .phone-screen { background: #000; border-radius: 20px; overflow: hidden; position: relative; }
     .phone-notch { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 60px; height: 18px; background: #000; border-radius: 10px; z-index: 10; }
+    /* Platform durum badge animasyonları */
+    @keyframes upload-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.6; transform:scale(1.15); } }
+    @keyframes spin-slow { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+    @keyframes live-blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+    .badge-uploading { animation: upload-pulse 1.2s ease-in-out infinite; }
+    .badge-spin { animation: spin-slow 1.5s linear infinite; display:inline-block; }
+    .badge-live { animation: live-blink 1s ease-in-out infinite; }
+    .platform-badge { display:inline-flex; align-items:center; gap:2px; border-radius:6px; padding:2px 5px; font-size:10px; font-weight:600; white-space:nowrap; }
+    .badge-pending   { background:rgba(234,179,8,0.15);  color:#92400e; border:1px solid rgba(234,179,8,0.3); }
+    .badge-queued    { background:rgba(99,102,241,0.12); color:#4338ca; border:1px solid rgba(99,102,241,0.25); }
+    .badge-producing { background:rgba(59,130,246,0.15); color:#1d4ed8; border:1px solid rgba(59,130,246,0.3); }
+    .badge-uploading { background:rgba(245,158,11,0.15); color:#92400e; border:1px solid rgba(245,158,11,0.3); }
+    .badge-published { background:rgba(34,197,94,0.15);  color:#166534; border:1px solid rgba(34,197,94,0.3); }
+    .badge-failed    { background:rgba(239,68,68,0.15);  color:#991b1b; border:1px solid rgba(239,68,68,0.3); }
+    .dark .badge-pending   { background:rgba(234,179,8,0.2);  color:#fcd34d; border-color:rgba(234,179,8,0.4); }
+    .dark .badge-queued    { background:rgba(99,102,241,0.2); color:#a5b4fc; border-color:rgba(99,102,241,0.35); }
+    .dark .badge-producing { background:rgba(59,130,246,0.2); color:#93c5fd; border-color:rgba(59,130,246,0.35); }
+    .dark .badge-uploading { background:rgba(245,158,11,0.2); color:#fcd34d; border-color:rgba(245,158,11,0.4); }
+    .dark .badge-published { background:rgba(34,197,94,0.2);  color:#86efac; border-color:rgba(34,197,94,0.35); }
+    .dark .badge-failed    { background:rgba(239,68,68,0.2);  color:#fca5a5; border-color:rgba(239,68,68,0.35); }
+    /* job_status satır sol border rengi */
+    .row-pending   { border-left: 3px solid rgba(234,179,8,0.5); }
+    .row-producing { border-left: 3px solid rgba(59,130,246,0.7); }
+    .row-done      { border-left: 3px solid rgba(34,197,94,0.5); }
+    .row-failed    { border-left: 3px solid rgba(239,68,68,0.5); }
+    /* Küçük dönen ikon */
+    .icon-spin { display:inline-block; animation:spin-slow 1.2s linear infinite; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script>
@@ -24,7 +51,7 @@
       selectedQueue: null,
       selectedVideo: null,
       filteredVideos: [],
-      filterStatus: 'all',
+      filterStatus: 'pending',
       previewPlatform: 'youtube',
       editingQueue: false,
       editingMetadata: false,
@@ -118,19 +145,32 @@
           platforms: [],
           scheduleType: 'interval',
           intervalHours: 2,
-          specificTimes: ['09:00', '15:00', '21:00']
+          specificTimes: ['09:00', '15:00', '21:00'],
+          dimensionPreset: 'vertical',
+          customWidth: 1080,
+          customHeight: 1920,
+          subtitleMode: 'config',
+          subtitlePreset: 'classic',
+          customSubtitle: { ...this.configSubtitle }
         };
         this.createModal = true;
       },
       
       openEditModal(queue) {
         this.selectedQueue = queue;
+        const vs = queue.video_settings || {};
         this.form = {
           name: queue.name,
           platforms: [...queue.platforms],
           scheduleType: queue.schedule?.type || 'interval',
           intervalHours: queue.schedule?.interval_hours || 2,
-          specificTimes: queue.schedule?.specific_times || ['09:00', '15:00', '21:00']
+          specificTimes: queue.schedule?.specific_times || ['09:00', '15:00', '21:00'],
+          dimensionPreset: vs.dimensionPreset || 'vertical',
+          customWidth: vs.videoWidth || 1080,
+          customHeight: vs.videoHeight || 1920,
+          subtitleMode: vs.subtitleMode || 'config',
+          subtitlePreset: vs.subtitlePreset || 'classic',
+          customSubtitle: vs.customSubtitle || { ...this.configSubtitle }
         };
         this.editModal = true;
       },
@@ -185,12 +225,19 @@
       // Toggle queue settings edit mode
       toggleQueueEdit() {
         if (!this.editingQueue) {
+          const vs = this.selectedQueue.video_settings || {};
           this.form = {
             name: this.selectedQueue.name,
             platforms: [...this.selectedQueue.platforms],
             scheduleType: this.selectedQueue.schedule?.type || 'interval',
             intervalHours: this.selectedQueue.schedule?.interval_hours || 2,
-            specificTimes: this.selectedQueue.schedule?.specific_times || ['09:00', '15:00', '21:00']
+            specificTimes: this.selectedQueue.schedule?.specific_times || ['09:00', '15:00', '21:00'],
+            dimensionPreset: vs.dimensionPreset || 'vertical',
+            customWidth: vs.videoWidth || 1080,
+            customHeight: vs.videoHeight || 1920,
+            subtitleMode: vs.subtitleMode || 'config',
+            subtitlePreset: vs.subtitlePreset || 'classic',
+            customSubtitle: vs.customSubtitle || { ...this.configSubtitle }
           };
         }
         this.editingQueue = !this.editingQueue;
@@ -199,14 +246,33 @@
       // Open queue settings modal
       openQueueSettingsModal() {
         if (!this.selectedQueue) return;
+        const vs = this.selectedQueue.video_settings || {};
         this.form = {
           name: this.selectedQueue.name,
           platforms: [...(this.selectedQueue.platforms || [])],
           scheduleType: this.selectedQueue.schedule?.type || 'interval',
           intervalHours: this.selectedQueue.schedule?.interval_hours || 2,
-          specificTimes: this.selectedQueue.schedule?.specific_times || ['09:00', '15:00', '21:00']
+          specificTimes: this.selectedQueue.schedule?.specific_times || ['09:00', '15:00', '21:00'],
+          dimensionPreset: vs.dimensionPreset || 'vertical',
+          customWidth: vs.videoWidth || 1080,
+          customHeight: vs.videoHeight || 1920,
+          subtitleMode: vs.subtitleMode || 'config',
+          subtitlePreset: vs.subtitlePreset || 'classic',
+          customSubtitle: vs.customSubtitle || { ...this.configSubtitle }
         };
         this.queueSettingsModal = true;
+      },
+      
+      // Build video_settings object from form
+      buildVideoSettings() {
+        return {
+          dimensionPreset: this.form.dimensionPreset,
+          videoWidth: this.formVideoWidth,
+          videoHeight: this.formVideoHeight,
+          subtitleMode: this.form.subtitleMode,
+          subtitlePreset: this.form.subtitlePreset,
+          customSubtitle: this.form.subtitleMode === 'custom' ? this.form.customSubtitle : null
+        };
       },
       
       // Save queue settings from modal
@@ -227,7 +293,8 @@
                   interval_hours: this.form.intervalHours,
                   specific_times: this.form.specificTimes,
                   timezone: 'Europe/Istanbul'
-                }
+                },
+                video_settings: this.buildVideoSettings()
               }
             })
           });
@@ -272,9 +339,11 @@
         }
         let videos = [...this.selectedQueue.videos];
         if (this.filterStatus === 'pending') {
-          videos = videos.filter(v => v.status !== 'published');
+          // Henüz tüm platformlarda yayınlanmamış olanlar
+          videos = videos.filter(v => !this.allPublished(v));
         } else if (this.filterStatus === 'published') {
-          videos = videos.filter(v => v.status === 'published');
+          // Tüm platformlarda yayınlanmış olanlar
+          videos = videos.filter(v => this.allPublished(v));
         }
         this.filteredVideos = videos;
       },
@@ -367,7 +436,8 @@
               action: 'create',
               name: this.form.name.trim(),
               platforms: this.form.platforms,
-              schedule: schedule
+              schedule: schedule,
+              video_settings: this.buildVideoSettings()
             })
           });
           
@@ -415,7 +485,8 @@
               updates: {
                 name: this.form.name.trim(),
                 platforms: this.form.platforms,
-                schedule: schedule
+                schedule: schedule,
+                video_settings: this.buildVideoSettings()
               }
             })
           });
@@ -432,6 +503,58 @@
           alert('Hata: ' + error.message);
         } finally {
           this.submitting = false;
+        }
+      },
+      
+      async pauseQueue(queue) {
+        try {
+          const response = await fetch('/api/queues.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'pause',
+              queue_id: queue.id
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            await this.loadQueues();
+            if (this.selectedQueue && this.selectedQueue.id === queue.id) {
+              await this.selectQueueTab(queue);
+            }
+          } else {
+            alert('Hata: ' + (result.error || 'Bilinmeyen hata'));
+          }
+        } catch (error) {
+          alert('Hata: ' + error.message);
+        }
+      },
+      
+      async resumeQueue(queue) {
+        try {
+          const response = await fetch('/api/queues.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'resume',
+              queue_id: queue.id
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            await this.loadQueues();
+            if (this.selectedQueue && this.selectedQueue.id === queue.id) {
+              await this.selectQueueTab(queue);
+            }
+          } else {
+            alert('Hata: ' + (result.error || 'Bilinmeyen hata'));
+          }
+        } catch (error) {
+          alert('Hata: ' + error.message);
         }
       },
       
@@ -525,21 +648,165 @@
           const r = await fetch('/api/queues.php?action=list');
           const d = await r.json();
           this.queues = d.queues || [];
+          
+          // İlk kuyruk seçili gelsin (boş ekran olmasın)
+          if (this.queues.length > 0 && !this.activeTab) {
+            await this.selectQueueTab(this.queues[0]);
+          } else if (this.activeTab && this.selectedQueue) {
+            // Seçili kuyruğu güncelle (canlı refresh için)
+            const r2 = await fetch('/api/queues.php?action=get&id=' + this.activeTab);
+            const d2 = await r2.json();
+            if (d2.success) {
+              this.selectedQueue = d2.queue;
+              this.filterVideos();
+            }
+          }
         } catch(e) {
           console.error('Kuyruklar yüklenemedi:', e);
         }
         this.loading = false;
       },
-      
+
+      // ── Platform durum yardımcıları ──────────────────────────────
+      // platform_status hem { youtube: 'pending' } hem { youtube: { status:'pending' } } olabilir
+      getPlatformStatus(video, platform) {
+        const ps = (video.platform_status || {})[platform];
+        if (!ps) return 'pending';
+        if (typeof ps === 'string') return ps;
+        return ps.status || 'pending';
+      },
+
+      getPlatformPostUrl(video, platform) {
+        const ps = (video.platform_status || {})[platform];
+        if (!ps || typeof ps === 'string') return null;
+        return ps.post_url || null;
+      },
+
+      // job_status: video üretim aşaması (job.json'dan API ile geliyor)
+      getJobPhase(video) {
+        const s = video.job_status || 'pending';
+        return s; // pending, scraping, scripting, imaging, tts, subtitling, composing, done, failed
+      },
+
+      jobPhaseLabel(phase) {
+        const map = {
+          pending: '⏳ Bekliyor', scraping: '📰 Haber', scripting: '✍️ Script',
+          imaging: '🖼️ Görsel', tts: '🎙️ Ses', subtitling: '💬 Altyazı',
+          composing: '🎬 Video', done: '✅ Hazır', failed: '❌ Hata', paused: '⏸️ Durduruldu'
+        };
+        return map[phase] || phase;
+      },
+
+      jobPhaseClass(phase) {
+        if (phase === 'done') return 'badge-published';
+        if (phase === 'failed') return 'badge-failed';
+        if (phase === 'pending') return 'badge-pending';
+        if (phase === 'paused') return 'badge-pending';
+        return 'badge-producing'; // üretim aşamaları
+      },
+
+      isProducing(video) {
+        const s = video.job_status || 'pending';
+        return !['done','failed','pending','paused'].includes(s);
+      },
+
+      getPlatformIcon(platform) {
+        const icons = { youtube:'📺', tiktok:'🎵', instagram:'📸', facebook:'📘' };
+        return icons[platform] || '🌐';
+      },
+
+      getPlatformKeys(video) {
+        return Object.keys(video.platform_status || {});
+      },
+
+      // Platform badge HTML'ini string olarak üret (iç içe x-for sorununu çözer)
+      renderPlatformBadges(video) {
+        const icons = { youtube:'📺', tiktok:'🎵', instagram:'📸', facebook:'📘' };
+        const ps = video.platform_status || {};
+        return Object.keys(ps).map(platform => {
+          const rawStatus = ps[platform];
+          const status = typeof rawStatus === 'string' ? rawStatus : (rawStatus?.status || 'pending');
+          const postUrl = typeof rawStatus === 'object' ? rawStatus?.post_url : null;
+          const icon = icons[platform] || '🌐';
+          let cls = 'badge-pending';
+          let statusIcon = '·';
+          let extra = '';
+          if (status === 'published' || status === 'success') { cls = 'badge-published'; statusIcon = '✓'; }
+          else if (status === 'processing') { cls = 'badge-uploading'; statusIcon = ''; extra = '<span class="icon-spin" style="font-style:normal">↻</span>'; }
+          else if (status === 'failed') { cls = 'badge-failed'; statusIcon = '✕'; }
+          else if (status === 'queued') { cls = 'badge-queued'; statusIcon = '…'; }
+          const link = postUrl ? `<a href="${postUrl}" target="_blank" onclick="event.stopPropagation()" class="hover:opacity-70">↗</a>` : '';
+          const title = this.platformStatusLabel(status) + ' — ' + platform;
+          return `<span class="platform-badge ${cls}" title="${title}">${icon}${extra || statusIcon}${link}</span>`;
+        }).join('');
+      },
+
+      platformStatusClass(status) {
+        if (status === 'published' || status === 'success') return 'badge-published';
+        if (status === 'processing') return 'badge-uploading badge-uploading';
+        if (status === 'failed') return 'badge-failed';
+        if (status === 'queued') return 'badge-queued';
+        return 'badge-pending';
+      },
+
+      platformStatusIcon(status) {
+        if (status === 'published' || status === 'success') return '✓';
+        if (status === 'processing') return '↑';
+        if (status === 'failed') return '✕';
+        if (status === 'queued') return '…';
+        return '·';
+      },
+
+      platformStatusLabel(status) {
+        if (status === 'published' || status === 'success') return 'Yayınlandı';
+        if (status === 'processing') return 'Yükleniyor';
+        if (status === 'failed') return 'Hata';
+        if (status === 'queued') return 'Sırada';
+        return 'Bekliyor';
+      },
+
+      // Tüm platformlar yayınlandı mı?
+      allPublished(video) {
+        const platforms = Object.keys(video.platform_status || {});
+        if (platforms.length === 0) return false;
+        return platforms.every(p => {
+          const s = this.getPlatformStatus(video, p);
+          return s === 'published' || s === 'success';
+        });
+      },
+
+      // Herhangi bir platform aktif upload ediyor mu?
+      anyUploading(video) {
+        return Object.keys(video.platform_status || {}).some(p =>
+          this.getPlatformStatus(video, p) === 'processing'
+        );
+      },
+
+      anyFailed(video) {
+        return Object.keys(video.platform_status || {}).some(p =>
+          this.getPlatformStatus(video, p) === 'failed'
+        );
+      },
+
+      // Video satır sol kenar rengi sınıfı
+      rowBorderClass(video) {
+        if (this.anyUploading(video) || this.isProducing(video)) return 'row-producing';
+        if (this.allPublished(video)) return 'row-done';
+        if (this.anyFailed(video) || video.job_status === 'failed') return 'row-failed';
+        return 'row-pending';
+      },
+
       init() {
         this.darkMode = localStorage.getItem('darkMode') === '1';
         document.documentElement.classList.toggle('dark', this.darkMode);
         this.loadQueues();
+        // 15 saniyede bir canlı güncelleme
+        setInterval(() => { if (this.selectedQueue) this.loadQueues(); }, 15000);
       }
     };
   }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
 </head>
 <body class="bg-gray-100 dark:bg-slate-900 min-h-screen" x-data="queuesApp()" x-init="init()">
   <div class="flex flex-col h-screen">
@@ -599,6 +866,12 @@
                       <span class="px-1.5 py-0.5 text-xs rounded-full" 
                             :class="activeTab === queue.id ? 'bg-white/20' : 'bg-gray-200 dark:bg-slate-600'"
                             x-text="(queue.videos?.length || 0)"></span>
+                      <!-- Durum göstergesi -->
+                      <span 
+                        :title="queue.is_active ? 'Kuyruk çalışıyor' : 'Kuyruk durduruldu'"
+                        class="text-lg"
+                        x-text="queue.is_active ? '🟢' : '🔴'"
+                      ></span>
                     </button>
                   </template>
                 </div>
@@ -612,73 +885,124 @@
                   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
                     <div class="p-3 border-b border-gray-100 dark:border-slate-700">
                       <div class="flex items-center justify-between">
-                        <button 
-                          @click="openQueueSettingsModal()"
-                          class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition"
-                        >
-                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                          Kuyruğu Düzenle
-                        </button>
+                        <div class="flex items-center gap-2">
+                          <button 
+                            @click="openQueueSettingsModal()"
+                            class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition"
+                          >
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            Kuyruğu Düzenle
+                          </button>
+                          <!-- Pause/Resume Button -->
+                          <button 
+                            @click="selectedQueue?.is_active ? pauseQueue(selectedQueue) : resumeQueue(selectedQueue)"
+                            class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition"
+                            :class="selectedQueue?.is_active ? 'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30' : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'"
+                          >
+                            <svg x-show="selectedQueue?.is_active" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <svg x-show="!selectedQueue?.is_active" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span x-text="selectedQueue?.is_active ? 'Durdur' : 'Çalıştır'"></span>
+                          </button>
+                        </div>
                         <select x-model="filterStatus" @change="filterVideos()" class="text-xs border border-gray-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 dark:text-white">
-                          <option value="all">Tümü</option>
                           <option value="pending">⏳ Bekleyen</option>
                           <option value="published">✅ Yayınlanan</option>
+                          <option value="all">Tümü</option>
                         </select>
                       </div>
                     </div>
                     
                     <div class="max-h-[500px] overflow-y-auto" id="videoSortList">
-                      <template x-if="filteredVideos.length === 0">
-                        <div class="p-6 text-center">
-                          <p class="text-gray-400 dark:text-gray-500 text-sm">Video yok</p>
-                          <a href="dashboard.php" class="text-indigo-600 text-xs hover:underline mt-2 inline-block">Ekle →</a>
-                        </div>
-                      </template>
+                      <div x-show="filteredVideos.length === 0" class="p-6 text-center">
+                        <p class="text-gray-400 dark:text-gray-500 text-sm">Video yok</p>
+                        <a href="dashboard.php" class="text-indigo-600 text-xs hover:underline mt-2 inline-block">Ekle →</a>
+                      </div>
                       
-                      <template x-for="(video, idx) in filteredVideos" :key="video.job_id">
+                      <template x-for="(video, idx) in filteredVideos" :key="idx">
                         <div 
                           @click="selectVideo(video)"
-                          class="p-2 cursor-pointer transition border-b border-gray-100 dark:border-slate-700 last:border-0"
-                          :class="selectedVideo?.job_id === video.job_id ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'hover:bg-gray-50 dark:hover:bg-slate-700/50'"
+                          class="px-3 py-2.5 cursor-pointer transition-all border-b border-gray-100 dark:border-slate-700/60 last:border-0"
+                          :class="[
+                            selectedVideo?.job_id === video.job_id
+                              ? 'bg-indigo-50 dark:bg-indigo-900/25'
+                              : 'hover:bg-gray-50 dark:hover:bg-slate-700/40',
+                            rowBorderClass(video)
+                          ]"
                           :data-job-id="video.job_id"
                         >
-                          <div class="flex items-center gap-2">
-                            <div class="drag-handle cursor-grab text-gray-300 dark:text-slate-500 hover:text-gray-500">
+                          <div class="flex items-start gap-2.5">
+                            
+                            <!-- Drag handle -->
+                            <div class="drag-handle cursor-grab text-gray-300 dark:text-slate-600 hover:text-gray-400 mt-2">
                               <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6-12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
                             </div>
-                            <div class="w-12 h-16 rounded overflow-hidden bg-gray-200 dark:bg-slate-700 flex-shrink-0 relative group">
-                              <template x-if="video.videoUrl">
-                                <video 
-                                  :src="video.videoUrl" 
-                                  :poster="video.thumbnailUrl"
-                                  class="w-full h-full object-cover cursor-pointer"
-                                  muted
-                                  playsinline
-                                  @click.stop="$event.target.paused ? $event.target.play() : $event.target.pause()"
-                                  @mouseenter="$event.target.play()"
-                                  @mouseleave="$event.target.pause(); $event.target.currentTime = 0;"
-                                ></video>
-                              </template>
-                              <template x-if="!video.videoUrl && video.thumbnailUrl">
-                                <img :src="video.thumbnailUrl" class="w-full h-full object-cover">
-                              </template>
-                              <template x-if="!video.videoUrl && !video.thumbnailUrl">
-                                <div class="w-full h-full flex items-center justify-center text-gray-400 text-xs" x-text="idx + 1"></div>
-                              </template>
-                              <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition pointer-events-none" x-show="video.videoUrl">
-                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+
+                            <!-- Sıra numarası -->
+                            <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-1.5 text-[10px] font-bold"
+                                 :class="allPublished(video) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : isProducing(video) || anyUploading(video) ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-slate-600 text-gray-500 dark:text-gray-400'"
+                                 x-text="idx + 1">
+                            </div>
+
+                            <!-- Thumbnail -->
+                            <div class="w-10 h-14 rounded overflow-hidden bg-gray-200 dark:bg-slate-700 flex-shrink-0 relative group">
+                              <video
+                                x-show="video.videoUrl"
+                                :src="video.videoUrl || ''"
+                                :poster="video.thumbnailUrl || ''"
+                                class="w-full h-full object-cover cursor-pointer"
+                                muted playsinline
+                                @click.stop="$event.target.paused ? $event.target.play() : $event.target.pause()"
+                                @mouseenter="$event.target.play()"
+                                @mouseleave="$event.target.pause(); $event.target.currentTime = 0;"
+                              ></video>
+                              <img
+                                x-show="!video.videoUrl && video.thumbnailUrl"
+                                :src="video.thumbnailUrl || ''"
+                                class="w-full h-full object-cover"
+                              >
+                              <div x-show="!video.videoUrl && !video.thumbnailUrl" class="w-full h-full flex items-center justify-center">
+                                <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                              </div>
+                              <!-- Oynat overlay -->
+                              <div x-show="video.videoUrl" class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                              </div>
+                              <!-- Üretim spinnerı (video yoksa üretiliyor) -->
+                              <div x-show="!video.videoUrl && isProducing(video)"
+                                   class="absolute inset-0 bg-gradient-to-b from-blue-900/80 to-blue-600/80 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-white icon-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                               </div>
                             </div>
+
+                            <!-- Bilgi kolonu -->
                             <div class="flex-1 min-w-0">
-                              <p class="text-xs font-medium text-gray-800 dark:text-white truncate" x-text="video.title || 'Video'"></p>
-                              <div class="flex gap-0.5 mt-0.5">
-                                <template x-for="(status, platform) in video.platform_status" :key="platform">
-                                  <span class="text-[10px] px-1 rounded" :class="{'bg-green-100 dark:bg-green-900/30 text-green-700': status === 'published', 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700': status === 'pending'}">
-                                    <span x-text="platform === 'youtube' ? '📺' : platform === 'tiktok' ? '🎵' : platform === 'instagram' ? '📸' : '📘'"></span>
-                                  </span>
-                                </template>
+                              <!-- Başlık -->
+                              <p class="text-xs font-semibold text-gray-800 dark:text-white truncate leading-tight mb-1.5" x-text="video.title || 'Video'"></p>
+
+                              <!-- İş üretim aşaması + canlı nokta -->
+                              <div class="flex items-center gap-1 mb-1">
+                                <span x-show="isProducing(video)" class="text-[9px] badge-live" style="color:#3b82f6;">●</span>
+                                <span class="platform-badge" :class="jobPhaseClass(getJobPhase(video))" x-text="jobPhaseLabel(getJobPhase(video))"></span>
+                              </div>
+
+                              <!-- Platform paylaşım durumu badge'leri (JS'de HTML olarak üretilir) -->
+                              <div class="flex flex-wrap gap-1" x-html="renderPlatformBadges(video)"></div>
+                            </div>
+
+                            <!-- Sağ: durum ikonu -->
+                            <div class="flex-shrink-0 flex flex-col items-center gap-1 mt-1">
+                              <div x-show="anyUploading(video)" class="flex items-center gap-0.5" title="Şu an yükleniyor">
+                                <span class="text-[9px] badge-live font-bold" style="color:#f59e0b;">●</span>
+                                <span class="text-[10px] font-semibold text-amber-500">Canlı</span>
+                              </div>
+                              <div x-show="allPublished(video)" class="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center" title="Tüm platformlarda yayınlandı">
+                                <svg class="w-3 h-3 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                              </div>
+                              <div x-show="anyFailed(video) && !allPublished(video)" class="w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center" title="Bazı platformlarda hata">
+                                <svg class="w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
                               </div>
                             </div>
+
                           </div>
                         </div>
                       </template>

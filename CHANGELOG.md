@@ -4,6 +4,40 @@ Bu dosya, projedeki tüm önemli değişiklikleri kronolojik sırayla takip eder
 
 ---
 
+## [2.2.0] - 2026-03-22 - Kuyruk UI Gerçek Zamanlı Durum Göstergesi
+
+### ✨ Eklenenler
+- **Platform durum badge'leri:** Her video için platform bazlı canlı paylaşım durumu göstergesi (📺 · bekliyor, ↻ işleniyor, ✓ yayınlandı, ✕ hata)
+- **İş aşaması badge'leri:** ⏳ Bekliyor / ✅ Hazır / 🎬 Video / ❌ Hata etiketleri
+- **Canlı animasyon:** Aktif upload sırasında "● Canlı" yanıp sönen gösterge
+- **Renkli sol kenarlık:** Video satırlarında durum bazlı renk kodu (sarı, mavi, yeşil, kırmızı)
+- **Thumbnail üretim spinner:** Video üretilirken thumbnail alanında dönen mavi animasyon
+- **Otomatik yenileme:** 15 saniyede bir kuyruk listesi güncellenir
+- **Gerçek platform durumu:** `social_queue.json` + `social_history.json` kaynağından anlık durum okunur
+
+### 🐛 Hata Düzeltmeleri
+- **Alpine.js `x-for` nested template crash:** `<template x-if>` yerine `x-show` kullanımına geçildi
+- **Duplicate job_id crash:** `x-for` key'i `video.job_id` yerine `idx` (index) kullanıyor; duplicate girişlerde Alpine çökmüyor
+- **`selectedQueue` null hatası:** `selectedQueue.is_active` → `selectedQueue?.is_active` optional chaining ile korunuyor
+- **Kuyruk veri deduplication:** `queues.json`'daki duplicate job_id girişleri temizlendi
+- **Platform durumu "Bekliyor" kalıyor:** `api/queues.php`'de `loadSocialPlatformStatus()` fonksiyonu ile `social_queue.json`'dan gerçek durum okunuyor
+
+### 🔧 Değişiklikler
+- `frontend/queues.php`
+  - Alpine.js `3.13.0` → `3.14.1` güncellendi
+  - `renderPlatformBadges(video)` — iç içe `x-for` yerine JS'de HTML string üretimi
+  - `filterStatus` varsayılanı `'all'` → `'pending'` (Bekleyen ilk görünür)
+  - `filterVideos()` — `platform_status` bazlı filtreleme (`allPublished()`)
+  - Filtre dropdown sırası: Bekleyen > Yayınlanan > Tümü
+  - CSS: `.badge-*`, `.row-*`, `.icon-spin`, `.badge-live` animasyon stilleri
+  - JS: `getPlatformStatus`, `getJobPhase`, `jobPhaseClass`, `jobPhaseLabel`, `isProducing`, `platformStatusClass`, `platformStatusIcon`, `platformStatusLabel`, `getPlatformPostUrl`, `allPublished`, `anyUploading`, `anyFailed`, `rowBorderClass`, `renderPlatformBadges` yardımcı fonksiyonları
+- `api/queues.php`
+  - `loadSocialPlatformStatus()` fonksiyonu eklendi — `social_queue.json` ve `social_history.json`'dan durum okur
+  - `list` ve `get` aksiyonlarında `platform_status` gerçek durum ile override ediliyor
+  - `job_status` alanı `get` aksiyon yanıtına eklendi
+
+---
+
 ## [2.1.0] - 2026-01-18 - Modern Kuyruk UI Tasarımı
 
 ### ✨ Eklenenler
@@ -261,13 +295,15 @@ Bu dosya, projedeki tüm önemli değişiklikleri kronolojik sırayla takip eder
 
 ## Planlanan Özellikler
 
-### v2.1.0
-- [ ] Toplu video üretimi
+### v2.3.0
+- [ ] Toplu video üretimi (birden fazla içerik aynı anda)
 - [ ] A/B test desteği
+- [ ] `queues.json`'daki `platform_status` alanını scheduler güncellediğinde otomatik senkronize etme
 
-### v2.2.0
+### v2.4.0
 - [ ] Analytics dashboard
-- [ ] Performans metrikleri
+- [ ] Performans metrikleri (izlenme, etkileşim)
+- [ ] Upload geçmişi sayfası (`social_history.json` görselleştirme)
 
 ### v3.0.0
 - [ ] Çoklu dil desteği

@@ -1,3 +1,362 @@
 {
-  "history": []
+  "history": [
+    {
+      "queue_id": "social_dcd015a1eef0463a",
+      "job_id": "job_69bf559b3bec80.82364190",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b3bec80.82364190\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-22T03:41:17.461994+00:00",
+      "status": "failed",
+      "priority": 0,
+      "metadata": {
+        "title": "Bolu’da husumetli gruplar sokak ortasında çatıştı",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T03:41:17.464386+00:00",
+      "retry_count": 3,
+      "last_error": null,
+      "completed_at": "2026-03-22T03:42:57.615277+00:00"
+    },
+    {
+      "queue_id": "social_60b4cf2febd04d86",
+      "job_id": "job_69bf559b357552.93126517",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b357552.93126517\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-22T03:26:47.115889+00:00",
+      "status": "failed",
+      "priority": 0,
+      "metadata": {
+        "title": "İran'ın vurduğu Arad'da büyük yıkım | Çok sayıda ölü ve yaralı var",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T03:26:47.118356+00:00",
+      "retry_count": 3,
+      "last_error": null,
+      "completed_at": "2026-03-22T03:28:31.468831+00:00"
+    },
+    {
+      "queue_id": "social_418a79fc6371411d",
+      "job_id": "job_69bf559b2ed134.65560868",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b2ed134.65560868\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "pnjezZC8I7w",
+          "post_url": "https://youtube.com/shorts/pnjezZC8I7w",
+          "error": null,
+          "uploaded_at": "2026-03-22T03:15:26.776179+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-22T03:14:16.908534+00:00",
+      "status": "success",
+      "priority": 0,
+      "metadata": {
+        "title": "Dimona ve Arad’a kritik saldırı: Dokunulamaz denen bölgedeler vuruldu",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T03:14:16.912529+00:00",
+      "retry_count": 0,
+      "last_error": null,
+      "completed_at": "2026-03-22T03:15:26.789856+00:00"
+    },
+    {
+      "queue_id": "social_2237ca1fe8894386",
+      "job_id": "job_69bf55250f6b49.26001828",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf55250f6b49.26001828\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "ESrcQ8r1pjg",
+          "post_url": "https://youtube.com/shorts/ESrcQ8r1pjg",
+          "error": null,
+          "uploaded_at": "2026-03-22T03:00:48.484401+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-22T02:59:46.692484+00:00",
+      "status": "success",
+      "priority": 0,
+      "metadata": {
+        "title": "ChatGPT Yardımıyla Köpeği İçin Kişiselleştirilmiş Kanser Aşısı Geliştirdi",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T02:59:46.697156+00:00",
+      "retry_count": 0,
+      "last_error": null,
+      "completed_at": "2026-03-22T03:00:48.492967+00:00"
+    },
+    {
+      "queue_id": "social_02068bcd23984be0",
+      "job_id": "job_69bf5525080bb0.89047506",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf5525080bb0.89047506\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "_182sp6XAlw",
+          "post_url": "https://youtube.com/shorts/_182sp6XAlw",
+          "error": null,
+          "uploaded_at": "2026-03-22T02:48:03.794803+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-22T02:46:46.478909+00:00",
+      "status": "success",
+      "priority": 0,
+      "metadata": {
+        "title": "Faturayı Kadınlara Kesti! Yapay Zekanın Hedefindeki Meslek Grupları Açıklandı",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T02:46:46.482617+00:00",
+      "retry_count": 0,
+      "last_error": null,
+      "completed_at": "2026-03-22T02:48:03.808685+00:00"
+    },
+    {
+      "queue_id": "social_f748ee9149d64459",
+      "job_id": "job_69bf51079246f7.30167492",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf51079246f7.30167492\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "67O1ApGo_ck",
+          "post_url": "https://youtube.com/shorts/67O1ApGo_ck",
+          "error": null,
+          "uploaded_at": "2026-03-22T02:31:35.896570+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-22T02:30:16.342546+00:00",
+      "status": "success",
+      "priority": 0,
+      "metadata": {
+        "title": "Zekiyseniz Sebebi Anneniz! Bilim Zeka Geninin Anneden Geçtiğini Açıkladı",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T02:30:16.347475+00:00",
+      "retry_count": 0,
+      "last_error": null,
+      "completed_at": "2026-03-22T02:31:35.907896+00:00"
+    },
+    {
+      "queue_id": "social_34f94ed28bc24259",
+      "job_id": "job_69bf43996961e4.24463412",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf43996961e4.24463412\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "2Qugq2D-vPk",
+          "post_url": "https://youtube.com/shorts/2Qugq2D-vPk",
+          "error": null,
+          "uploaded_at": "2026-03-22T01:59:39.103066+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-22T01:57:16.086996+00:00",
+      "status": "success",
+      "priority": 0,
+      "metadata": {
+        "title": "Google Gemini&apos;dan Bayram Şekeri Gibi Akım: Fotoğrafları Nostaljik Karelere Dönüştürdüler",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T01:57:16.089207+00:00",
+      "retry_count": 0,
+      "last_error": null,
+      "completed_at": "2026-03-22T01:59:39.122414+00:00"
+    },
+    {
+      "queue_id": "social_6ef4ab029dd148a0",
+      "job_id": "job_69bf4374734d74.68040670",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf4374734d74.68040670\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "42WPc_HjfIs",
+          "post_url": "https://youtube.com/shorts/42WPc_HjfIs",
+          "error": null,
+          "uploaded_at": "2026-03-22T01:48:11.765024+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-22T01:45:45.938863+00:00",
+      "status": "success",
+      "priority": 0,
+      "metadata": {
+        "title": "Gökbilimciler Evrenin En Nadir Yıldızlarından Birini Buldu",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T01:45:45.942573+00:00",
+      "retry_count": 0,
+      "last_error": null,
+      "completed_at": "2026-03-22T01:48:11.773509+00:00"
+    },
+    {
+      "queue_id": "social_364c243d8b344e3e",
+      "job_id": "job_69bf42e8a24c38.70475922",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf42e8a24c38.70475922\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "lPVXo3K8ZBY",
+          "post_url": "https://youtube.com/shorts/lPVXo3K8ZBY",
+          "error": null,
+          "uploaded_at": "2026-03-22T01:33:04.476591+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-22T01:31:45.297403+00:00",
+      "status": "success",
+      "priority": 0,
+      "metadata": {
+        "title": "İşler Tersine Döndü: Yapay Zeka, Artık İnsanlara Para Karşılığı İş Yaptıracak!",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T01:31:45.302999+00:00",
+      "retry_count": 0,
+      "last_error": null,
+      "completed_at": "2026-03-22T01:33:04.500707+00:00"
+    },
+    {
+      "queue_id": "social_562c167a89ff41e0",
+      "job_id": "job_69bc7f419aa4b0.32928005",
+      "video_path": "output\\job_69bc7f419aa4b0.32928005\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "PTVkkdR816g",
+          "post_url": "https://youtube.com/shorts/PTVkkdR816g",
+          "error": null,
+          "uploaded_at": "2026-03-22T00:40:52.482078+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-21T23:34:46.302730+00:00",
+      "status": "success",
+      "priority": 0,
+      "metadata": {
+        "title": "Bayram-sekeri-masali-ramazan-bayrami-masali",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-21T23:34:46.302746+00:00",
+      "retry_count": 0,
+      "last_error": null,
+      "completed_at": "2026-03-22T00:40:52.492526+00:00"
+    },
+    {
+      "queue_id": "social_612c99141074accc",
+      "job_id": "job_69bd66143544c1.20546059",
+      "video_path": "/output/job_69bd66143544c1.20546059/final_video.mp4",
+      "platforms": [
+        "youtube",
+        "tiktok",
+        "instagram",
+        "facebook"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "Video dosyası bulunamadı: /output/job_69bd66143544c1.20546059/final_video.mp4",
+          "uploaded_at": null
+        },
+        "tiktok": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "Video dosyası bulunamadı: /output/job_69bd66143544c1.20546059/final_video.mp4",
+          "uploaded_at": null
+        },
+        "instagram": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "Video dosyası bulunamadı: /output/job_69bd66143544c1.20546059/final_video.mp4",
+          "uploaded_at": null
+        },
+        "facebook": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "Video dosyası bulunamadı: /output/job_69bd66143544c1.20546059/final_video.mp4",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-20T21:34:48.882Z",
+      "status": "failed",
+      "priority": 0,
+      "metadata": {
+        "title": "Güzel Dini Masallar: Köstebek Masalı Ve Emek Hikayesi #Shorts",
+        "description": "Güzel Dini Masallar: Köstebek Masalı ve Emek Hikayesi\n\n🔔 Abone olmayı unutmayın!\n💬 Yorumlarınızı bekliyoruz!\n\n#Shorts #Haber #Teknoloji #Türkçe",
+        "tags": [
+          "Shorts",
+          "video",
+          "viral"
+        ]
+      },
+      "platform_metadata": [],
+      "created_at": "2026-03-20T22:34:48+01:00",
+      "retry_count": 0,
+      "last_error": null,
+      "completed_at": "2026-03-22T00:37:49.189119+00:00"
+    }
+  ]
 }

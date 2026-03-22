@@ -1,0 +1,35 @@
+{
+    "id": "job_69bf559b7af2a7.43783812",
+    "url": "https:\/\/www.ahaber.com.tr\/yasam\/2026\/03\/21\/bayram-tatili-bitti-donus-cilesi-basladi",
+    "template": "short_haber",
+    "scriptId": "",
+    "videoWidth": 1080,
+    "videoHeight": 1920,
+    "subtitleStyle": {
+        "FontName": "Arial",
+        "FontSize": 16,
+        "PrimaryColour": "#FFFF00",
+        "OutlineColour": "#000000",
+        "Outline": 2,
+        "Shadow": 1,
+        "MarginV": 80,
+        "Bold": 1,
+        "preset": "config",
+        "BorderStyle": 1,
+        "Alignment": 2
+    },
+    "status": "pending",
+    "created_at": "2026-03-22 03:36:11",
+    "previewUrl": "",
+    "subtitles": "",
+    "error": "",
+    "title": "Bayram tatili bitti! Dönüş çilesi başladı",
+    "content_id": "content_173135e3ef2a",
+    "source_type": "rss",
+    "queue_status": {
+        "queue_id": "youtube-testr-8737ec",
+        "queue_name": "Youtube Testr",
+        "status": "queued",
+        "added_at": "2026-03-22T03:36:11+01:00"
+    }
+}

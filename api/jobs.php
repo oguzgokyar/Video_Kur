@@ -63,19 +63,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $jobOutputDir = "$outputDir/$jobId";
     if (!is_dir($jobOutputDir)) { mkdir($jobOutputDir, 0777, true); }
 
-    // Python pipeline'ı arka planda başlat
-    $pythonScript = __DIR__ . '/../python/pipeline.py';
-    $configFile = "$dataDir/config.json";
-
-    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-        $cmd = "start /B $pythonCmd \"$pythonScript\" \"$jobId\" \"$url\" \"$template\" \"$configFile\" > \"$jobOutputDir/log.txt\" 2>&1";
+    // DEĞIŞTI: Pipeline başlatmak yerine production queue'ya ekle
+    // Eğer queue_id varsa production queue'ya ekle, yoksa direkt başlat (eski davranış)
+    $queue_id = $input['queue_id'] ?? null;
+    
+    if ($queue_id) {
+        // Production queue'ya ekle - scheduler başlatacak
+        $prodQueueData = file_exists("$dataDir/production_queue.json") 
+            ? json_decode(file_get_contents("$dataDir/production_queue.json"), true) 
+            : ['production_queue' => [], 'current_production' => null, 'max_concurrent' => 1, 'metadata' => []];
+        
+        $prodItem = [
+            'prod_queue_id' => 'prod_' . bin2hex(random_bytes(8)),
+            'job_id' => $jobId,
+            'queue_id' => $queue_id,
+            'status' => 'waiting',
+            'priority' => intval($input['priority'] ?? 0),
+            'added_at' => date('c'),
+            'started_at' => null,
+            'completed_at' => null,
+            'error' => null
+        ];
+        
+        $prodQueueData['production_queue'][] = $prodItem;
+        $prodQueueData['metadata']['last_updated'] = date('c');
+        file_put_contents("$dataDir/production_queue.json", json_encode($prodQueueData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        
+        echo json_encode(['jobId' => $jobId, 'status' => 'queued', 'message' => 'Üretim kuyruğuna eklendi']);
     } else {
-        $cmd = "$pythonCmd \"$pythonScript\" \"$jobId\" \"$url\" \"$template\" \"$configFile\" > \"$jobOutputDir/log.txt\" 2>&1 &";
+        // Eski davranış: Direkt pipeline başlat (queue_id yoksa)
+        $pythonScript = __DIR__ . '/../python/pipeline.py';
+        $configFile = "$dataDir/config.json";
+
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $cmd = "start /B $pythonCmd \"$pythonScript\" \"$jobId\" \"$url\" \"$template\" \"$configFile\" > \"$jobOutputDir/log.txt\" 2>&1";
+        } else {
+            $cmd = "$pythonCmd \"$pythonScript\" \"$jobId\" \"$url\" \"$template\" \"$configFile\" > \"$jobOutputDir/log.txt\" 2>&1 &";
+        }
+
+        pclose(popen($cmd, 'r'));
+        
+        echo json_encode(['jobId' => $jobId, 'status' => 'pending']);
     }
-
-    pclose(popen($cmd, 'r'));
-
-    echo json_encode(['jobId' => $jobId, 'status' => 'pending']);
     exit;
 }
 

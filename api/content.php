@@ -402,10 +402,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $content['processed_job_id'] = $job_id;
         saveContentPool($pool);
         
+        // Production queue'ya ekle
+        $dataDir = __DIR__ . '/../data';
+        $prodQueueFile = $dataDir . '/production_queue.json';
+        $prodQueueData = file_exists($prodQueueFile) 
+            ? json_decode(file_get_contents($prodQueueFile), true) 
+            : ['production_queue' => [], 'current_production' => null, 'max_concurrent' => 1, 'metadata' => []];
+        
+        $prodItem = [
+            'prod_queue_id' => 'prod_' . bin2hex(random_bytes(8)),
+            'job_id' => $job_id,
+            'queue_id' => $queue_id,
+            'status' => 'waiting',
+            'priority' => 0,
+            'added_at' => date('c'),
+            'started_at' => null,
+            'completed_at' => null,
+            'error' => null
+        ];
+        
+        $prodQueueData['production_queue'][] = $prodItem;
+        $prodQueueData['metadata']['last_updated'] = date('c');
+        file_put_contents($prodQueueFile, json_encode($prodQueueData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        
         echo json_encode([
             'success' => true,
             'job_id' => $job_id,
-            'message' => 'Job oluşturuldu'
+            'message' => 'Job oluşturuldu ve üretim kuyruğuna eklendi'
         ]);
         exit;
     }
