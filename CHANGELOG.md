@@ -4,6 +4,24 @@ Bu dosya, projedeki tüm önemli değişiklikleri kronolojik sırayla takip eder
 
 ---
 
+## [2.3.0] - 2026-03-22 - SEO Metadata Motoru ve Yükleme Stabilizasyonu
+
+### ✨ Eklenenler
+- **SEO Metadata Motoru:** Video yüklenmeden önce AI ile platform-spesifik (YouTube vb.) başlık, açıklama ve SEO uyumlu etiketlerin otomatik üretimi sağlandı.
+- **`metadata_cli.py` Aracı:** Metadata motoru öncesi üretilmiş veya metadatası eksik videoların, yükleme aşamasından önce anlık metadata oluşturması için CLI modülü eklendi.
+- **Scheduler Entegrasyonu:** `social_scheduler.py` ve `production_scheduler.py` içerisinde video kuyruğa alınırken otomatik metadata kontrolü ve üretimi mekanizması kuruldu.
+
+### 🐛 Hata Düzeltmeleri
+- **Yükleme Hatalarının Çözümü:** Metadata eksikliği yüzünden yükleme esnasında oluşan API hataları giderildi.
+- Kuyrukta takılı kalan veya donarak hata veren videoların tekrar islenip başariyla yüklenmesi sağlandı.
+
+### 🔧 Değişiklikler
+- `python/metadata_cli.py` adlı yeni metadata yönetim modülü oluşturuldu.
+- `python/scheduler/social_scheduler.py` ve `python/scheduler/production_scheduler.py` dosyalarında yükleme öncesi metadata validasyonu eklendi.
+- `api/youtube.php` üzerinde metadata kullanım ve kontrol iyileştirmeleri yapıldı.
+
+---
+
 ## [2.2.0] - 2026-03-22 - Kuyruk UI Gerçek Zamanlı Durum Göstergesi
 
 ### ✨ Eklenenler

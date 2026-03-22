@@ -171,11 +171,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'upload') {
     }
     
     // Prepare metadata arguments
-    $title = $metadata['title'] ?? 'YouTube Short';
+    $title       = $metadata['title'] ?? '';
     $description = $metadata['description'] ?? '';
-    $category = $metadata['category_id'] ?? '28';
-    $privacy = $metadata['privacy_status'] ?? 'public';
-    $tags = isset($metadata['tags']) ? implode(',', $metadata['tags']) : '#Shorts';
+    $category    = $metadata['category_id'] ?? '28';
+    $privacy     = $metadata['privacy_status'] ?? 'public';
+    $tags        = isset($metadata['tags']) ? implode(',', $metadata['tags']) : '';
+
+    // Baslik yoksa veya 'YouTube Short' gibi varsayilansa AI optimize et
+    $needsOptimize = (empty($title) || $title === 'YouTube Short' || $title === 'Video');
+    if ($needsOptimize) {
+        $configFile = $dataDir . '/config.json';
+        $config     = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+        $geminiKey  = $config['geminiKey'] ?? '';
+
+        // metadata_cli.py ile AI metadata uret
+        $metadataCmd = sprintf(
+            'cd "%s" && python metadata_cli.py --job-id "%s" --platform youtube --base-dir "%s" 2>NUL',
+            $pythonDir,
+            $jobId,
+            escapeshellarg(dirname($dataDir))
+        );
+        $metaOutput = [];
+        exec($metadataCmd, $metaOutput, $metaCode);
+
+        if ($metaCode === 0 && !empty($metaOutput)) {
+            $generatedMeta = json_decode(implode('', $metaOutput), true);
+            if (!empty($generatedMeta['title'])) {
+                $title       = $generatedMeta['title'];
+                $description = $generatedMeta['description'] ?? $description;
+                if (!empty($generatedMeta['tags'])) {
+                    $tags = implode(',', $generatedMeta['tags']);
+                }
+            }
+        }
+    }
+
+    // Hala bos kalirsa son care
+    if (empty($title))       { $title = 'YouTube Short'; }
+    if (empty($tags))        { $tags  = '#Shorts'; }
     
     // Build command with thumbnail support - use python -m to avoid import errors
     $cmd = sprintf(

@@ -329,6 +329,26 @@ class ProductionScheduler:
         # Default: now
         return now.isoformat()
     
+    def _load_script_text(self, job_id: str) -> str:
+        """output/job_id/script.json'dan duz metin olustur (metadata motoru icin)"""
+        script_file = self.base_dir / 'output' / job_id / 'script.json'
+        if not script_file.exists():
+            return ''
+        try:
+            with open(script_file, 'r', encoding='utf-8') as f:
+                script = json.load(f)
+            parts = []
+            if script.get('hook'):
+                parts.append(script['hook'])
+            for scene in script.get('scenes', []):
+                if scene.get('text'):
+                    parts.append(scene['text'])
+            if script.get('outro'):
+                parts.append(script['outro'])
+            return ' '.join(parts)
+        except Exception:
+            return ''
+
     def _add_to_social_queue(self, job_id: str, job_data: dict, queue: dict, scheduled_time: str, video_path: str):
         """Add video to social_queue.json for social scheduler"""
         try:
@@ -352,7 +372,10 @@ class ProductionScheduler:
                     'error': None,
                     'uploaded_at': None
                 }
-            
+
+            # Gercek script metnini yukle — metadata motoru bunu kullanacak
+            script_text = self._load_script_text(job_id)
+
             queue_item = {
                 'queue_id': f"social_{uuid.uuid4().hex[:16]}",
                 'job_id': job_id,
@@ -364,10 +387,12 @@ class ProductionScheduler:
                 'priority': 0,
                 'metadata': {
                     'title': job_data.get('title', 'Video'),
-                    'description': job_data.get('description', ''),
-                    'tags': job_data.get('tags', [])
+                    # description = gercek script metni (upload oncesi AI optimizasyon icin)
+                    'description': script_text or job_data.get('description', ''),
+                    'tags': job_data.get('tags', []),
+                    'privacy_status': 'public'
                 },
-                'platform_metadata': {},
+                'platform_metadata': {},  # social_scheduler upload oncesi dolduracak
                 'created_at': datetime.now(timezone.utc).isoformat(),
                 'retry_count': 0,
                 'last_error': None
@@ -378,10 +403,10 @@ class ProductionScheduler:
             with open(social_queue_file, 'w', encoding='utf-8') as f:
                 json.dump(social_data, f, indent=2, ensure_ascii=False)
             
-            print(f"📤 Social queue'ya eklendi: {job_id} (Zamanlama: {scheduled_time})")
+            print(f"\u2705 Social queue'ya eklendi: {job_id} | Script: {len(script_text)} kar | Zamanlama: {scheduled_time}")
             
         except Exception as e:
-            print(f"⚠️  Social queue ekleme hatası: {e}")
+            print(f"\u26a0\ufe0f  Social queue ekleme hatasi: {e}")
 
 
 # CLI Entry Point

@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scheduler.social_queue_manager import SocialQueueManager
 from social.platform_optimizer import PlatformMetadataOptimizer
+from youtube.metadata_optimizer import MetadataOptimizer
 
 # Platform uploaders
 from youtube.uploader import YouTubeUploader
@@ -65,10 +66,14 @@ class SocialMediaScheduler:
         # Initialize queue manager
         self.queue_manager = SocialQueueManager(str(self.data_dir))
         
-        # Initialize metadata optimizer
+        # Initialize metadata optimizers
         config = self._load_config()
         gemini_key = config.get('geminiKey')
-        self.metadata_optimizer = PlatformMetadataOptimizer(gemini_key)
+        gemini_model = config.get('geminiModel', 'gemini-2.0-flash')
+        # Sosyal platformlar icin (TikTok, Instagram, Facebook) → caption + hashtags
+        self.metadata_optimizer = PlatformMetadataOptimizer(gemini_key, model=gemini_model)
+        # YouTube icin → optimize edilmis title + description + tags
+        self.yt_metadata_optimizer = MetadataOptimizer(gemini_key=gemini_key, model=gemini_model)
         
         # Initialize uploaders
         self.uploaders = self._init_uploaders()
@@ -158,6 +163,27 @@ class SocialMediaScheduler:
         for item in pending:
             self._process_item(item)
     
+    def _get_script_text(self, job_id: str) -> str:
+        """output/job_id/script.json dosyasindan seslendirme metnini birlestirerek dondurur.
+        Metadata motorunun gercek icerige gore optimizasyon yapabilmesi icin kullanilir."""
+        script_file = self.base_dir / 'output' / job_id / 'script.json'
+        if not script_file.exists():
+            return ''
+        try:
+            with open(script_file, 'r', encoding='utf-8') as f:
+                script = json.load(f)
+            parts = []
+            if script.get('hook'):
+                parts.append(script['hook'])
+            for scene in script.get('scenes', []):
+                if scene.get('text'):
+                    parts.append(scene['text'])
+            if script.get('outro'):
+                parts.append(script['outro'])
+            return ' '.join(parts)
+        except Exception:
+            return ''
+
     def _process_item(self, item: Dict):
         """Process single queue item across all pending platforms"""
         queue_id = item['queue_id']
@@ -207,21 +233,49 @@ class SocialMediaScheduler:
         
         # Get platform-specific metadata
         platform_meta = item.get('platform_metadata', {}).get(platform, {})
-        
-        # Generate optimized metadata if not provided
+
+        # Upload oncesi platform-aware SEO metadata uret
         if not platform_meta:
             try:
-                platform_meta = self.metadata_optimizer.optimize_for_platform(
-                    platform=platform,
-                    original_title=base_metadata.get('title', ''),
-                    script_text=base_metadata.get('description', ''),
-                    base_tags=base_metadata.get('tags', []),
-                    use_ai=True
-                )
+                # Once social_queue'daki description'i dene (gercek script metni)
+                script_text = base_metadata.get('description', '')
+                # Yoksa script.json'dan yukle
+                if not script_text:
+                    script_text = self._get_script_text(item['job_id'])
+                # Hala yoksa baslik ile devam et
+                if not script_text:
+                    script_text = base_metadata.get('title', '')
+
+                original_title = base_metadata.get('title', '')
+                base_tags = base_metadata.get('tags', [])
+                use_ai = bool(getattr(self.metadata_optimizer, 'gemini_key', None))
+
+                if platform == 'youtube':
+                    # YouTube: MetadataOptimizer → title + description + tags
+                    print(f"   [META] YouTube icin AI metadata uretiliyor... ({len(script_text)} kar)")
+                    platform_meta = self.yt_metadata_optimizer.optimize_metadata(
+                        original_title=original_title,
+                        script_text=script_text,
+                        tags=base_tags,
+                        use_ai=use_ai
+                    )
+                else:
+                    # TikTok / Instagram / Facebook: PlatformMetadataOptimizer → caption + hashtags
+                    print(f"   [META] {platform.title()} icin AI metadata uretiliyor... ({len(script_text)} kar)")
+                    platform_meta = self.metadata_optimizer.optimize_for_platform(
+                        platform=platform,
+                        original_title=original_title,
+                        script_text=script_text,
+                        base_tags=base_tags,
+                        use_ai=use_ai
+                    )
             except Exception as e:
-                print(f"   [WARN] Metadata optimizasyonu başarısız: {e}")
+                print(f"   [WARN] Metadata optimizasyonu basarisiz, fallback kullaniliyor: {e}")
                 platform_meta = {
+                    'title': base_metadata.get('title', 'Video'),
+                    'description': base_metadata.get('description', ''),
                     'caption': base_metadata.get('description', base_metadata.get('title', '')),
+                    'tags': base_metadata.get('tags', []),
                     'hashtags': base_metadata.get('tags', [])
                 }
         
@@ -229,11 +283,27 @@ class SocialMediaScheduler:
             uploader = self.uploaders[platform]
             
             if platform == 'youtube':
+                # Optimize edilmis title'i kullan (MetadataOptimizer'dan geliyor)
+                yt_title = (
+                    platform_meta.get('title')
+                    or base_metadata.get('title', 'Video')
+                )
+                yt_description = (
+                    platform_meta.get('description')
+                    or platform_meta.get('caption', '')
+                    or base_metadata.get('description', '')
+                )
+                yt_tags = (
+                    platform_meta.get('tags')
+                    or platform_meta.get('hashtags')
+                    or base_metadata.get('tags', [])
+                )
+                print(f"   [YT] Baslik: {yt_title[:60]}")
                 result = uploader.upload_video(
                     video_path=video_path,
-                    title=base_metadata.get('title', 'Video'),
-                    description=platform_meta.get('caption', base_metadata.get('description', '')),
-                    tags=platform_meta.get('hashtags', base_metadata.get('tags', [])),
+                    title=yt_title,
+                    description=yt_description,
+                    tags=yt_tags,
                     privacy_status=base_metadata.get('privacy_status', 'public')
                 )
                 
