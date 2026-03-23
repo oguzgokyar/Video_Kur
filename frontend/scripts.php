@@ -125,7 +125,7 @@
   function scriptManager() {
     return {
       // App State
-      sidebarOpen: false,
+      sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === '1',
       darkMode: localStorage.getItem('darkMode') === '1',
       
       // Scripts State

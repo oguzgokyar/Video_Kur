@@ -44,7 +44,7 @@ $active_page = 'settings';
   <script>
   function settingsApp() {
     return {
-      sidebarOpen: false, darkMode: false, activeTab: 'genel',
+      sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === '1', darkMode: false, activeTab: 'genel',
       geminiKey: '', elevenKey: '', hfKey: '', pexelsKey: '', falKey: '', pollinationsKey: '',
       ttsProvider: 'elevenlabs', geminiModel: 'gemini-2.0-flash',
       imageService: 'pollinations', pollinationsModel: 'flux',

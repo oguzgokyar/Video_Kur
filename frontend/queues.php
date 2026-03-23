@@ -44,6 +44,7 @@
   function queuesApp() {
     return {
       sidebarOpen: false,
+      sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === '1',
       darkMode: false,
       loading: true,
       queues: [],
@@ -55,6 +56,11 @@
       previewPlatform: 'youtube',
       editingQueue: false,
       editingMetadata: false,
+      
+      // Queue Stats
+      queueStats: null,
+      loadingStats: false,
+      statsInterval: null,
       
       // Metadata form
       metadata: {
@@ -211,10 +217,42 @@
             this.selectedVideo = null;
             this.editingMetadata = false;
             this.$nextTick(() => this.initSortable());
+            // Load queue stats with auto-refresh
+            this.loadQueueStats();
+            // Clear old interval and set new 15-second refresh
+            if (this.statsInterval) clearInterval(this.statsInterval);
+            this.statsInterval = setInterval(() => this.loadQueueStats(), 15000);
           }
         } catch(e) {
           console.error('Kuyruk detayı yüklenemedi:', e);
         }
+      },
+      
+      // Load queue statistics
+      async loadQueueStats() {
+        if (!this.selectedQueue) return;
+        this.loadingStats = true;
+        try {
+          const r = await fetch('/api/queues.php?action=get_queue_stats&id=' + this.selectedQueue.id);
+          const d = await r.json();
+          if (d.success) {
+            this.queueStats = d.stats;
+          } else {
+            this.queueStats = null;
+          }
+        } catch(e) {
+          console.error('Stats yüklenemedi:', e);
+          this.queueStats = null;
+        }
+        this.loadingStats = false;
+      },
+
+      isSocialSchedulerRunning() {
+        return !!(this.queueStats?.scheduler_status?.social?.running);
+      },
+
+      isProductionSchedulerRunning() {
+        return !!(this.queueStats?.scheduler_status?.production?.running);
       },
       
       // New: Select queue for two-column view
@@ -558,6 +596,46 @@
         }
       },
       
+      async resetAndResumeQueue(queue) {
+        if (!confirm('Kuyruk resetlenecek:\n\n✓ Duplicate videolar temizlenecek\n✓ Sıra numaraları düzenlenecek\n✓ Takılı kalan durumlar sıfırlanacak\n\nDevam edilsin mi?')) {
+          return;
+        }
+        
+        try {
+          const response = await fetch('/api/queues.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'reset_and_resume',
+              queue_id: queue.id
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            const stats = result.stats || {};
+            let message = 'Kuyruk başarıyla resetlendi!\n\n';
+            if (stats.duplicates_removed > 0) message += `✓ ${stats.duplicates_removed} duplicate video temizlendi\n`;
+            if (stats.positions_fixed > 0) message += `✓ ${stats.positions_fixed} position düzeltildi\n`;
+            if (stats.status_reset > 0) message += `✓ ${stats.status_reset} durum sıfırlandı\n`;
+            if (stats.jobs_reset > 0) message += `✓ ${stats.jobs_reset} job dosyası güncellendi\n`;
+            alert(message);
+            
+            await this.loadQueues();
+            if (this.selectedQueue && this.selectedQueue.id === queue.id) {
+              await this.selectQueueTab(queue);
+            }
+            // İstatistikleri yenile
+            await this.loadQueueStats();
+          } else {
+            alert('Hata: ' + (result.error || 'Bilinmeyen hata'));
+          }
+        } catch (error) {
+          alert('Hata: ' + error.message);
+        }
+      },
+      
       async deleteQueue(queue) {
         if (!confirm('Bu kuyruğu silmek istediğinizden emin misiniz?\n\nKuyruk: ' + queue.name + '\nİçindeki ' + (queue.videos?.length || 0) + ' video kuyruktan çıkarılacak.')) {
           return;
@@ -670,13 +748,19 @@
       // ── Platform durum yardımcıları ──────────────────────────────
       // platform_status hem { youtube: 'pending' } hem { youtube: { status:'pending' } } olabilir
       getPlatformStatus(video, platform) {
+        if (!video || !video.platform_status) return 'pending';
         const ps = (video.platform_status || {})[platform];
         if (!ps) return 'pending';
         if (typeof ps === 'string') return ps;
-        return ps.status || 'pending';
+        const raw = ps.status || 'pending';
+        if (raw === 'uploaded' || raw === 'published') return 'success';
+        if (raw === 'queued') return 'pending';
+        if (raw === 'uploading') return 'processing';
+        return raw;
       },
 
       getPlatformPostUrl(video, platform) {
+        if (!video || !video.platform_status) return null;
         const ps = (video.platform_status || {})[platform];
         if (!ps || typeof ps === 'string') return null;
         return ps.post_url || null;
@@ -802,6 +886,11 @@
         this.loadQueues();
         // 15 saniyede bir canlı güncelleme
         setInterval(() => { if (this.selectedQueue) this.loadQueues(); }, 15000);
+      },
+      
+      toggleSidebarCollapse() {
+        this.sidebarCollapsed = !this.sidebarCollapsed;
+        localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed ? '1' : '0');
       }
     };
   }
@@ -877,11 +966,11 @@
                 </div>
               </div>
               
-              <!-- Main Content Grid -->
+              <!-- Main Content Grid: 3 columns (5-4-3) -->
               <div class="grid grid-cols-1 lg:grid-cols-12 gap-4" x-show="selectedQueue">
                 
-                <!-- Left: Videos List -->
-                <div class="lg:col-span-6">
+                <!-- Left: Videos List (5 cols) -->
+                <div class="lg:col-span-5">
                   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
                     <div class="p-3 border-b border-gray-100 dark:border-slate-700">
                       <div class="flex items-center justify-between">
@@ -902,6 +991,15 @@
                             <svg x-show="selectedQueue?.is_active" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             <svg x-show="!selectedQueue?.is_active" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             <span x-text="selectedQueue?.is_active ? 'Durdur' : 'Çalıştır'"></span>
+                          </button>
+                          <!-- Reset & Resume Button -->
+                          <button 
+                            @click="resetAndResumeQueue(selectedQueue)"
+                            class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition"
+                            title="Duplicate temizle, sıra düzelt, durumları resetle"
+                          >
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            Reset & Başlat
                           </button>
                         </div>
                         <select x-model="filterStatus" @change="filterVideos()" class="text-xs border border-gray-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 dark:text-white">
@@ -1010,8 +1108,8 @@
                   </div>
                 </div>
                 
-                <!-- Center: Video Preview + Metadata -->
-                <div class="lg:col-span-6">
+                <!-- Center: Video Preview + Metadata (4 cols) -->
+                <div class="lg:col-span-4">
                   <template x-if="!selectedVideo">
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-12 text-center h-full flex flex-col items-center justify-center">
                       <svg class="w-16 h-16 mb-4 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
@@ -1165,15 +1263,16 @@
                                 <span 
                                   class="text-xs px-2 py-1 rounded-full"
                                   :class="{
-                                    'bg-green-100 dark:bg-green-900/30 text-green-700': selectedVideo?.platform_status?.[previewPlatform] === 'published',
-                                    'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700': selectedVideo?.platform_status?.[previewPlatform] === 'pending',
-                                    'bg-red-100 dark:bg-red-900/30 text-red-700': selectedVideo?.platform_status?.[previewPlatform] === 'failed'
+                                    'bg-green-100 dark:bg-green-900/30 text-green-700': getPlatformStatus(selectedVideo, previewPlatform) === 'success',
+                                    'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700': getPlatformStatus(selectedVideo, previewPlatform) === 'pending',
+                                    'bg-blue-100 dark:bg-blue-900/30 text-blue-700': getPlatformStatus(selectedVideo, previewPlatform) === 'processing',
+                                    'bg-red-100 dark:bg-red-900/30 text-red-700': getPlatformStatus(selectedVideo, previewPlatform) === 'failed'
                                   }"
-                                  x-text="selectedVideo?.platform_status?.[previewPlatform] === 'published' ? '✓ Yayınlandı' : selectedVideo?.platform_status?.[previewPlatform] === 'pending' ? '⏳ Bekliyor' : '✗ Başarısız'"
+                                  x-text="getPlatformStatus(selectedVideo, previewPlatform) === 'success' ? '✓ Yayınlandı' : getPlatformStatus(selectedVideo, previewPlatform) === 'processing' ? '🔄 Yükleniyor' : getPlatformStatus(selectedVideo, previewPlatform) === 'failed' ? '✗ Başarısız' : '⏳ Bekliyor'"
                                 ></span>
                               </div>
-                              <template x-if="selectedVideo?.platform_status?.[previewPlatform] === 'published' && selectedVideo?.post_urls?.[previewPlatform]">
-                                <a :href="selectedVideo.post_urls[previewPlatform]" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline">
+                              <template x-if="getPlatformStatus(selectedVideo, previewPlatform) === 'success' && getPlatformPostUrl(selectedVideo, previewPlatform)">
+                                <a :href="getPlatformPostUrl(selectedVideo, previewPlatform)" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline">
                                   <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                                   Paylaşıma Git
                                 </a>
@@ -1215,6 +1314,151 @@
                       </div>
                     </div>
                   </template>
+                </div>
+                
+                <!-- Right: Queue Stats Widget (3 cols) -->
+                <div class="lg:col-span-3">
+                  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 sticky top-4">
+                    <div class="p-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
+                      <h3 class="font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                        📊 Kuyruk Durumu
+                      </h3>
+                      <button @click="loadQueueStats()" class="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400">
+                        🔄 Yenile
+                      </button>
+                    </div>
+                    
+                    <div class="p-4 space-y-4">
+                      <!-- Loading -->
+                      <template x-if="loadingStats">
+                        <div class="text-center py-4">
+                          <div class="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                          <p class="text-xs text-gray-400 mt-2">Yükleniyor...</p>
+                        </div>
+                      </template>
+                      
+                      <!-- Stats Content -->
+                      <template x-if="!loadingStats && queueStats">
+                        <div class="space-y-4">
+                          <!-- Queue Status -->
+                          <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
+                            <span class="text-sm text-gray-600 dark:text-gray-300">Durum</span>
+                            <span class="flex items-center gap-1.5 text-sm font-medium" 
+                                  :class="queueStats.blocked_reason ? 'text-red-600 dark:text-red-400' : (queueStats.is_active && isSocialSchedulerRunning() ? 'text-green-600 dark:text-green-400' : 'text-yellow-500')">
+                              <span class="w-2 h-2 rounded-full animate-pulse" :class="queueStats.blocked_reason ? 'bg-red-500' : (queueStats.is_active && isSocialSchedulerRunning() ? 'bg-green-500' : 'bg-yellow-500')"></span>
+                              <span x-text="queueStats.blocked_reason ? '⛔ Engellendi' : (queueStats.is_active && isSocialSchedulerRunning() ? '● Çalışıyor' : '⏸️ Durduruldu')"></span>
+                            </span>
+                          </div>
+                          
+                          <!-- Error Alert -->
+                          <template x-if="queueStats.blocked_reason">
+                            <div class="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                              <div class="flex items-start gap-2">
+                                <span class="text-red-500 text-lg">⚠️</span>
+                                <div class="flex-1 min-w-0">
+                                  <p class="text-xs font-medium text-red-700 dark:text-red-400 mb-1">Paylaşım Engellendi</p>
+                                  <p class="text-xs text-red-600 dark:text-red-300 break-words" x-html="queueStats.blocked_reason.replace(/<a[^>]*>|<\/a>/g, '')"></p>
+                                </div>
+                              </div>
+                              <button 
+                                @click="resetAndResumeQueue(selectedQueue)"
+                                class="mt-2 w-full py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition flex items-center justify-center gap-1"
+                              >
+                                🔄 Sıfırla ve Tekrar Dene
+                              </button>
+                            </div>
+                          </template>
+                          
+                          <!-- Current Item -->
+                          <template x-if="queueStats.current_item">
+                            <div class="p-3 border border-gray-200 dark:border-slate-600 rounded-lg">
+                              <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">📍 Sıradaki Video</p>
+                              <div class="flex items-center gap-2">
+                                <span class="w-6 h-6 flex items-center justify-center text-xs font-bold rounded-full"
+                                      :class="queueStats.current_item.status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' : 
+                                              queueStats.current_item.status === 'processing' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400' : 
+                                              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400'"
+                                      x-text="queueStats.current_item.position"></span>
+                                <div class="flex-1 min-w-0">
+                                  <p class="text-sm font-medium text-gray-800 dark:text-white truncate" x-text="queueStats.current_item.title"></p>
+                                  <p class="text-xs" 
+                                     :class="queueStats.current_item.status === 'failed' ? 'text-red-500' : 
+                                             queueStats.current_item.status === 'processing' ? 'text-blue-500' : 'text-yellow-500'"
+                                     x-text="queueStats.current_item.status === 'failed' ? '❌ Başarısız' : 
+                                             queueStats.current_item.status === 'processing' ? '🔄 Yükleniyor...' : '⏳ Bekliyor'"></p>
+                                </div>
+                              </div>
+                            </div>
+                          </template>
+                          
+                          <!-- Production Status -->
+                          <template x-if="queueStats.production_status && isProductionSchedulerRunning()">
+                            <div class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                              <div class="flex items-center gap-2">
+                                <span class="text-purple-500">🎬</span>
+                                <div class="flex-1">
+                                  <p class="text-xs font-medium text-purple-700 dark:text-purple-400">
+                                    <span x-show="queueStats.production_status.status === 'producing'">Video Üretiliyor...</span>
+                                    <span x-show="queueStats.production_status.status === 'waiting'" x-text="'⏳ ' + (queueStats.production_status.waiting_count || 0) + ' video üretim bekliyor'"></span>
+                                  </p>
+                                </div>
+                                <div x-show="queueStats.production_status.status === 'producing'" class="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                              </div>
+                            </div>
+                          </template>
+                          
+                          <!-- Platform Stats -->
+                          <template x-for="platform in Object.keys(queueStats.platforms || {})" :key="platform">
+                            <div class="border border-gray-100 dark:border-slate-600 rounded-lg p-3">
+                              <div class="flex items-center gap-2 mb-2">
+                                <span x-text="platform === 'youtube' ? '📺' : platform === 'tiktok' ? '🎵' : platform === 'instagram' ? '📸' : '📘'" class="text-lg"></span>
+                                <span class="font-medium text-gray-800 dark:text-white capitalize" x-text="platform === 'youtube' ? 'YouTube' : platform === 'tiktok' ? 'TikTok' : platform === 'instagram' ? 'Instagram' : 'Facebook'"></span>
+                              </div>
+                              <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div class="flex items-center justify-between bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-1 rounded">
+                                  <span>✅ Yayında</span>
+                                  <span class="font-bold" x-text="queueStats.platforms[platform]?.published || 0"></span>
+                                </div>
+                                <div class="flex items-center justify-between bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-2 py-1 rounded">
+                                  <span>⏳ Bekliyor</span>
+                                  <span class="font-bold" x-text="queueStats.platforms[platform]?.pending || 0"></span>
+                                </div>
+                                <div class="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-2 py-1 rounded">
+                                  <span>🔄 Yükleniyor</span>
+                                  <span class="font-bold" x-text="queueStats.platforms[platform]?.uploading || 0"></span>
+                                </div>
+                                <div class="flex items-center justify-between bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-2 py-1 rounded">
+                                  <span>❌ Hata</span>
+                                  <span class="font-bold" x-text="queueStats.platforms[platform]?.failed || 0"></span>
+                                </div>
+                              </div>
+                            </div>
+                          </template>
+                          
+                          <!-- Totals -->
+                          <div class="pt-3 border-t border-gray-100 dark:border-slate-600">
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                              <div class="text-center p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
+                                <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400" x-text="Object.values(queueStats.platforms || {}).reduce((s, p) => s + (p.published || 0), 0)"></div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Toplam Yayınlanan</div>
+                              </div>
+                              <div class="text-center p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
+                                <div class="text-2xl font-bold text-amber-600 dark:text-amber-400" x-text="Object.values(queueStats.platforms || {}).reduce((s, p) => s + (p.pending || 0), 0)"></div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Toplam Bekleyen</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </template>
+                      
+                      <!-- No Stats -->
+                      <template x-if="!loadingStats && !queueStats">
+                        <div class="text-center py-4 text-gray-400 dark:text-gray-500 text-sm">
+                          İstatistik bulunamadı
+                        </div>
+                      </template>
+                    </div>
+                  </div>
                 </div>
                 
               </div>
@@ -1450,13 +1694,14 @@
                             <span 
                               class="px-1.5 py-0.5 rounded text-xs font-medium"
                               :class="{
-                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': status === 'published',
-                                'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400': status === 'pending',
-                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': status === 'failed'
+                                'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': getPlatformStatus(video, platform) === 'success',
+                                'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400': getPlatformStatus(video, platform) === 'pending',
+                                'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': getPlatformStatus(video, platform) === 'processing',
+                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': getPlatformStatus(video, platform) === 'failed'
                               }"
                             >
                               <span x-text="platform === 'youtube' ? '📺' : platform === 'tiktok' ? '🎵' : platform === 'instagram' ? '📸' : '📘'"></span>
-                              <span x-text="status === 'published' ? '✓' : status === 'failed' ? '✗' : '⏳'"></span>
+                              <span x-text="getPlatformStatus(video, platform) === 'success' ? '✓' : getPlatformStatus(video, platform) === 'failed' ? '✗' : getPlatformStatus(video, platform) === 'processing' ? '↻' : '⏳'"></span>
                             </span>
                           </template>
                         </div>

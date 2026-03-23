@@ -18,7 +18,7 @@
   <script>
   function contentApp() {
     return {
-      sidebarOpen: false,
+      sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === '1',
       darkMode: false,
       loading: true,
       
@@ -113,9 +113,11 @@
           const data = await resp.json();
           if (data.success) {
             this.queues = data.queues || [];
-            // Eğer aktif tab yoksa veya artık mevcut değilse ilk kuyruğu seç
-            if (!this.activeQueueTab && this.queues.length > 0) {
+            // Aktif tab yoksa veya artık yoksa ilk kuyruğu seç
+            if (this.queues.length > 0 && !this.queues.some(q => q.id === this.activeQueueTab)) {
               this.activeQueueTab = this.queues[0].id;
+            } else if (this.queues.length === 0) {
+              this.activeQueueTab = null;
             }
           }
         } catch (err) {
@@ -131,10 +133,39 @@
         return this.queues.find(q => q.id === this.activeQueueTab);
       },
       
-      get activeQueueVideos() {
-        const queue = this.activeQueue;
+      normalizePlatformStatus(rawStatus) {
+        const s = typeof rawStatus === 'string' ? rawStatus : (rawStatus?.status || 'pending');
+        const normalized = (s || 'pending').toLowerCase();
+        if (normalized === 'published' || normalized === 'uploaded' || normalized === 'success') return 'success';
+        if (normalized === 'queued') return 'pending';
+        if (normalized === 'uploading') return 'processing';
+        return normalized;
+      },
+
+      getVideoPlatformStatuses(video) {
+        const ps = video?.platform_status || {};
+        return Object.keys(ps).map(platform => this.normalizePlatformStatus(ps[platform]));
+      },
+
+      isVideoFullyPublished(video) {
+        if (!video) return false;
+        if ((video.status || '').toLowerCase() === 'published') return true;
+        const statuses = this.getVideoPlatformStatuses(video);
+        return statuses.length > 0 && statuses.every(s => s === 'success');
+      },
+
+      getVisibleQueueVideos(queue) {
         if (!queue) return [];
-        return queue.videos || [];
+        const videos = queue.videos || [];
+        return videos.filter(video => !this.isVideoFullyPublished(video));
+      },
+
+      getQueueTabCount(queue) {
+        return this.getVisibleQueueVideos(queue).length;
+      },
+
+      get activeQueueVideos() {
+        return this.getVisibleQueueVideos(this.activeQueue);
       },
       
       toggleSelect(contentId) {
@@ -472,20 +503,41 @@
       
       // Kuyruk öğesi için durum metni (video üretilmiş mi?)
       getQueueVideoStatus(video) {
-        // job_status (job.json'daki status) veya video.status'a bak
-        const jobStatus = video.job_status || video.status || 'pending';
-        if (jobStatus === 'done' || jobStatus === 'completed') {
-          return 'Paylaşılacak';
+        const statuses = this.getVideoPlatformStatuses(video);
+        const jobStatus = (video.job_status || video.status || 'pending').toLowerCase();
+        const producingPhases = ['scraping', 'scripting', 'imaging', 'tts', 'subtitling', 'composing'];
+
+        if (statuses.length > 0) {
+          const successCount = statuses.filter(s => s === 'success').length;
+          if (successCount === statuses.length) return 'Yayınlandı';
+          if (statuses.includes('failed') && successCount > 0) return 'Kısmi Başarılı';
+          if (statuses.includes('failed')) return 'Başarısız';
+          if (statuses.includes('processing')) return 'Yükleniyor';
+          if (statuses.includes('pending')) {
+            if (jobStatus === 'done' || jobStatus === 'completed') return 'Paylaşım Bekliyor';
+            if (producingPhases.includes(jobStatus)) return 'Üretiliyor';
+            return 'Sırada';
+          }
         }
-        return 'Üretilecek';
+
+        if (jobStatus === 'done' || jobStatus === 'completed') return 'Paylaşım Bekliyor';
+        if (jobStatus === 'failed') return 'Başarısız';
+        if (producingPhases.includes(jobStatus)) return 'Üretiliyor';
+        return 'Sırada';
       },
       
       getQueueVideoStatusBadge(video) {
-        const jobStatus = video.job_status || video.status || 'pending';
-        if (jobStatus === 'done' || jobStatus === 'completed') {
-          return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-        }
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+        const status = this.getQueueVideoStatus(video);
+        const badges = {
+          'Yayınlandı': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+          'Kısmi Başarılı': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+          'Yükleniyor': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+          'Paylaşım Bekliyor': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
+          'Üretiliyor': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300',
+          'Sırada': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+          'Başarısız': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+        };
+        return badges[status] || badges['Sırada'];
       },
       
       formatDate(dateStr) {
@@ -633,7 +685,7 @@
                         : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'"
                       class="px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition flex items-center gap-2">
                       <span x-text="queue.name"></span>
-                      <span class="text-xs opacity-70" x-text="`(${(queue.videos || []).length})`"></span>
+                      <span class="text-xs opacity-70" x-text="`(${getQueueTabCount(queue)})`"></span>
                     </button>
                   </template>
                   
@@ -654,7 +706,7 @@
                 
                 <!-- Queue Videos -->
                 <div x-show="activeQueueTab" class="space-y-2">
-                  <template x-for="(video, index) in activeQueueVideos" :key="video.id || index">
+                  <template x-for="(video, index) in activeQueueVideos" :key="video.job_id || video.id || index">
                     <div class="queue-item p-3 rounded-lg border border-gray-200 dark:border-slate-700 anim-fade-in">
                       <div class="flex items-center gap-3">
                         
@@ -703,7 +755,7 @@
               <div x-show="activeQueue" class="p-3 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
                 <div class="flex items-center justify-between text-sm">
                   <span class="text-gray-600 dark:text-gray-400">
-                    Platform: <span class="font-medium text-gray-900 dark:text-white" x-text="activeQueue?.platform || 'YouTube'"></span>
+                    Platform: <span class="font-medium text-gray-900 dark:text-white" x-text="(activeQueue?.platforms || []).join(', ') || '-'"></span>
                   </span>
                   <span class="text-gray-600 dark:text-gray-400">
                     <span class="font-medium text-gray-900 dark:text-white" x-text="activeQueueVideos.length"></span> video

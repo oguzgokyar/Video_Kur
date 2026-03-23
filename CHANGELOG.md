@@ -4,6 +4,29 @@ Bu dosya, projedeki tüm önemli değişiklikleri kronolojik sırayla takip eder
 
 ---
 
+## [2.4.0] - 2026-03-23 - Kuyruk Senkronizasyonu ve UI Tutarlılığı
+
+### ✨ Eklenenler
+- **İçerikler > Kuyruklar paneli güncellemesi:** Tamamen paylaşılmış öğeler listeden gizlenir, kalan öğeler güncel paylaşım durumlarıyla gösterilir.
+- **Videolar sayfası filtreleri:** Üretim durumu (bekleyen/tamamlanan/tümü) ve kuyruk üyeliği filtreleri eklendi; varsayılan görünüm "bekleyen" olarak ayarlandı.
+- **Sidebar durum kalıcılığı:** Sidebar açık/kapalı (collapsed) durumu sayfalar arasında `localStorage` ile korunur.
+
+### 🐛 Hata Düzeltmeleri
+- **Social scheduler çökmesi düzeltildi:** `platform_metadata` alanı list geldiğinde oluşan `'list' object has no attribute 'get'` hatası tip kontrolleriyle giderildi.
+- **Scheduler durumu UI senkronu:** Paylaşım scheduler durduğunda Kuyruk Durumu kartı artık "Çalışıyor" göstermiyor.
+- **Kuyruk reset sonrası yanlış durumlar:** `failed/processing` statüleri reset sonrası doğru şekilde temizlenip yeniden sıraya alınır.
+- **Yanlış "Video Üretiliyor..." göstergesi:** Üretim scheduler duruyken bu durum artık gösterilmiyor.
+
+### 🔧 Değişiklikler
+- `api/queues.php`: platform durum normalizasyonu, çoklu kaynak durum birleştirme, reset kapsamı genişletme, scheduler durumu çıktısı.
+- `frontend/queues.php`: platform badge/önizleme durumlarının normalize edilmesi ve gerçek scheduler durumuna göre kuyruk durum etiketi.
+- `python/scheduler/social_scheduler.py`: veri şekli doğrulama, güvenli metadata erişimi ve item-bazlı hata izolasyonu.
+- `frontend/content.php`: kuyruk panelinde canlı durum eşleme ve paylaşımı tamamlanan öğeleri gizleme.
+- `frontend/dashboard.php`: üretim + kuyruk filtreleme ve filtreye bağlı liste/sayaç güncellemeleri.
+- `frontend/components/_sidebar.php`: sidebar durumunun component içinde yönetimi ve sayfalar arası kalıcılık.
+
+---
+
 ## [2.3.0] - 2026-03-22 - SEO Metadata Motoru ve Yükleme Stabilizasyonu
 
 ### ✨ Eklenenler

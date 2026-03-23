@@ -6,7 +6,7 @@
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js" defer></script>
 </head>
 <body class="bg-gray-100 min-h-screen" x-data="{ 
-  sidebarOpen: false, 
+  sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === '1', 
   url: '', 
   template: 'short_haber', 
   jobId: '', 

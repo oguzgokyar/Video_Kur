@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $dataDir = __DIR__ . '/../data';
 $queuesFile = $dataDir . '/queues.json';
 $jobsDir = $dataDir . '/jobs';
+$schedulerStatusFile = $dataDir . '/scheduler_status.json';
 
 // Kuyruk verilerini yükle
 function loadQueues() {
@@ -59,6 +60,125 @@ function saveJob($jobId, $data) {
     file_put_contents($jobFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 }
 
+/**
+ * Pending videoları social_queue.json'a ekle (eğer zaten yoksa)
+ * @param array $queue Queue verisi
+ * @param string $dataDir Data dizini
+ * @return int Eklenen video sayısı
+ */
+function addPendingVideosToSocialQueue($queue, $dataDir) {
+    $socialQueueFile = $dataDir . '/social_queue.json';
+    $baseDir = dirname($dataDir);
+    
+    // Social queue'yu yükle veya oluştur
+    if (file_exists($socialQueueFile)) {
+        $socialQueue = json_decode(file_get_contents($socialQueueFile), true);
+    } else {
+        $socialQueue = ['queue' => []];
+    }
+    
+    // Mevcut job_id'leri topla
+    $existingJobIds = [];
+    foreach ($socialQueue['queue'] as $item) {
+        $existingJobIds[] = $item['job_id'];
+    }
+    
+    $added = 0;
+    $platforms = $queue['platforms'] ?? ['youtube'];
+    
+    // Videoları position sırasına göre işle
+    $videos = $queue['videos'] ?? [];
+    usort($videos, function($a, $b) {
+        return ($a['position'] ?? 999) - ($b['position'] ?? 999);
+    });
+    
+    foreach ($videos as $video) {
+        $jobId = $video['job_id'];
+        
+        // Zaten social_queue'da varsa atla
+        if (in_array($jobId, $existingJobIds)) {
+            continue;
+        }
+        
+        // Job dosyasını yükle
+        $job = loadJob($jobId);
+        if (!$job) continue;
+        
+        // Video dosyası var mı kontrol et
+        $videoPath = $baseDir . '/output/' . $jobId . '/final_video.mp4';
+        if (!file_exists($videoPath)) {
+            continue; // Video henüz üretilmemiş
+        }
+        
+        // Her platform için durumu kontrol et
+        $pendingPlatforms = [];
+        foreach ($platforms as $platform) {
+            $platformStatus = null;
+            if (isset($job['social_upload']['platforms'][$platform])) {
+                $platformStatus = $job['social_upload']['platforms'][$platform];
+            }
+            
+            $status = is_array($platformStatus) ? ($platformStatus['status'] ?? 'pending') : ($platformStatus ?? 'pending');
+            
+            // Sadece pending olanları ekle (success olanları ekleme)
+            if ($status === 'pending') {
+                $pendingPlatforms[] = $platform;
+            }
+        }
+        
+        if (empty($pendingPlatforms)) {
+            continue; // Tüm platformlar zaten tamamlanmış
+        }
+        
+        // Platform status oluştur
+        $platformStatus = [];
+        foreach ($pendingPlatforms as $platform) {
+            $platformStatus[$platform] = [
+                'status' => 'pending',
+                'post_id' => null,
+                'post_url' => null,
+                'error' => null,
+                'uploaded_at' => null
+            ];
+        }
+        
+        // Social queue item oluştur
+        // Priority: Negatif position (düşük position = yüksek öncelik)
+        // Social scheduler high-to-low sıralıyor, bu yüzden position 1 → priority -1 (en yüksek)
+        $position = $video['position'] ?? 999;
+        $queueItem = [
+            'queue_id' => 'social_' . substr(uniqid(), -16),
+            'job_id' => $jobId,
+            'video_path' => $videoPath,
+            'platforms' => $pendingPlatforms,
+            'platform_status' => $platformStatus,
+            'scheduled_time' => date('c'),
+            'status' => 'pending',
+            'priority' => -$position, // Negatif position = düşük position önce
+            'metadata' => [
+                'title' => $job['title'] ?? 'Video',
+                'description' => $job['description'] ?? '',
+                'tags' => $job['tags'] ?? []
+            ],
+            'platform_metadata' => new stdClass(),
+            'created_at' => date('c'),
+            'updated_at' => date('c'),
+            'retry_count' => 0
+        ];
+        
+        $socialQueue['queue'][] = $queueItem;
+        $existingJobIds[] = $jobId;
+        $added++;
+    }
+    
+    // Kaydet
+    if ($added > 0) {
+        file_put_contents($socialQueueFile, json_encode($socialQueue, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+    
+    return $added;
+}
+
 // Benzersiz ID oluştur
 function generateId($name) {
     $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $name));
@@ -76,28 +196,34 @@ function loadSocialPlatformStatus() {
     global $dataDir;
     $result = [];
 
-    $files = [
-        $dataDir . '/social_queue.json',
-        $dataDir . '/social_history.json'
+    // Önce history'yi oku, sonra aktif queue ile override et.
+    // Böylece reset sonrası yeniden kuyruğa alınan videolarda eski failed history baskın gelmez.
+    $sources = [
+        ['file' => $dataDir . '/social_history.json', 'key' => 'history', 'force_override' => false],
+        ['file' => $dataDir . '/social_queue.json', 'key' => 'queue', 'force_override' => true]
     ];
 
-    foreach ($files as $file) {
+    foreach ($sources as $source) {
+        $file = $source['file'];
         if (!file_exists($file)) continue;
         $raw = json_decode(file_get_contents($file), true);
-        // social_queue.json key: 'queue', social_history.json key: 'history'
-        $items = $raw['queue'] ?? $raw['history'] ?? [];
+        $items = $raw[$source['key']] ?? [];
         foreach ($items as $item) {
             $jobId = $item['job_id'] ?? null;
             if (!$jobId) continue;
             $platformStatus = $item['platform_status'] ?? [];
-            // Merge: bir job için birden fazla social_queue girişi olabilir, en güncel olanlar kazansın
             if (!isset($result[$jobId])) {
                 $result[$jobId] = [];
             }
             foreach ($platformStatus as $platform => $ps) {
-                // Eğer zaten bu platform için daha iyi bir durum varsa override etme
-                $existingStatus = $result[$jobId][$platform]['status'] ?? 'pending';
-                $newStatus = is_array($ps) ? ($ps['status'] ?? 'pending') : $ps;
+                if ($source['force_override']) {
+                    $result[$jobId][$platform] = is_array($ps) ? $ps : ['status' => $ps];
+                    continue;
+                }
+
+                // History merge: daha güçlü durum baskın gelsin
+                $existingStatus = normalizePlatformStatusValue($result[$jobId][$platform]['status'] ?? 'pending');
+                $newStatus = extractPlatformStatusValue($ps);
                 // Öncelik: success > failed > processing > pending
                 $priority = ['success' => 4, 'failed' => 3, 'processing' => 2, 'pending' => 1];
                 $existingPrio = $priority[$existingStatus] ?? 0;
@@ -110,6 +236,86 @@ function loadSocialPlatformStatus() {
     }
 
     return $result;
+}
+
+function normalizePlatformStatusValue($status) {
+    if (!is_string($status) || $status === '') {
+        return 'pending';
+    }
+    $status = strtolower($status);
+    if ($status === 'uploaded' || $status === 'published') {
+        return 'success';
+    }
+    if ($status === 'queued') {
+        return 'pending';
+    }
+    if ($status === 'uploading') {
+        return 'processing';
+    }
+    return $status;
+}
+
+function extractPlatformStatusValue($platformStatus) {
+    if (is_array($platformStatus)) {
+        return normalizePlatformStatusValue($platformStatus['status'] ?? 'pending');
+    }
+    return normalizePlatformStatusValue($platformStatus ?? 'pending');
+}
+
+function getJobPlatformStatus($job, $platform) {
+    if (!is_array($job)) {
+        return null;
+    }
+    if (isset($job['social_upload']['platforms'][$platform])) {
+        return $job['social_upload']['platforms'][$platform];
+    }
+    if ($platform === 'youtube' && isset($job['youtube_upload'])) {
+        return $job['youtube_upload'];
+    }
+    return null;
+}
+
+function resolveEffectivePlatformPayload($video, $job, $jobId, $platform, $socialStatus) {
+    $queuePlatform = $video['platform_status'][$platform] ?? null;
+    $jobPlatform = getJobPlatformStatus($job, $platform);
+    $socialPlatform = $socialStatus[$jobId][$platform] ?? null;
+
+    $resolved = $socialPlatform ?? $jobPlatform ?? $queuePlatform ?? 'pending';
+    if (!is_array($resolved)) {
+        $resolved = ['status' => $resolved];
+    }
+    $resolved['status'] = extractPlatformStatusValue($resolved);
+    return $resolved;
+}
+
+function loadSchedulerStatusData() {
+    global $schedulerStatusFile;
+    $default = [
+        'production' => ['running' => false, 'pid' => null, 'started_at' => null, 'stopped_at' => null],
+        'social' => ['running' => false, 'pid' => null, 'started_at' => null, 'stopped_at' => null]
+    ];
+
+    if (!file_exists($schedulerStatusFile)) {
+        return $default;
+    }
+
+    $raw = json_decode(file_get_contents($schedulerStatusFile), true);
+    if (!is_array($raw)) {
+        return $default;
+    }
+
+    foreach (['production', 'social'] as $type) {
+        if (!isset($raw[$type]) || !is_array($raw[$type])) {
+            $raw[$type] = $default[$type];
+            continue;
+        }
+        $raw[$type]['running'] = (bool)($raw[$type]['running'] ?? false);
+        $raw[$type]['pid'] = $raw[$type]['pid'] ?? null;
+        $raw[$type]['started_at'] = $raw[$type]['started_at'] ?? null;
+        $raw[$type]['stopped_at'] = $raw[$type]['stopped_at'] ?? null;
+    }
+
+    return $raw;
 }
 
 // Config'den varsayılan video ayarlarını al
@@ -209,6 +415,178 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $data = loadQueues();
     
     switch ($action) {
+        case 'get_queue_stats':
+            // Belirli bir kuyruğun istatistiklerini döndür
+            $queueId = $_GET['id'] ?? '';
+            
+            if (empty($queueId)) {
+                echo json_encode(['success' => false, 'error' => 'queue_id gerekli']);
+                exit;
+            }
+            
+            $targetQueue = null;
+            foreach ($data['queues'] as $queue) {
+                if ($queue['id'] === $queueId) {
+                    $targetQueue = $queue;
+                    break;
+                }
+            }
+            
+            if (!$targetQueue) {
+                echo json_encode(['success' => false, 'error' => 'Kuyruk bulunamadı']);
+                exit;
+            }
+            
+            // Platform bazlı istatistikleri hesapla
+            $socialStatus = loadSocialPlatformStatus();
+            $platformStats = [];
+            foreach ($targetQueue['platforms'] as $platform) {
+                $platformStats[$platform] = [
+                    'published' => 0,
+                    'pending' => 0,
+                    'failed' => 0,
+                    'uploading' => 0,
+                    'total' => 0
+                ];
+            }
+            
+            $lastUploadTime = null;
+            $totalVideos = count($targetQueue['videos'] ?? []);
+            
+            foreach ($targetQueue['videos'] ?? [] as $video) {
+                $jobId = $video['job_id'] ?? null;
+                if (!$jobId) continue;
+                $job = loadJob($jobId);
+                
+                foreach ($targetQueue['platforms'] as $platform) {
+                    if (!isset($platformStats[$platform])) continue;
+                    
+                    $platformStats[$platform]['total']++;
+
+                    $effective = resolveEffectivePlatformPayload($video, $job, $jobId, $platform, $socialStatus);
+                    $statusValue = $effective['status'] ?? 'pending';
+
+                    if ($statusValue === 'success') {
+                        $platformStats[$platform]['published']++;
+                        if (isset($effective['uploaded_at'])) {
+                            $uploadTime = strtotime($effective['uploaded_at']);
+                            if ($uploadTime && (!$lastUploadTime || $uploadTime > $lastUploadTime)) {
+                                $lastUploadTime = $uploadTime;
+                            }
+                        }
+                    } elseif ($statusValue === 'pending') {
+                        $platformStats[$platform]['pending']++;
+                    } elseif ($statusValue === 'failed') {
+                        $platformStats[$platform]['failed']++;
+                    } elseif ($statusValue === 'processing') {
+                        $platformStats[$platform]['uploading']++;
+                    } else {
+                        $platformStats[$platform]['pending']++;
+                    }
+                }
+            }
+            
+            // Sıra 1'deki video bilgisini al (current_item)
+            $currentItem = null;
+            $lastError = null;
+            $blockedReason = null;
+            
+            // Videoları position'a göre sırala
+            $videos = $targetQueue['videos'] ?? [];
+            usort($videos, function($a, $b) {
+                return ($a['position'] ?? 999) - ($b['position'] ?? 999);
+            });
+            
+            // İlk pending veya failed videoyu bul
+            foreach ($videos as $video) {
+                $jobId = $video['job_id'] ?? null;
+                if (!$jobId) continue;
+                $job = loadJob($jobId);
+                
+                // Her platform için durum kontrol et
+                foreach ($targetQueue['platforms'] as $platform) {
+                    $effective = resolveEffectivePlatformPayload($video, $job, $jobId, $platform, $socialStatus);
+                    $status = $effective['status'] ?? 'pending';
+                    
+                    // pending veya failed durumundaki ilk video = current_item
+                    if ($status === 'pending' || $status === 'failed' || $status === 'processing') {
+                        $currentItem = [
+                            'job_id' => $jobId,
+                            'position' => $video['position'] ?? 0,
+                            'title' => $job['title'] ?? ($video['title'] ?? 'Başlık yok'),
+                            'status' => $status,
+                            'platform' => $platform,
+                            'thumbnail' => $job['previewUrl'] ?? ($video['thumbnailUrl'] ?? null)
+                        ];
+                        
+                        // Hata varsa al
+                        if ($status === 'failed') {
+                            $lastError = $effective['error'] ?? null;
+                            $blockedReason = $lastError;
+                        }
+                        
+                        break 2; // Her iki döngüden de çık
+                    }
+                }
+            }
+            
+            // Production durumunu kontrol et
+            $productionStatus = null;
+            $productionFile = $dataDir . '/production_queue.json';
+            if (file_exists($productionFile)) {
+                $prodData = json_decode(file_get_contents($productionFile), true);
+                $currentProdId = $prodData['current_production'] ?? null;
+                
+                if ($currentProdId) {
+                    foreach ($prodData['production_queue'] ?? [] as $prodItem) {
+                        if ($prodItem['prod_queue_id'] === $currentProdId && $prodItem['queue_id'] === $queueId) {
+                            $productionStatus = [
+                                'status' => $prodItem['status'] ?? 'unknown',
+                                'job_id' => $prodItem['job_id'] ?? null,
+                                'started_at' => $prodItem['started_at'] ?? null
+                            ];
+                            break;
+                        }
+                    }
+                }
+                
+                // Kuyrukta bekleyen üretim var mı?
+                $waitingCount = 0;
+                foreach ($prodData['production_queue'] ?? [] as $prodItem) {
+                    if ($prodItem['queue_id'] === $queueId && $prodItem['status'] === 'waiting') {
+                        $waitingCount++;
+                    }
+                }
+                if ($waitingCount > 0 && !$productionStatus) {
+                    $productionStatus = [
+                        'status' => 'waiting',
+                        'waiting_count' => $waitingCount
+                    ];
+                }
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'stats' => [
+                    'platforms' => $platformStats,
+                    'total_videos' => $totalVideos,
+                    'is_active' => $targetQueue['is_active'] ?? false,
+                    'last_upload' => $lastUploadTime ? date('c', $lastUploadTime) : null,
+                    'last_publish' => $targetQueue['last_publish'] ?? null,
+                    'resumed_at' => $targetQueue['resumed_at'] ?? null,
+                    'paused_at' => $targetQueue['paused_at'] ?? null,
+                    'strict_mode' => $targetQueue['strict_mode'] ?? false,
+                    'fail_threshold' => $targetQueue['fail_threshold'] ?? 3,
+                    'consecutive_fails' => $targetQueue['consecutive_fails'] ?? 0,
+                    'current_item' => $currentItem,
+                    'last_error' => $lastError,
+                    'blocked_reason' => $blockedReason,
+                    'production_status' => $productionStatus,
+                    'scheduler_status' => loadSchedulerStatusData()
+                ]
+            ]);
+            break;
+        
         case 'list':
             // Her kuyruk için video detaylarını ekle
             $socialStatus = loadSocialPlatformStatus(); // Gerçek platform durumları
@@ -435,6 +813,192 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($found) {
                 saveQueues($data);
                 echo json_encode(['success' => true, 'message' => 'Kuyruk devam ediyor']);
+            } else {
+                echo json_encode(['success' => false, 'error' => 'Kuyruk bulunamadı']);
+            }
+            break;
+        
+        case 'reset_and_resume':
+            // Kuyruk durumunu resetle ve devam ettir
+            $queueId = $input['queue_id'] ?? '';
+            $resetFailed = $input['reset_failed'] ?? true; // Hatalı videoları da sıfırla
+            
+            $found = false;
+            $queueJobIds = [];
+            $stats = ['duplicates_removed' => 0, 'positions_fixed' => 0, 'status_reset' => 0, 'jobs_reset' => 0];
+            
+            foreach ($data['queues'] as &$queue) {
+                if ($queue['id'] === $queueId) {
+                    $found = true;
+                    
+                    // 1. Duplicate videoları temizle
+                    $uniqueVideos = [];
+                    $seenJobIds = [];
+                    foreach ($queue['videos'] ?? [] as $video) {
+                        $jobId = $video['job_id'];
+                        if (!in_array($jobId, $seenJobIds)) {
+                            $seenJobIds[] = $jobId;
+                            $uniqueVideos[] = $video;
+                        } else {
+                            $stats['duplicates_removed']++;
+                        }
+                    }
+                    $queue['videos'] = $uniqueVideos;
+                    
+                    // 2. Position'ları yeniden hesapla
+                    foreach ($queue['videos'] as $idx => &$video) {
+                        $oldPosition = $video['position'] ?? 0;
+                        $video['position'] = $idx + 1;
+                        if ($oldPosition !== $video['position']) {
+                            $stats['positions_fixed']++;
+                        }
+                        if (isset($video['job_id'])) {
+                            $queueJobIds[] = $video['job_id'];
+                        }
+                    }
+                    unset($video);
+                    
+                    // 3. Job dosyalarından gerçek durumu oku ve "failed" olanları "pending"e çevir
+                    foreach ($queue['videos'] as &$video) {
+                        $jobId = $video['job_id'];
+                        $job = loadJob($jobId);
+                        $jobUpdated = false;
+                        
+                        if (!$job) continue;
+                        
+                        // Her platform için job dosyasındaki durumu kontrol et
+                        foreach ($queue['platforms'] as $platform) {
+                            $jobPlatformStatus = getJobPlatformStatus($job, $platform);
+                            $queuePlatformStatus = $video['platform_status'][$platform] ?? 'pending';
+                            $currentStatus = $jobPlatformStatus !== null
+                                ? extractPlatformStatusValue($jobPlatformStatus)
+                                : extractPlatformStatusValue($queuePlatformStatus);
+                            
+                            // processing veya failed durumlarını sıfırla
+                            if ($currentStatus === 'processing' || ($resetFailed && $currentStatus === 'failed')) {
+                                // Job dosyasındaki durumu sıfırla
+                                if (isset($job['social_upload']['platforms'][$platform])) {
+                                    $job['social_upload']['platforms'][$platform]['status'] = 'pending';
+                                    $job['social_upload']['platforms'][$platform]['error'] = null;
+                                    $job['social_upload']['status'] = 'pending';
+                                    $jobUpdated = true;
+                                }
+
+                                if ($platform === 'youtube' && isset($job['youtube_upload'])) {
+                                    $job['youtube_upload']['status'] = 'pending';
+                                    $job['youtube_upload']['error'] = null;
+                                    if (isset($job['youtube_upload']['video_id'])) $job['youtube_upload']['video_id'] = null;
+                                    if (isset($job['youtube_upload']['video_url'])) $job['youtube_upload']['video_url'] = null;
+                                    $jobUpdated = true;
+                                }
+                                
+                                // Queue'daki platform_status'u da güncelle
+                                if (!isset($video['platform_status'][$platform]) || is_string($video['platform_status'][$platform])) {
+                                    $video['platform_status'][$platform] = 'pending';
+                                } else {
+                                    $video['platform_status'][$platform]['status'] = 'pending';
+                                    $video['platform_status'][$platform]['error'] = null;
+                                    if (isset($video['platform_status'][$platform]['post_id'])) $video['platform_status'][$platform]['post_id'] = null;
+                                    if (isset($video['platform_status'][$platform]['post_url'])) $video['platform_status'][$platform]['post_url'] = null;
+                                    if (isset($video['platform_status'][$platform]['uploaded_at'])) $video['platform_status'][$platform]['uploaded_at'] = null;
+                                }
+                                $stats['status_reset']++;
+                            }
+                        }
+                        
+                        // Video'nun overall status'unu da kontrol et
+                        $videoStatus = $video['status'] ?? '';
+                        $jobStatus = $job['social_upload']['status'] ?? ($job['youtube_upload']['status'] ?? '');
+                        if ($videoStatus === 'processing' || $jobStatus === 'processing' ||
+                            ($resetFailed && ($videoStatus === 'failed' || $jobStatus === 'failed'))) {
+                            $video['status'] = 'queued';
+                            if ($job && isset($job['social_upload'])) {
+                                $job['social_upload']['status'] = 'pending';
+                                $jobUpdated = true;
+                            }
+                            if ($job && isset($job['youtube_upload'])) {
+                                $job['youtube_upload']['status'] = 'pending';
+                                $job['youtube_upload']['error'] = null;
+                                $jobUpdated = true;
+                            }
+                        }
+                        
+                        // Job dosyasını kaydet
+                        if ($jobUpdated && $job) {
+                            saveJob($jobId, $job);
+                            $stats['jobs_reset']++;
+                        }
+                    }
+                    unset($video);
+                    
+                    // 4. Kuyruğu aktifleştir
+                    $queue['is_active'] = true;
+                    $queue['resumed_at'] = date('c');
+                    $queue['consecutive_fails'] = 0; // Fail counter'ı sıfırla
+                    unset($queue['paused_at']);
+                    
+                    break;
+                }
+            }
+            
+            if ($found) {
+                saveQueues($data);
+                
+                // 5. social_queue.json'daki processing/failed statuslarını da resetle
+                $socialQueueFile = $dataDir . '/social_queue.json';
+                if (file_exists($socialQueueFile)) {
+                    $socialQueue = json_decode(file_get_contents($socialQueueFile), true);
+                    if ($socialQueue && isset($socialQueue['queue'])) {
+                        foreach ($socialQueue['queue'] as &$item) {
+                            $itemJobId = $item['job_id'] ?? '';
+                            if (!$itemJobId || !in_array($itemJobId, $queueJobIds, true)) {
+                                continue;
+                            }
+                            $itemUpdated = false;
+                            foreach ($item['platform_status'] ?? [] as &$ps) {
+                                $psStatus = extractPlatformStatusValue($ps);
+                                if ($psStatus === 'processing' || ($resetFailed && $psStatus === 'failed')) {
+                                    if (!is_array($ps)) {
+                                        $ps = ['status' => 'pending'];
+                                    } else {
+                                        $ps['status'] = 'pending';
+                                    }
+                                    $ps['error'] = null;
+                                    $ps['post_id'] = null;
+                                    $ps['post_url'] = null;
+                                    $ps['uploaded_at'] = null;
+                                    $itemUpdated = true;
+                                    $stats['status_reset']++;
+                                }
+                            }
+                            unset($ps);
+                            if ($itemUpdated) {
+                                $item['status'] = 'pending';
+                                $item['retry_count'] = 0;
+                                $item['last_error'] = null;
+                                $item['updated_at'] = date('c');
+                            }
+                        }
+                        unset($item);
+                        file_put_contents($socialQueueFile, json_encode($socialQueue, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+                    }
+                }
+                
+                // 6. Pending videoları social_queue.json'a ekle (eğer yoksa)
+                $addedToSocialQueue = 0;
+                foreach ($data['queues'] as $q) {
+                    if ($q['id'] === $queueId) {
+                        $addedToSocialQueue = addPendingVideosToSocialQueue($q, $dataDir);
+                        break;
+                    }
+                }
+                $stats['added_to_social_queue'] = $addedToSocialQueue;
+                
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Kuyruk resetlendi ve devam ediyor',
+                    'stats' => $stats
+                ]);
             } else {
                 echo json_encode(['success' => false, 'error' => 'Kuyruk bulunamadı']);
             }

@@ -6,6 +6,7 @@ import sys
 import os
 import time
 import json
+import traceback
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, Optional
@@ -161,7 +162,12 @@ class SocialMediaScheduler:
         print(f"\n📋 {len(pending)} yükleme işleniyor...")
         
         for item in pending:
-            self._process_item(item)
+            try:
+                self._process_item(item)
+            except Exception as e:
+                queue_id = item.get('queue_id', 'unknown') if isinstance(item, dict) else 'unknown'
+                print(f"\n❌ Queue item işlenemedi ({queue_id}): {e}")
+                traceback.print_exc()
     
     def _get_script_text(self, job_id: str) -> str:
         """output/job_id/script.json dosyasindan seslendirme metnini birlestirerek dondurur.
@@ -186,9 +192,17 @@ class SocialMediaScheduler:
 
     def _process_item(self, item: Dict):
         """Process single queue item across all pending platforms"""
-        queue_id = item['queue_id']
-        job_id = item['job_id']
-        video_path = item['video_path']
+        queue_id = item.get('queue_id', 'unknown')
+        job_id = item.get('job_id', '')
+        video_path = item.get('video_path', '')
+        platforms = item.get('platforms', [])
+        platform_statuses = item.get('platform_status', {})
+
+        if not isinstance(platforms, list):
+            print(f"⚠️  Geçersiz platforms alanı ({queue_id}), atlanıyor")
+            return
+        if not isinstance(platform_statuses, dict):
+            platform_statuses = {}
         
         print(f"\n{'='*60}")
         print(f"[PROCESS] Queue item: {queue_id}")
@@ -199,15 +213,19 @@ class SocialMediaScheduler:
             error = f"Video dosyası bulunamadı: {video_path}"
             print(f"❌ {error}")
             # Mark all platforms as failed
-            for platform in item['platforms']:
+            for platform in platforms:
                 self.queue_manager.mark_platform_failed(queue_id, platform, error, retry=False)
             return
         
         # Process each pending platform
-        for platform in item['platforms']:
-            platform_status = item['platform_status'].get(platform, {})
-            
-            if platform_status.get('status') != 'pending':
+        for platform in platforms:
+            raw_platform_status = platform_statuses.get(platform, {})
+            if isinstance(raw_platform_status, dict):
+                platform_status_value = raw_platform_status.get('status', 'pending')
+            else:
+                platform_status_value = raw_platform_status or 'pending'
+
+            if platform_status_value != 'pending':
                 continue  # Skip non-pending platforms
             
             if platform not in self.uploaders:
@@ -222,9 +240,11 @@ class SocialMediaScheduler:
     
     def _upload_to_platform(self, item: Dict, platform: str):
         """Upload video to specific platform"""
-        queue_id = item['queue_id']
-        video_path = item['video_path']
-        base_metadata = item['metadata']
+        queue_id = item.get('queue_id', 'unknown')
+        video_path = item.get('video_path', '')
+        base_metadata = item.get('metadata', {})
+        if not isinstance(base_metadata, dict):
+            base_metadata = {}
         
         print(f"\n📱 [{platform.upper()}] Yükleniyor...")
         
@@ -232,7 +252,14 @@ class SocialMediaScheduler:
         self.queue_manager.mark_platform_processing(queue_id, platform)
         
         # Get platform-specific metadata
-        platform_meta = item.get('platform_metadata', {}).get(platform, {})
+        platform_meta_map = item.get('platform_metadata', {})
+        if not isinstance(platform_meta_map, dict):
+            print(f"   [WARN] Geçersiz platform_metadata tipi ({type(platform_meta_map).__name__}), boş metadata kullanılacak")
+            platform_meta_map = {}
+
+        platform_meta = platform_meta_map.get(platform, {})
+        if not isinstance(platform_meta, dict):
+            platform_meta = {}
 
         # Upload oncesi platform-aware SEO metadata uret
         if not platform_meta:
@@ -347,7 +374,7 @@ class SocialMediaScheduler:
             print(f"   ❌ {platform.title()} exception: {error}")
         
         # Update job file
-        self._update_job(item['job_id'], queue_id)
+        self._update_job(item.get('job_id', ''), queue_id)
     
     def _update_job(self, job_id: str, queue_id: str):
         """Update job JSON file with social upload status"""

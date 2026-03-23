@@ -34,16 +34,49 @@
     const totalSteps = 7;
 
     return {
-      sidebarOpen: false, darkMode: false, jobs: [], loading: true, autoRefresh: null,
+      sidebarOpen: false, 
+      sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === '1',
+      darkMode: false, 
+      jobs: [], 
+      loading: true, 
+      autoRefresh: null,
       videoPopup: null,
       queues: [],
       queueModal: null,
       selectedQueueId: '',
       addingToQueue: false,
+      productionFilter: 'waiting',
+      queueFilter: 'all',
       statusMeta,
       getMeta(s) { return statusMeta[s] || statusMeta.pending; },
       isActive(s) { return !['done','failed','pending','paused'].includes(s); },
       isPaused(s) { return s === 'paused'; },
+      isProductionDone(job) {
+        const s = (job?.status || '').toLowerCase();
+        return s === 'done' || s === 'completed';
+      },
+      isProductionWaiting(job) {
+        return !this.isProductionDone(job);
+      },
+      get filteredJobs() {
+        let items = [...this.jobs];
+
+        if (this.productionFilter === 'waiting') {
+          items = items.filter(job => this.isProductionWaiting(job));
+        } else if (this.productionFilter === 'done') {
+          items = items.filter(job => this.isProductionDone(job));
+        }
+
+        if (this.queueFilter === 'in_queue') {
+          items = items.filter(job => !!job.queue_status?.queue_id);
+        } else if (this.queueFilter === 'no_queue') {
+          items = items.filter(job => !job.queue_status?.queue_id);
+        } else if (this.queueFilter !== 'all') {
+          items = items.filter(job => (job.queue_status?.queue_id || '') === this.queueFilter);
+        }
+
+        return items;
+      },
       progressPercent(s) {
         const m = this.getMeta(s);
         if (s === 'done') return 100;
@@ -161,7 +194,34 @@
 
       <main class="flex-1 overflow-y-auto p-6 md:p-8">
         <div class="max-w-5xl mx-auto">
-          <h1 class="text-2xl font-bold text-gray-800 mb-6">Videolar</h1>
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">Videolar</h1>
+            <span class="text-sm text-gray-500">
+              <span x-text="filteredJobs.length"></span> / <span x-text="jobs.length"></span> gösteriliyor
+            </span>
+          </div>
+
+          <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1">Üretim Durumu</label>
+              <select x-model="productionFilter" class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm">
+                <option value="waiting">Üretimi Bekleyen (Varsayılan)</option>
+                <option value="done">Üretimi Tamamlanan</option>
+                <option value="all">Tümü</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1">Kuyruk</label>
+              <select x-model="queueFilter" class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm">
+                <option value="all">Tüm Kuyruklar</option>
+                <option value="in_queue">Kuyruğa Dahil</option>
+                <option value="no_queue">Kuyruğa Dahil Değil</option>
+                <template x-for="queue in queues" :key="'filter-' + queue.id">
+                  <option :value="queue.id" x-text="queue.name"></option>
+                </template>
+              </select>
+            </div>
+          </div>
 
           <template x-if="loading">
             <div class="flex items-center justify-center py-16">
@@ -170,10 +230,10 @@
             </div>
           </template>
 
-          <template x-if="!loading && jobs.length === 0">
+          <template x-if="!loading && filteredJobs.length === 0">
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
               <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-              <p class="text-gray-400 text-lg mb-2">Henüz hiç iş yok.</p>
+              <p class="text-gray-400 text-lg mb-2">Seçili filtreye uygun video yok.</p>
               <a href="create.php" class="inline-flex items-center gap-2 mt-3 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 İlk Videoyu Oluştur
@@ -181,9 +241,9 @@
             </div>
           </template>
 
-          <template x-if="!loading && jobs.length > 0">
+          <template x-if="!loading && filteredJobs.length > 0">
             <div class="space-y-4">
-              <template x-for="(job, ji) in jobs" :key="job.id">
+              <template x-for="(job, ji) in filteredJobs" :key="job.id">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden anim-fade-in"
                      :class="{'ring-2 ring-blue-400 ring-offset-2': isActive(job.status), 'ring-2 ring-yellow-400 ring-offset-2': isPaused(job.status)}">
 
