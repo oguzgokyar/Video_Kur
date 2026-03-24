@@ -1,9 +1,9 @@
 {
   "history": [
     {
-      "queue_id": "social_9d0ae25b53b9436c",
-      "job_id": "job_69bf559b969105.84696119",
-      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b969105.84696119\\final_video.mp4",
+      "queue_id": "social_69c145d4b4f2e",
+      "job_id": "job_69bf559b9f1cf9.75694972",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b9f1cf9.75694972/final_video.mp4",
       "platforms": [
         "youtube"
       ],
@@ -16,24 +16,54 @@
           "uploaded_at": null
         }
       },
-      "scheduled_time": "2026-03-22T16:37:23.660029+00:00",
+      "scheduled_time": "2026-03-23T14:53:24+01:00",
       "status": "failed",
-      "priority": 0,
+      "priority": -19,
+      "metadata": {
+        "title": "Yeni bir gezegen sınıfı keşfedildi: Derinliklerinde magma okyanusu var",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-23T14:53:24+01:00",
+      "updated_at": "2026-03-23T14:53:24+01:00",
+      "retry_count": 3,
+      "completed_at": "2026-03-23T13:57:01.164856+00:00"
+    },
+    {
+      "queue_id": "social_69c145d4b4cf8",
+      "job_id": "job_69bf559b969105.84696119",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b969105.84696119/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-23T14:53:24+01:00",
+      "status": "failed",
+      "priority": -18,
       "metadata": {
         "title": "İran’dan kritik hamle: Savunma değil sensörler hedefte",
         "description": "",
         "tags": []
       },
       "platform_metadata": {},
-      "created_at": "2026-03-22T16:37:23.664540+00:00",
+      "created_at": "2026-03-23T14:53:24+01:00",
+      "updated_at": "2026-03-23T14:53:24+01:00",
       "retry_count": 3,
-      "last_error": null,
-      "completed_at": "2026-03-22T16:41:10.876226+00:00"
+      "completed_at": "2026-03-23T13:56:58.345078+00:00"
     },
     {
-      "queue_id": "social_942314a4b3d04d95",
-      "job_id": "job_69bf559b8e7382.99942758",
-      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b8e7382.99942758\\final_video.mp4",
+      "queue_id": "social_69c144472d9b4",
+      "job_id": "job_69bf559b9f1cf9.75694972",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b9f1cf9.75694972/final_video.mp4",
       "platforms": [
         "youtube"
       ],
@@ -46,204 +76,475 @@
           "uploaded_at": null
         }
       },
-      "scheduled_time": "2026-03-22T16:22:23.330700+00:00",
+      "scheduled_time": "2026-03-23T14:46:47+01:00",
       "status": "failed",
-      "priority": 0,
+      "priority": -20,
+      "metadata": {
+        "title": "Yeni bir gezegen sınıfı keşfedildi: Derinliklerinde magma okyanusu var",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-23T14:46:47+01:00",
+      "updated_at": "2026-03-23T14:46:47+01:00",
+      "retry_count": 3,
+      "completed_at": "2026-03-23T13:50:32.789334+00:00"
+    },
+    {
+      "queue_id": "social_69c144472d6bb",
+      "job_id": "job_69bf559b969105.84696119",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b969105.84696119/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-23T14:46:47+01:00",
+      "status": "failed",
+      "priority": -19,
+      "metadata": {
+        "title": "İran’dan kritik hamle: Savunma değil sensörler hedefte",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-23T14:46:47+01:00",
+      "updated_at": "2026-03-23T14:46:47+01:00",
+      "retry_count": 3,
+      "completed_at": "2026-03-23T13:50:30.315262+00:00"
+    },
+    {
+      "queue_id": "social_69c1414e35cbd",
+      "job_id": "job_69bf559b9f1cf9.75694972",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b9f1cf9.75694972/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-23T14:34:06+01:00",
+      "status": "failed",
+      "priority": -20,
+      "metadata": {
+        "title": "Yeni bir gezegen sınıfı keşfedildi: Derinliklerinde magma okyanusu var",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-23T14:34:06+01:00",
+      "updated_at": "2026-03-23T14:34:06+01:00",
+      "retry_count": 3,
+      "completed_at": "2026-03-23T13:38:10.824535+00:00"
+    },
+    {
+      "queue_id": "social_69c1414e35187",
+      "job_id": "job_69bf559b969105.84696119",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b969105.84696119/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-23T14:34:06+01:00",
+      "status": "failed",
+      "priority": -19,
+      "metadata": {
+        "title": "İran’dan kritik hamle: Savunma değil sensörler hedefte",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-23T14:34:06+01:00",
+      "updated_at": "2026-03-23T14:34:06+01:00",
+      "retry_count": 3,
+      "completed_at": "2026-03-23T13:38:06.884738+00:00"
+    },
+    {
+      "queue_id": "social_69c1097d4d930",
+      "job_id": "job_69bf559b9f1cf9.75694972",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b9f1cf9.75694972/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-23T12:35:57+03:00",
+      "status": "failed",
+      "priority": -21,
+      "metadata": {
+        "title": "Yeni bir gezegen sınıfı keşfedildi: Derinliklerinde magma okyanusu var",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": [],
+      "created_at": "2026-03-23T12:35:57+03:00",
+      "updated_at": "2026-03-23T12:35:57+03:00",
+      "retry_count": 3,
+      "completed_at": "2026-03-23T13:31:47.841385+00:00"
+    },
+    {
+      "queue_id": "social_69c1097d4d8d6",
+      "job_id": "job_69bf559b969105.84696119",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b969105.84696119/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-23T12:35:57+03:00",
+      "status": "failed",
+      "priority": -20,
+      "metadata": {
+        "title": "İran’dan kritik hamle: Savunma değil sensörler hedefte",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": [],
+      "created_at": "2026-03-23T12:35:57+03:00",
+      "updated_at": "2026-03-23T12:35:57+03:00",
+      "retry_count": 3,
+      "completed_at": "2026-03-23T13:31:41.770815+00:00"
+    },
+    {
+      "queue_id": "social_69c1097d4d875",
+      "job_id": "job_69bf559b8e7382.99942758",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b8e7382.99942758/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "PUJUg761PSM",
+          "post_url": "https://youtube.com/shorts/PUJUg761PSM",
+          "error": null,
+          "uploaded_at": "2026-03-23T13:28:19.781817+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-23T12:35:57+03:00",
+      "status": "success",
+      "priority": -19,
       "metadata": {
         "title": "Kanarya’da orta sahada yeni dönem! Tedesco’dan Kante kararı",
         "description": "",
         "tags": []
       },
-      "platform_metadata": {},
-      "created_at": "2026-03-22T16:22:23.335022+00:00",
-      "retry_count": 3,
-      "last_error": null,
-      "completed_at": "2026-03-22T16:27:02.361821+00:00"
+      "platform_metadata": [],
+      "created_at": "2026-03-23T12:35:57+03:00",
+      "updated_at": "2026-03-23T12:35:57+03:00",
+      "retry_count": 0,
+      "completed_at": "2026-03-23T13:28:19.791016+00:00"
     },
     {
-      "queue_id": "social_1fa4bdf41d9b48d5",
+      "queue_id": "social_69c1097d4d815",
       "job_id": "job_69bf559b846fb3.26133417",
-      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b846fb3.26133417\\final_video.mp4",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b846fb3.26133417/final_video.mp4",
       "platforms": [
         "youtube"
       ],
       "platform_status": {
         "youtube": {
-          "status": "failed",
-          "post_id": null,
-          "post_url": null,
-          "error": "The user has exceeded the number of videos they may upload.",
-          "uploaded_at": null
+          "status": "success",
+          "post_id": "HOslMiWqda4",
+          "post_url": "https://youtube.com/shorts/HOslMiWqda4",
+          "error": null,
+          "uploaded_at": "2026-03-23T13:28:11.576226+00:00"
         }
       },
-      "scheduled_time": "2026-03-22T16:06:53.115800+00:00",
-      "status": "failed",
-      "priority": 0,
+      "scheduled_time": "2026-03-23T12:35:57+03:00",
+      "status": "success",
+      "priority": -18,
       "metadata": {
         "title": "İsrail'in Arad şehrine füze düşme anı! A Haber’de çarpıcı görüntüler",
         "description": "",
         "tags": []
       },
-      "platform_metadata": {},
-      "created_at": "2026-03-22T16:06:53.117206+00:00",
-      "retry_count": 3,
-      "last_error": null,
-      "completed_at": "2026-03-22T16:10:40.134697+00:00"
+      "platform_metadata": [],
+      "created_at": "2026-03-23T12:35:57+03:00",
+      "updated_at": "2026-03-23T12:35:57+03:00",
+      "retry_count": 0,
+      "completed_at": "2026-03-23T13:28:11.589365+00:00"
     },
     {
-      "queue_id": "social_4dfd859693ca46c1",
+      "queue_id": "social_69c1097d4d7b5",
       "job_id": "job_69bf559b7af2a7.43783812",
-      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b7af2a7.43783812\\final_video.mp4",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b7af2a7.43783812/final_video.mp4",
       "platforms": [
         "youtube"
       ],
       "platform_status": {
         "youtube": {
-          "status": "failed",
-          "post_id": null,
-          "post_url": null,
-          "error": "The user has exceeded the number of videos they may upload.",
-          "uploaded_at": null
+          "status": "success",
+          "post_id": "0kTy3Z8_FYI",
+          "post_url": "https://youtube.com/shorts/0kTy3Z8_FYI",
+          "error": null,
+          "uploaded_at": "2026-03-23T13:28:03.860177+00:00"
         }
       },
-      "scheduled_time": "2026-03-22T16:02:22.983228+00:00",
-      "status": "failed",
-      "priority": 0,
+      "scheduled_time": "2026-03-23T12:35:57+03:00",
+      "status": "success",
+      "priority": -17,
       "metadata": {
         "title": "Bayram tatili bitti! Dönüş çilesi başladı",
         "description": "",
         "tags": []
       },
-      "platform_metadata": {},
-      "created_at": "2026-03-22T16:02:22.985420+00:00",
-      "retry_count": 3,
-      "last_error": null,
-      "completed_at": "2026-03-22T16:06:26.437833+00:00"
+      "platform_metadata": [],
+      "created_at": "2026-03-23T12:35:57+03:00",
+      "updated_at": "2026-03-23T12:35:57+03:00",
+      "retry_count": 0,
+      "completed_at": "2026-03-23T13:28:03.870298+00:00"
     },
     {
-      "queue_id": "social_ce2286ee01cc49c9",
+      "queue_id": "social_69c1097d4d75c",
       "job_id": "job_69bf559b726997.32570735",
-      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b726997.32570735\\final_video.mp4",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b726997.32570735/final_video.mp4",
       "platforms": [
         "youtube"
       ],
       "platform_status": {
         "youtube": {
-          "status": "failed",
-          "post_id": null,
-          "post_url": null,
-          "error": "The user has exceeded the number of videos they may upload.",
-          "uploaded_at": null
+          "status": "success",
+          "post_id": "DpTXRNuJT50",
+          "post_url": "https://youtube.com/shorts/DpTXRNuJT50",
+          "error": null,
+          "uploaded_at": "2026-03-23T13:27:56.773957+00:00"
         }
       },
-      "scheduled_time": "2026-03-22T15:57:22.871741+00:00",
-      "status": "failed",
-      "priority": 0,
+      "scheduled_time": "2026-03-23T12:35:57+03:00",
+      "status": "success",
+      "priority": -16,
       "metadata": {
         "title": "Neden kot pantolonlarda küçük cep var? İşte 150 yıllık hikayesi",
         "description": "",
         "tags": []
       },
-      "platform_metadata": {},
-      "created_at": "2026-03-22T15:57:22.873571+00:00",
-      "retry_count": 3,
-      "last_error": null,
-      "completed_at": "2026-03-22T16:01:21.309134+00:00"
+      "platform_metadata": [],
+      "created_at": "2026-03-23T12:35:57+03:00",
+      "updated_at": "2026-03-23T12:35:57+03:00",
+      "retry_count": 0,
+      "completed_at": "2026-03-23T13:27:56.784965+00:00"
     },
     {
-      "queue_id": "social_448b878f9cb74a33",
+      "queue_id": "social_69c1097d4d6fc",
       "job_id": "job_69bf559b6ab832.67752094",
-      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b6ab832.67752094\\final_video.mp4",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b6ab832.67752094/final_video.mp4",
       "platforms": [
         "youtube"
       ],
       "platform_status": {
         "youtube": {
-          "status": "failed",
-          "post_id": null,
-          "post_url": null,
-          "error": "The user has exceeded the number of videos they may upload.",
-          "uploaded_at": null
+          "status": "success",
+          "post_id": "J1MDydlDevQ",
+          "post_url": "https://youtube.com/shorts/J1MDydlDevQ",
+          "error": null,
+          "uploaded_at": "2026-03-23T13:27:44.467370+00:00"
         }
       },
-      "scheduled_time": "2026-03-22T15:50:22.718652+00:00",
-      "status": "failed",
-      "priority": 0,
+      "scheduled_time": "2026-03-23T12:35:57+03:00",
+      "status": "success",
+      "priority": -15,
       "metadata": {
         "title": "Milli Takım’da Romanya mesaisi",
         "description": "",
         "tags": []
       },
-      "platform_metadata": {},
-      "created_at": "2026-03-22T15:50:22.721636+00:00",
-      "retry_count": 3,
-      "last_error": null,
-      "completed_at": "2026-03-22T15:54:17.044713+00:00"
+      "platform_metadata": [],
+      "created_at": "2026-03-23T12:35:57+03:00",
+      "updated_at": "2026-03-23T12:35:57+03:00",
+      "retry_count": 0,
+      "completed_at": "2026-03-23T13:27:44.487713+00:00"
     },
     {
-      "queue_id": "social_aac67fa0e48e49be",
+      "queue_id": "social_69c1097d4d6a1",
       "job_id": "job_69bf559b6490e2.63345678",
-      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b6490e2.63345678\\final_video.mp4",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b6490e2.63345678/final_video.mp4",
       "platforms": [
         "youtube"
       ],
       "platform_status": {
         "youtube": {
-          "status": "failed",
-          "post_id": null,
-          "post_url": null,
-          "error": "The user has exceeded the number of videos they may upload.",
-          "uploaded_at": null
+          "status": "success",
+          "post_id": "d5NUT8L50gs",
+          "post_url": "https://youtube.com/shorts/d5NUT8L50gs",
+          "error": null,
+          "uploaded_at": "2026-03-23T13:27:37.836977+00:00"
         }
       },
-      "scheduled_time": "2026-03-22T15:44:52.590074+00:00",
-      "status": "failed",
-      "priority": 0,
+      "scheduled_time": "2026-03-23T12:35:57+03:00",
+      "status": "success",
+      "priority": -14,
       "metadata": {
         "title": "İran’dan İsrail’e stratejik hamle: Savunma değil sensörler hedefte",
         "description": "",
         "tags": []
       },
-      "platform_metadata": {},
-      "created_at": "2026-03-22T15:44:52.592075+00:00",
-      "retry_count": 3,
-      "last_error": null,
-      "completed_at": "2026-03-22T15:48:13.131216+00:00"
+      "platform_metadata": [],
+      "created_at": "2026-03-23T12:35:57+03:00",
+      "updated_at": "2026-03-23T12:35:57+03:00",
+      "retry_count": 0,
+      "completed_at": "2026-03-23T13:27:37.869046+00:00"
     },
     {
-      "queue_id": "social_73a4af980c0a49fc",
+      "queue_id": "social_69c1097d4d63c",
       "job_id": "job_69bf559b5b8340.85329334",
-      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b5b8340.85329334\\final_video.mp4",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b5b8340.85329334/final_video.mp4",
       "platforms": [
         "youtube"
       ],
       "platform_status": {
         "youtube": {
-          "status": "failed",
-          "post_id": null,
-          "post_url": null,
-          "error": "The user has exceeded the number of videos they may upload.",
-          "uploaded_at": null
+          "status": "success",
+          "post_id": "ikNACnN4bXE",
+          "post_url": "https://youtube.com/shorts/ikNACnN4bXE",
+          "error": null,
+          "uploaded_at": "2026-03-23T13:27:29.645346+00:00"
         }
       },
-      "scheduled_time": "2026-03-22T15:35:21.649366+00:00",
-      "status": "failed",
-      "priority": 0,
+      "scheduled_time": "2026-03-23T12:35:57+03:00",
+      "status": "success",
+      "priority": -13,
       "metadata": {
         "title": "New York'ta \"elleri kanlı\" teknoloji devi protesto edildi",
         "description": "",
         "tags": []
       },
-      "platform_metadata": {},
-      "created_at": "2026-03-22T15:35:21.655475+00:00",
-      "retry_count": 3,
-      "last_error": null,
-      "completed_at": "2026-03-22T15:39:04.372454+00:00"
+      "platform_metadata": [],
+      "created_at": "2026-03-23T12:35:57+03:00",
+      "updated_at": "2026-03-23T12:35:57+03:00",
+      "retry_count": 0,
+      "completed_at": "2026-03-23T13:27:29.662301+00:00"
     },
     {
-      "queue_id": "social_84f93b86e49e4b31",
-      "job_id": "job_69bee50f4ab897.05006987",
-      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bee50f4ab897.05006987\\final_video.mp4",
+      "queue_id": "social_69c1097d4d55f",
+      "job_id": "job_69bf559b42b704.21034777",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b42b704.21034777/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "pReoewht6vw",
+          "post_url": "https://youtube.com/shorts/pReoewht6vw",
+          "error": null,
+          "uploaded_at": "2026-03-23T13:27:21.943125+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-23T12:35:57+03:00",
+      "status": "success",
+      "priority": -11,
+      "metadata": {
+        "title": "İran'ın yeni füzeleri Demir Kubbe'yi nasıl aşıyor?",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": [],
+      "created_at": "2026-03-23T12:35:57+03:00",
+      "updated_at": "2026-03-23T12:35:57+03:00",
+      "retry_count": 0,
+      "completed_at": "2026-03-23T13:27:21.961986+00:00"
+    },
+    {
+      "queue_id": "social_69c1097d4d4e7",
+      "job_id": "job_69bf559b3bec80.82364190",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b3bec80.82364190/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "ciXNZh3Utno",
+          "post_url": "https://youtube.com/shorts/ciXNZh3Utno",
+          "error": null,
+          "uploaded_at": "2026-03-23T13:27:14.332381+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-23T12:35:57+03:00",
+      "status": "success",
+      "priority": -10,
+      "metadata": {
+        "title": "Bolu’da husumetli gruplar sokak ortasında çatıştı",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": [],
+      "created_at": "2026-03-23T12:35:57+03:00",
+      "updated_at": "2026-03-23T12:35:57+03:00",
+      "retry_count": 0,
+      "completed_at": "2026-03-23T13:27:14.352674+00:00"
+    },
+    {
+      "queue_id": "social_69c1097d4b141",
+      "job_id": "job_69bf559b357552.93126517",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b357552.93126517/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "SUf_qT73V8I",
+          "post_url": "https://youtube.com/shorts/SUf_qT73V8I",
+          "error": null,
+          "uploaded_at": "2026-03-23T13:27:05.493412+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-23T12:35:57+03:00",
+      "status": "success",
+      "priority": -9,
+      "metadata": {
+        "title": "İran'ın vurduğu Arad'da büyük yıkım | Çok sayıda ölü ve yaralı var",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": [],
+      "created_at": "2026-03-23T12:35:57+03:00",
+      "updated_at": "2026-03-23T13:40:27+01:00",
+      "retry_count": 0,
+      "last_error": null,
+      "completed_at": "2026-03-23T13:27:05.500776+00:00"
+    },
+    {
+      "queue_id": "social_7cf4be19c10d43d0",
+      "job_id": "job_69bf559b357552.93126517",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b357552.93126517\\final_video.mp4",
       "platforms": [
         "youtube"
       ],
@@ -252,28 +553,28 @@
           "status": "failed",
           "post_id": null,
           "post_url": null,
-          "error": "The user has exceeded the number of videos they may upload.",
+          "error": "The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.",
           "uploaded_at": null
         }
       },
-      "scheduled_time": "2026-03-21T23:34:46.302383+00:00",
+      "scheduled_time": "2026-03-22T21:56:57.046479+00:00",
       "status": "failed",
       "priority": 0,
       "metadata": {
-        "title": "Kucuk-oruc-kahraman-eymen-ramazann-ilk-gunu-masal",
+        "title": "İran'ın vurduğu Arad'da büyük yıkım | Çok sayıda ölü ve yaralı var",
         "description": "",
         "tags": []
       },
       "platform_metadata": {},
-      "created_at": "2026-03-21T23:34:46.302402+00:00",
+      "created_at": "2026-03-22T21:56:57.046480+00:00",
       "retry_count": 3,
       "last_error": null,
-      "completed_at": "2026-03-22T13:59:11.287194+00:00"
+      "completed_at": "2026-03-22T22:03:14.765845+00:00"
     },
     {
-      "queue_id": "social_ba653e19925c4249",
-      "job_id": "job_69be9d81488911.65994191",
-      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69be9d81488911.65994191\\final_video.mp4",
+      "queue_id": "social_1d69fc3c0af348d7",
+      "job_id": "job_69bf559b3bec80.82364190",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b3bec80.82364190\\final_video.mp4",
       "platforms": [
         "youtube"
       ],
@@ -282,26 +583,26 @@
           "status": "failed",
           "post_id": null,
           "post_url": null,
-          "error": "The user has exceeded the number of videos they may upload.",
+          "error": "The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.",
           "uploaded_at": null
         }
       },
-      "scheduled_time": "2026-03-21T23:34:46.302057+00:00",
+      "scheduled_time": "2026-03-22T21:56:57.046475+00:00",
       "status": "failed",
       "priority": 0,
       "metadata": {
-        "title": "Kalpten-gelen-dua-minik-aysenin-huzurlu-hikayesi",
+        "title": "Bolu’da husumetli gruplar sokak ortasında çatıştı",
         "description": "",
         "tags": []
       },
       "platform_metadata": {},
-      "created_at": "2026-03-21T23:34:46.302096+00:00",
+      "created_at": "2026-03-22T21:56:57.046477+00:00",
       "retry_count": 3,
       "last_error": null,
-      "completed_at": "2026-03-22T13:59:08.942629+00:00"
+      "completed_at": "2026-03-22T22:03:10.344016+00:00"
     },
     {
-      "queue_id": "social_1e1525baae4448a9",
+      "queue_id": "social_a1f5a033036d4028",
       "job_id": "job_69bf559b42b704.21034777",
       "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b42b704.21034777\\final_video.mp4",
       "platforms": [
@@ -316,7 +617,7 @@
           "uploaded_at": null
         }
       },
-      "scheduled_time": "2026-03-22T03:54:17.639247+00:00",
+      "scheduled_time": "2026-03-22T21:56:57.046472+00:00",
       "status": "failed",
       "priority": 0,
       "metadata": {
@@ -325,15 +626,15 @@
         "tags": []
       },
       "platform_metadata": {},
-      "created_at": "2026-03-22T03:54:17.642247+00:00",
+      "created_at": "2026-03-22T21:56:57.046473+00:00",
       "retry_count": 3,
       "last_error": null,
-      "completed_at": "2026-03-22T13:57:03.709598+00:00"
+      "completed_at": "2026-03-22T22:03:06.584336+00:00"
     },
     {
-      "queue_id": "social_dcd015a1eef0463a",
-      "job_id": "job_69bf559b3bec80.82364190",
-      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b3bec80.82364190\\final_video.mp4",
+      "queue_id": "social_64e84ea79a1548e6",
+      "job_id": "job_69be9d81488911.65994191",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69be9d81488911.65994191\\final_video.mp4",
       "platforms": [
         "youtube"
       ],
@@ -346,24 +647,24 @@
           "uploaded_at": null
         }
       },
-      "scheduled_time": "2026-03-22T03:41:17.461994+00:00",
+      "scheduled_time": "2026-03-22T21:56:57.046468+00:00",
       "status": "failed",
       "priority": 0,
       "metadata": {
-        "title": "Bolu’da husumetli gruplar sokak ortasında çatıştı",
+        "title": "Kalpten-gelen-dua-minik-aysenin-huzurlu-hikayesi",
         "description": "",
         "tags": []
       },
       "platform_metadata": {},
-      "created_at": "2026-03-22T03:41:17.464386+00:00",
+      "created_at": "2026-03-22T21:56:57.046469+00:00",
       "retry_count": 3,
       "last_error": null,
-      "completed_at": "2026-03-22T03:42:57.615277+00:00"
+      "completed_at": "2026-03-22T22:03:03.820990+00:00"
     },
     {
-      "queue_id": "social_60b4cf2febd04d86",
-      "job_id": "job_69bf559b357552.93126517",
-      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b357552.93126517\\final_video.mp4",
+      "queue_id": "social_51760b45f03e49bb",
+      "job_id": "job_69bee50f4ab897.05006987",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bee50f4ab897.05006987\\final_video.mp4",
       "platforms": [
         "youtube"
       ],
@@ -376,19 +677,289 @@
           "uploaded_at": null
         }
       },
-      "scheduled_time": "2026-03-22T03:26:47.115889+00:00",
+      "scheduled_time": "2026-03-22T21:56:57.046464+00:00",
       "status": "failed",
       "priority": 0,
       "metadata": {
-        "title": "İran'ın vurduğu Arad'da büyük yıkım | Çok sayıda ölü ve yaralı var",
+        "title": "Kucuk-oruc-kahraman-eymen-ramazann-ilk-gunu-masal",
         "description": "",
         "tags": []
       },
       "platform_metadata": {},
-      "created_at": "2026-03-22T03:26:47.118356+00:00",
+      "created_at": "2026-03-22T21:56:57.046465+00:00",
       "retry_count": 3,
       "last_error": null,
-      "completed_at": "2026-03-22T03:28:31.468831+00:00"
+      "completed_at": "2026-03-22T22:03:01.255140+00:00"
+    },
+    {
+      "queue_id": "social_539f143952534b5f",
+      "job_id": "job_69bf559b5b8340.85329334",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b5b8340.85329334\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-22T21:56:57.046460+00:00",
+      "status": "failed",
+      "priority": 0,
+      "metadata": {
+        "title": "New York'ta \"elleri kanlı\" teknoloji devi protesto edildi",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T21:56:57.046461+00:00",
+      "retry_count": 3,
+      "last_error": null,
+      "completed_at": "2026-03-22T22:02:57.964853+00:00"
+    },
+    {
+      "queue_id": "social_6db37dbe1add4c50",
+      "job_id": "job_69bf559b6490e2.63345678",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b6490e2.63345678\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-22T21:56:57.046456+00:00",
+      "status": "failed",
+      "priority": 0,
+      "metadata": {
+        "title": "İran’dan İsrail’e stratejik hamle: Savunma değil sensörler hedefte",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T21:56:57.046457+00:00",
+      "retry_count": 3,
+      "last_error": null,
+      "completed_at": "2026-03-22T22:02:55.727352+00:00"
+    },
+    {
+      "queue_id": "social_ca8ebca85a604363",
+      "job_id": "job_69bf559b6ab832.67752094",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b6ab832.67752094\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-22T21:56:57.046452+00:00",
+      "status": "failed",
+      "priority": 0,
+      "metadata": {
+        "title": "Milli Takım’da Romanya mesaisi",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T21:56:57.046453+00:00",
+      "retry_count": 3,
+      "last_error": null,
+      "completed_at": "2026-03-22T22:02:53.439618+00:00"
+    },
+    {
+      "queue_id": "social_1c580336c7824873",
+      "job_id": "job_69bf559b726997.32570735",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b726997.32570735\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-22T21:56:57.046446+00:00",
+      "status": "failed",
+      "priority": 0,
+      "metadata": {
+        "title": "Neden kot pantolonlarda küçük cep var? İşte 150 yıllık hikayesi",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T21:56:57.046447+00:00",
+      "retry_count": 3,
+      "last_error": null,
+      "completed_at": "2026-03-22T22:02:50.881674+00:00"
+    },
+    {
+      "queue_id": "social_acd0bc5d45294429",
+      "job_id": "job_69bf559b7af2a7.43783812",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b7af2a7.43783812\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-22T21:56:57.046442+00:00",
+      "status": "failed",
+      "priority": 0,
+      "metadata": {
+        "title": "Bayram tatili bitti! Dönüş çilesi başladı",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T21:56:57.046443+00:00",
+      "retry_count": 3,
+      "last_error": null,
+      "completed_at": "2026-03-22T22:02:48.272414+00:00"
+    },
+    {
+      "queue_id": "social_be850fdd08ee4b2e",
+      "job_id": "job_69bf559b846fb3.26133417",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b846fb3.26133417\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-22T21:56:57.046438+00:00",
+      "status": "failed",
+      "priority": 0,
+      "metadata": {
+        "title": "İsrail'in Arad şehrine füze düşme anı! A Haber’de çarpıcı görüntüler",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T21:56:57.046439+00:00",
+      "retry_count": 3,
+      "last_error": null,
+      "completed_at": "2026-03-22T22:02:45.806944+00:00"
+    },
+    {
+      "queue_id": "social_5f9ba36fef4e41dc",
+      "job_id": "job_69bf559b8e7382.99942758",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b8e7382.99942758\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-22T21:56:57.046433+00:00",
+      "status": "failed",
+      "priority": 0,
+      "metadata": {
+        "title": "Kanarya’da orta sahada yeni dönem! Tedesco’dan Kante kararı",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T21:56:57.046434+00:00",
+      "retry_count": 3,
+      "last_error": null,
+      "completed_at": "2026-03-22T22:02:43.618184+00:00"
+    },
+    {
+      "queue_id": "social_7a3120e12f1747d6",
+      "job_id": "job_69bf559b969105.84696119",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b969105.84696119\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-22T21:56:57.046424+00:00",
+      "status": "failed",
+      "priority": 0,
+      "metadata": {
+        "title": "İran’dan kritik hamle: Savunma değil sensörler hedefte",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T21:56:57.046426+00:00",
+      "retry_count": 3,
+      "last_error": null,
+      "completed_at": "2026-03-22T22:02:40.882459+00:00"
+    },
+    {
+      "queue_id": "social_c08a84bb20994c4a",
+      "job_id": "job_69bf559b9f1cf9.75694972",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\output\\job_69bf559b9f1cf9.75694972\\final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "The user has exceeded the number of videos they may upload.",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-22T21:56:57.046404+00:00",
+      "status": "failed",
+      "priority": 0,
+      "metadata": {
+        "title": "Yeni bir gezegen sınıfı keşfedildi: Derinliklerinde magma okyanusu var",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": {},
+      "created_at": "2026-03-22T21:56:57.046414+00:00",
+      "retry_count": 3,
+      "last_error": null,
+      "completed_at": "2026-03-22T22:02:38.433961+00:00"
     },
     {
       "queue_id": "social_418a79fc6371411d",

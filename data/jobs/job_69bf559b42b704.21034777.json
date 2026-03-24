@@ -34,17 +34,17 @@
   },
   "ttsProvider": "elevenlabs",
   "social_upload": {
-    "queue_id": "social_1e1525baae4448a9",
-    "status": "failed",
+    "queue_id": "social_69c1097d4d55f",
+    "status": "success",
     "platforms": {
       "youtube": {
-        "status": "failed",
-        "post_id": null,
-        "post_url": null,
-        "error": "The user has exceeded the number of videos they may upload.",
-        "uploaded_at": null
+        "status": "success",
+        "post_id": "pReoewht6vw",
+        "post_url": "https://youtube.com/shorts/pReoewht6vw",
+        "error": null,
+        "uploaded_at": "2026-03-23T13:27:21.943125+00:00"
       }
     },
-    "updated_at": "2026-03-22T13:57:03.771521+00:00"
+    "updated_at": "2026-03-23T13:27:22.001907+00:00"
   }
 }

@@ -9,7 +9,7 @@
       "is_active": true,
       "schedule": {
         "type": "interval",
-        "interval_hours": 2,
+        "interval_hours": "1",
         "specific_times": [
           "09:00",
           "15:00",
@@ -28,7 +28,25 @@
       "videos": [
         {
           "job_id": "job_69bc7f419aa4b0.32928005",
-          "added_at": "2026-03-21T14:31:03+01:00",
+          "added_at": "2026-03-21T16:31:03+03:00",
+          "status": "queued",
+          "platform_status": {
+            "youtube": "pending"
+          },
+          "position": 1
+        },
+        {
+          "job_id": "job_69bf42e8a24c38.70475922",
+          "added_at": "2026-03-22T04:16:24+03:00",
+          "status": "queued",
+          "platform_status": {
+            "youtube": "pending"
+          },
+          "position": 2
+        },
+        {
+          "job_id": "job_69bf4374734d74.68040670",
+          "added_at": "2026-03-22T04:18:44+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -36,8 +54,8 @@
           "position": 3
         },
         {
-          "job_id": "job_69bf42e8a24c38.70475922",
-          "added_at": "2026-03-22T02:16:24+01:00",
+          "job_id": "job_69bf43996961e4.24463412",
+          "added_at": "2026-03-22T04:19:21+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -45,8 +63,8 @@
           "position": 4
         },
         {
-          "job_id": "job_69bf4374734d74.68040670",
-          "added_at": "2026-03-22T02:18:44+01:00",
+          "job_id": "job_69bf51079246f7.30167492",
+          "added_at": "2026-03-22T05:16:39+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -54,8 +72,8 @@
           "position": 5
         },
         {
-          "job_id": "job_69bf43996961e4.24463412",
-          "added_at": "2026-03-22T02:19:21+01:00",
+          "job_id": "job_69bf5525080bb0.89047506",
+          "added_at": "2026-03-22T05:34:13+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -63,18 +81,8 @@
           "position": 6
         },
         {
-          "job_id": "job_69bf51079246f7.30167492",
-          "added_at": "2026-03-22T03:16:39+01:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 6
-        },
-        {
-          "job_id": "job_69bf51079246f7.30167492",
-          "added_at": "2026-03-22T02:30:16.342573+00:00",
-          "scheduled_at": "2026-03-22T02:30:16.342546+00:00",
+          "job_id": "job_69bf55250f6b49.26001828",
+          "added_at": "2026-03-22T05:34:13+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -82,8 +90,8 @@
           "position": 7
         },
         {
-          "job_id": "job_69bf5525080bb0.89047506",
-          "added_at": "2026-03-22T03:34:13+01:00",
+          "job_id": "job_69bf559b2ed134.65560868",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -91,8 +99,8 @@
           "position": 8
         },
         {
-          "job_id": "job_69bf55250f6b49.26001828",
-          "added_at": "2026-03-22T03:34:13+01:00",
+          "job_id": "job_69bf559b3bec80.82364190",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -100,8 +108,8 @@
           "position": 9
         },
         {
-          "job_id": "job_69bf559b2ed134.65560868",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559b42b704.21034777",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -109,8 +117,8 @@
           "position": 10
         },
         {
-          "job_id": "job_69bf559b357552.93126517",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559b5b8340.85329334",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -118,8 +126,8 @@
           "position": 11
         },
         {
-          "job_id": "job_69bf559b3bec80.82364190",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559b6490e2.63345678",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -127,8 +135,8 @@
           "position": 12
         },
         {
-          "job_id": "job_69bf559b42b704.21034777",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559b6ab832.67752094",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -136,8 +144,8 @@
           "position": 13
         },
         {
-          "job_id": "job_69bf559b4ab145.44283473",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559b726997.32570735",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -145,8 +153,8 @@
           "position": 14
         },
         {
-          "job_id": "job_69bf559b52eba7.21886695",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559b7af2a7.43783812",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -154,8 +162,8 @@
           "position": 15
         },
         {
-          "job_id": "job_69bf559b5b8340.85329334",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559b846fb3.26133417",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -163,8 +171,8 @@
           "position": 16
         },
         {
-          "job_id": "job_69bf559b6490e2.63345678",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559b8e7382.99942758",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -172,8 +180,8 @@
           "position": 17
         },
         {
-          "job_id": "job_69bf559b6ab832.67752094",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559b969105.84696119",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -181,8 +189,8 @@
           "position": 18
         },
         {
-          "job_id": "job_69bf559b726997.32570735",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559b9f1cf9.75694972",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -190,8 +198,8 @@
           "position": 19
         },
         {
-          "job_id": "job_69bf559b7af2a7.43783812",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559baf60e0.79441025",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -199,8 +207,8 @@
           "position": 20
         },
         {
-          "job_id": "job_69bf559b846fb3.26133417",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559bb644d4.08751328",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -208,8 +216,8 @@
           "position": 21
         },
         {
-          "job_id": "job_69bf559b8e7382.99942758",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559bbcaf18.32103193",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -217,8 +225,8 @@
           "position": 22
         },
         {
-          "job_id": "job_69bf559b969105.84696119",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559bc3fb72.29701872",
+          "added_at": "2026-03-22T05:36:11+03:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
@@ -226,213 +234,21 @@
           "position": 23
         },
         {
-          "job_id": "job_69bf559b9f1cf9.75694972",
-          "added_at": "2026-03-22T03:36:11+01:00",
+          "job_id": "job_69bf559b357552.93126517",
+          "added_at": "2026-03-23T14:47:47+01:00",
           "status": "queued",
           "platform_status": {
             "youtube": "pending"
           },
           "position": 24
-        },
-        {
-          "job_id": "job_69bf559ba764c6.14396792",
-          "added_at": "2026-03-22T03:36:11+01:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 25
-        },
-        {
-          "job_id": "job_69bf559baf60e0.79441025",
-          "added_at": "2026-03-22T03:36:11+01:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 26
-        },
-        {
-          "job_id": "job_69bf559bb644d4.08751328",
-          "added_at": "2026-03-22T03:36:11+01:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 27
-        },
-        {
-          "job_id": "job_69bf559bbcaf18.32103193",
-          "added_at": "2026-03-22T03:36:11+01:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 28
-        },
-        {
-          "job_id": "job_69bf559bc3fb72.29701872",
-          "added_at": "2026-03-22T03:36:11+01:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 29
-        },
-        {
-          "job_id": "job_69bf5525080bb0.89047506",
-          "added_at": "2026-03-22T02:46:46.478967+00:00",
-          "scheduled_at": "2026-03-22T02:46:46.478909+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 28
-        },
-        {
-          "job_id": "job_69bf55250f6b49.26001828",
-          "added_at": "2026-03-22T02:59:46.692505+00:00",
-          "scheduled_at": "2026-03-22T02:59:46.692484+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 29
-        },
-        {
-          "job_id": "job_69bf559b2ed134.65560868",
-          "added_at": "2026-03-22T03:14:16.908561+00:00",
-          "scheduled_at": "2026-03-22T03:14:16.908534+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 30
-        },
-        {
-          "job_id": "job_69bf559b357552.93126517",
-          "added_at": "2026-03-22T03:26:47.115905+00:00",
-          "scheduled_at": "2026-03-22T03:26:47.115889+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 31
-        },
-        {
-          "job_id": "job_69bf559b3bec80.82364190",
-          "added_at": "2026-03-22T03:41:17.462010+00:00",
-          "scheduled_at": "2026-03-22T03:41:17.461994+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 32
-        },
-        {
-          "job_id": "job_69bf559b42b704.21034777",
-          "added_at": "2026-03-22T03:54:17.639276+00:00",
-          "scheduled_at": "2026-03-22T03:54:17.639247+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 33
-        },
-        {
-          "job_id": "job_69bf559b5b8340.85329334",
-          "added_at": "2026-03-22T15:35:21.649407+00:00",
-          "scheduled_at": "2026-03-22T15:35:21.649366+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 34
-        },
-        {
-          "job_id": "job_69bf559b6490e2.63345678",
-          "added_at": "2026-03-22T15:44:52.590083+00:00",
-          "scheduled_at": "2026-03-22T15:44:52.590074+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 35
-        },
-        {
-          "job_id": "job_69bf559b6ab832.67752094",
-          "added_at": "2026-03-22T15:50:22.718659+00:00",
-          "scheduled_at": "2026-03-22T15:50:22.718652+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 36
-        },
-        {
-          "job_id": "job_69bf559b726997.32570735",
-          "added_at": "2026-03-22T15:57:22.871747+00:00",
-          "scheduled_at": "2026-03-22T15:57:22.871741+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 37
-        },
-        {
-          "job_id": "job_69bf559b7af2a7.43783812",
-          "added_at": "2026-03-22T16:02:22.983239+00:00",
-          "scheduled_at": "2026-03-22T16:02:22.983228+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 38
-        },
-        {
-          "job_id": "job_69bf559b846fb3.26133417",
-          "added_at": "2026-03-22T16:06:53.115812+00:00",
-          "scheduled_at": "2026-03-22T16:06:53.115800+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 39
-        },
-        {
-          "job_id": "job_69bf559b8e7382.99942758",
-          "added_at": "2026-03-22T16:22:23.330729+00:00",
-          "scheduled_at": "2026-03-22T16:22:23.330700+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 40
-        },
-        {
-          "job_id": "job_69bf559b969105.84696119",
-          "added_at": "2026-03-22T16:37:23.660047+00:00",
-          "scheduled_at": "2026-03-22T16:37:23.660029+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 41
-        },
-        {
-          "job_id": "job_69bf559b9f1cf9.75694972",
-          "added_at": "2026-03-22T16:52:53.888465+00:00",
-          "scheduled_at": "2026-03-22T18:52:53.888426+00:00",
-          "status": "queued",
-          "platform_status": {
-            "youtube": "pending"
-          },
-          "position": 42
         }
       ],
-      "created_at": "2026-03-20T23:10:00+01:00",
+      "created_at": "2026-03-21T01:10:00+03:00",
       "last_publish": null,
-      "resumed_at": "2026-03-22T17:13:44+01:00"
+      "resumed_at": "2026-03-23T17:03:47.374035",
+      "strict_mode": false,
+      "fail_threshold": 3,
+      "consecutive_fails": 0
     }
   ]
 }

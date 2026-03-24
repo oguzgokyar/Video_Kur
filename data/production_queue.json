@@ -296,12 +296,23 @@
       "started_at": null,
       "completed_at": null,
       "error": null
+    },
+    {
+      "prod_queue_id": "prod_bb846edc1cef4f52",
+      "job_id": "job_test_20260322_001",
+      "queue_id": "youtube-testr-8737ec",
+      "status": "waiting",
+      "priority": 0,
+      "added_at": "2026-03-23T12:36:50.444851+00:00",
+      "started_at": null,
+      "completed_at": null,
+      "error": null
     }
   ],
   "current_production": "prod_5ade5de8bf87bb50",
   "max_concurrent": 1,
   "metadata": {
-    "last_updated": "2026-03-22T16:53:23.935829+00:00",
+    "last_updated": "2026-03-23T12:36:50.444863+00:00",
     "total_produced": 20,
     "total_failed": 2
   }

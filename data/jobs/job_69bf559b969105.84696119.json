@@ -34,7 +34,7 @@
   },
   "ttsProvider": "elevenlabs",
   "social_upload": {
-    "queue_id": "social_9d0ae25b53b9436c",
+    "queue_id": "social_69c145d4b4cf8",
     "status": "failed",
     "platforms": {
       "youtube": {
@@ -45,6 +45,6 @@
         "uploaded_at": null
       }
     },
-    "updated_at": "2026-03-22T16:41:10.886043+00:00"
+    "updated_at": "2026-03-23T13:56:58.389739+00:00"
   }
 }
