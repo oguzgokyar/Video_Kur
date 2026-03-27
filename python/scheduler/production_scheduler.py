@@ -53,6 +53,8 @@ class ProductionScheduler:
     def run(self):
         """Main scheduler loop"""
         print("\nProduction Scheduler çalışıyor...\n")
+        print("🔐 YouTube Token Monitoring: Aktif")
+        print("⚠️  Token hatası alındığında otomatik yeniden auth yapılacak\n")
         
         try:
             while True:

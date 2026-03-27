@@ -26,25 +26,19 @@
   "title": "İran’dan kritik hamle: Savunma değil sensörler hedefte",
   "content_id": "content_2a6a542341bd",
   "source_type": "rss",
-  "queue_status": {
-    "queue_id": "youtube-testr-8737ec",
-    "queue_name": "Youtube Testr",
-    "status": "queued",
-    "added_at": "2026-03-22T03:36:11+01:00"
-  },
   "ttsProvider": "elevenlabs",
   "social_upload": {
-    "queue_id": "social_69c145d4b4cf8",
+    "queue_id": "social_69c53249a5301",
     "status": "failed",
     "platforms": {
       "youtube": {
         "status": "failed",
         "post_id": null,
         "post_url": null,
-        "error": "The user has exceeded the number of videos they may upload.",
+        "error": "Upload failed",
         "uploaded_at": null
       }
     },
-    "updated_at": "2026-03-23T13:56:58.389739+00:00"
+    "updated_at": "2026-03-26T13:45:49.919988+00:00"
   }
 }

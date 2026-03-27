@@ -58,7 +58,7 @@ class MetadataOptimizer:
     def _ai_optimize(self, title: str, script: str, tags: List[str] = None) -> Dict:
         """Use Gemini AI to generate optimized metadata"""
         try:
-            import google.generativeai as genai
+            import google.genai as genai
             genai.configure(api_key=self.gemini_key)
             model = genai.GenerativeModel(self.model)
             

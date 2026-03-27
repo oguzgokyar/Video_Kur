@@ -1,6 +1,97 @@
 {
   "history": [
     {
+      "queue_id": "social_69c5395bbd73e",
+      "job_id": "job_69bf559b9f1cf9.75694972",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b9f1cf9.75694972/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "success",
+          "post_id": "Pu_aulgZnkQ",
+          "post_url": "https://youtube.com/shorts/Pu_aulgZnkQ",
+          "error": null,
+          "uploaded_at": "2026-03-26T13:50:33.850359+00:00"
+        }
+      },
+      "scheduled_time": "2026-03-26T14:49:15+01:00",
+      "status": "success",
+      "priority": -1,
+      "metadata": {
+        "title": "Yeni bir gezegen sınıfı keşfedildi: Derinliklerinde magma okyanusu var",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": [],
+      "created_at": "2026-03-26T14:49:15+01:00",
+      "updated_at": "2026-03-26T14:49:15+01:00",
+      "retry_count": 0,
+      "completed_at": "2026-03-26T13:50:33.882260+00:00"
+    },
+    {
+      "queue_id": "social_69c53249a5479",
+      "job_id": "job_69bf559b9f1cf9.75694972",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b9f1cf9.75694972/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "Upload failed",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-26T14:19:05+01:00",
+      "status": "failed",
+      "priority": -19,
+      "metadata": {
+        "title": "Yeni bir gezegen sınıfı keşfedildi: Derinliklerinde magma okyanusu var",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": [],
+      "created_at": "2026-03-26T14:19:05+01:00",
+      "updated_at": "2026-03-26T14:19:05+01:00",
+      "retry_count": 3,
+      "completed_at": "2026-03-26T13:45:49.951503+00:00"
+    },
+    {
+      "queue_id": "social_69c53249a5301",
+      "job_id": "job_69bf559b969105.84696119",
+      "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b969105.84696119/final_video.mp4",
+      "platforms": [
+        "youtube"
+      ],
+      "platform_status": {
+        "youtube": {
+          "status": "failed",
+          "post_id": null,
+          "post_url": null,
+          "error": "Upload failed",
+          "uploaded_at": null
+        }
+      },
+      "scheduled_time": "2026-03-26T14:19:05+01:00",
+      "status": "failed",
+      "priority": -18,
+      "metadata": {
+        "title": "İran’dan kritik hamle: Savunma değil sensörler hedefte",
+        "description": "",
+        "tags": []
+      },
+      "platform_metadata": [],
+      "created_at": "2026-03-26T14:19:05+01:00",
+      "updated_at": "2026-03-26T14:30:06+01:00",
+      "retry_count": 3,
+      "last_error": null,
+      "completed_at": "2026-03-26T13:45:49.860049+00:00"
+    },
+    {
       "queue_id": "social_69c145d4b4f2e",
       "job_id": "job_69bf559b9f1cf9.75694972",
       "video_path": "C:\\Users\\user\\Documents\\GitHub\\Antigravity\\Video_Kur\\api/../output/job_69bf559b9f1cf9.75694972/final_video.mp4",

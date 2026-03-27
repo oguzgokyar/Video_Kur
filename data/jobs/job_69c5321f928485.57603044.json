@@ -1,0 +1,35 @@
+{
+    "id": "job_69c5321f928485.57603044",
+    "url": "https:\/\/www.youtube.com\/watch?v=VrmlU0BuGKQ",
+    "template": "short_haber",
+    "scriptId": "",
+    "videoWidth": 1080,
+    "videoHeight": 1920,
+    "subtitleStyle": {
+        "FontName": "Arial",
+        "FontSize": 16,
+        "PrimaryColour": "#FFFF00",
+        "OutlineColour": "#000000",
+        "Outline": 2,
+        "Shadow": 1,
+        "MarginV": 80,
+        "Bold": 1,
+        "preset": "config",
+        "BorderStyle": 1,
+        "Alignment": 2
+    },
+    "status": "pending",
+    "created_at": "2026-03-26 14:18:23",
+    "previewUrl": "",
+    "subtitles": "",
+    "error": "",
+    "title": "Manuel Eklenen İçerik",
+    "content_id": "content_fdb9c13017d6",
+    "source_type": "manual",
+    "queue_status": {
+        "queue_id": "youtube-testr-8737ec",
+        "queue_name": "Youtube Testr",
+        "status": "queued",
+        "added_at": "2026-03-26T14:18:23+01:00"
+    }
+}

@@ -1346,7 +1346,7 @@
                             <span class="flex items-center gap-1.5 text-sm font-medium" 
                                   :class="queueStats.blocked_reason ? 'text-red-600 dark:text-red-400' : (queueStats.is_active && isSocialSchedulerRunning() ? 'text-green-600 dark:text-green-400' : 'text-yellow-500')">
                               <span class="w-2 h-2 rounded-full animate-pulse" :class="queueStats.blocked_reason ? 'bg-red-500' : (queueStats.is_active && isSocialSchedulerRunning() ? 'bg-green-500' : 'bg-yellow-500')"></span>
-                              <span x-text="queueStats.blocked_reason ? '⛔ Engellendi' : (queueStats.is_active && isSocialSchedulerRunning() ? '● Çalışıyor' : '⏸️ Durduruldu')"></span>
+                              <span x-text="queueStats.blocked_reason ? '⛔ Engellendi' : (queueStats.is_active && isSocialSchedulerRunning() ? 'Çalışıyor' : '⏸️ Durduruldu')"></span>
                             </span>
                           </div>
                           

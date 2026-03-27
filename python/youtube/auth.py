@@ -66,12 +66,27 @@ class YouTubeAuth:
             try:
                 creds.refresh(Request())
                 self._save_token(creds, channel_id)
-                print("Token yenilendi", file=sys.stderr)
+                print("✅ Token yenilendi", file=sys.stderr)
             except Exception as e:
-                print(f"Token yenileme hatası: {e}", file=sys.stderr)
+                error_str = str(e)
+                print(f"❌ Token yenileme hatası: {e}", file=sys.stderr)
+                
+                # invalid_grant hatası = token revoke edilmiş veya expire olmuş
+                if 'invalid_grant' in error_str:
+                    print("⚠️  Token revoke edilmiş veya expire. Yeni kimlik doğrulama gerekli.", file=sys.stderr)
+                    # Token dosyasını sil ve yeni auth'u tetikle
+                    try:
+                        token_file.unlink()
+                        print(f"🔄 Eski token silindi: {token_file}", file=sys.stderr)
+                    except:
+                        pass
+                
                 creds = None
         
-        return creds if creds and creds.valid else None
+        if creds and creds.valid:
+            return creds
+        else:
+            return None
     
     def authenticate(self, channel_id: Optional[str] = None) -> Optional[Credentials]:
         """

@@ -1,6 +1,6 @@
 import json
 import requests
-import google.generativeai as genai
+import google.genai as genai
 
 
 def _build_script_prompt(title: str, text: str, max_duration: int = 55) -> str:

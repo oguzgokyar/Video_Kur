@@ -2,7 +2,7 @@ newspaper3k
 beautifulsoup4
 lxml
 requests
-google-generativeai
+google-genai
 elevenlabs
 edge-tts
 moviepy

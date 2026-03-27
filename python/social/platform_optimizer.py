@@ -142,7 +142,7 @@ class PlatformMetadataOptimizer:
     ) -> Dict:
         """Use Gemini AI for platform-specific optimization"""
         try:
-            import google.generativeai as genai
+            import google.genai as genai
             genai.configure(api_key=self.gemini_key)
             model = genai.GenerativeModel(self.model)
             
