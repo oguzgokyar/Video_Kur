@@ -16,6 +16,9 @@
   error: '', 
   steps: [], 
   configLoaded: false,
+  scripts: [],
+  scriptId: '',
+  contentType: 'haber',
   darkMode: localStorage.getItem('darkMode')==='1', 
   toggleDark(){ this.darkMode=!this.darkMode; localStorage.setItem('darkMode',this.darkMode?'1':'0'); document.documentElement.classList.toggle('dark',this.darkMode); },
   
@@ -31,19 +34,31 @@
   },
   get videoWidth() { return this.dimensionPreset === 'custom' ? this.customWidth : this.dimensionPresets[this.dimensionPreset].width; },
   get videoHeight() { return this.dimensionPreset === 'custom' ? this.customHeight : this.dimensionPresets[this.dimensionPreset].height; },
+  get videoType() {
+    if (this.videoWidth === this.videoHeight) return 'square';
+    if (this.videoWidth > this.videoHeight) return 'wide';
+    return 'short';
+  },
+  get contextScripts() {
+    return this.scripts.filter(s => {
+      const sType = (s.videoType || 'short') === this.videoType;
+      const sCategory = (s.contentType || '').toLowerCase() === this.contentType.toLowerCase();
+      return sType && sCategory;
+    });
+  },
   
   // Subtitle style settings - varsayılan olarak config'den yükleniyor
   subtitleMode: 'config',
   selectedSubtitlePreset: 'classic',
-  configSubtitle: { FontName: 'Arial', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 3, Shadow: 1, MarginV: 100, Bold: 1 },
-  customSubtitle: { FontName: 'Arial', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 2, MarginV: 60, Bold: 1 },
+  configSubtitle: { FontName: 'Arial', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 3, Shadow: 1, MarginV: 100, MarginL: 40, MarginR: 40, Bold: 1 },
+  customSubtitle: { FontName: 'Arial', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 2, MarginV: 60, MarginL: 40, MarginR: 40, Bold: 1 },
   subtitlePresets: {
-    classic: { label: 'Klasik', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 2, MarginV: 60, Bold: 1 },
-    neon: { label: 'Neon', FontSize: 26, PrimaryColour: '#00FF00', OutlineColour: '#000000', Outline: 2, MarginV: 60, Bold: 1 },
-    cinematic: { label: 'Sinematik', FontSize: 22, PrimaryColour: '#F5F5DC', OutlineColour: '#2C2C2C', Outline: 1.5, MarginV: 80, Bold: 0 },
-    bold: { label: 'Kalın', FontSize: 28, PrimaryColour: '#FFD700', OutlineColour: '#000000', Outline: 3, MarginV: 50, Bold: 1 },
-    minimal: { label: 'Minimal', FontSize: 20, PrimaryColour: '#FFFFFF', OutlineColour: '#333333', Outline: 1, MarginV: 70, Bold: 0 },
-    news: { label: 'Haber', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#CC0000', Outline: 2, MarginV: 55, Bold: 1 }
+    classic: { label: 'Klasik', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 2, MarginV: 60, MarginL: 40, MarginR: 40, Bold: 1 },
+    neon: { label: 'Neon', FontSize: 26, PrimaryColour: '#00FF00', OutlineColour: '#000000', Outline: 2, MarginV: 60, MarginL: 40, MarginR: 40, Bold: 1 },
+    cinematic: { label: 'Sinematik', FontSize: 22, PrimaryColour: '#F5F5DC', OutlineColour: '#2C2C2C', Outline: 1.5, MarginV: 80, MarginL: 40, MarginR: 40, Bold: 0 },
+    bold: { label: 'Kalın', FontSize: 28, PrimaryColour: '#FFD700', OutlineColour: '#000000', Outline: 3, MarginV: 50, MarginL: 40, MarginR: 40, Bold: 1 },
+    minimal: { label: 'Minimal', FontSize: 20, PrimaryColour: '#FFFFFF', OutlineColour: '#333333', Outline: 1, MarginV: 70, MarginL: 40, MarginR: 40, Bold: 0 },
+    news: { label: 'Haber', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#CC0000', Outline: 2, MarginV: 55, MarginL: 40, MarginR: 40, Bold: 1 }
   },
   get subtitleStyle() {
     if (this.subtitleMode === 'config') {
@@ -65,8 +80,15 @@
       })
       .catch(() => { this.configLoaded = true; });
   },
+  loadScripts() {
+    fetch('/api/scripts.php')
+      .then(r => r.json())
+      .then(d => { this.scripts = d.scripts || []; })
+      .catch(() => { this.scripts = []; });
+  },
   init() {
     this.loadConfig();
+    this.loadScripts();
   }
 }" x-init="init()">
   <div class="flex flex-col h-screen">
@@ -82,7 +104,7 @@
           <form @submit.prevent="
             loading=true; error='';
             steps=['Haber çekiliyor...'];
-            fetch('/api/jobs.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, template, videoWidth, videoHeight, subtitleStyle})})
+            fetch('/api/jobs.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, template, scriptId, contentType, videoWidth, videoHeight, subtitleStyle})})
               .then(r=>r.json())
               .then(d=>{ jobId=d.jobId; status='pending'; loading=false; steps.push('İş oluşturuldu: '+d.jobId); })
               .catch(e=>{ error='İş başlatılamadı. Backend çalışıyor mu?'; loading=false; })
@@ -94,6 +116,16 @@
             <select x-model="template" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
               <option value="short_haber">Short Haber (60sn)</option>
             </select>
+
+            <label class="block mb-2 text-sm font-semibold text-gray-700">Kategori</label>
+            <div class="flex flex-wrap gap-2 mb-4">
+              <button type="button" @click="contentType='haber'" class="px-3 py-1.5 rounded-full border text-sm transition"
+                :class="contentType==='haber' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Haber</button>
+              <button type="button" @click="contentType='komedi'" class="px-3 py-1.5 rounded-full border text-sm transition"
+                :class="contentType==='komedi' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Komedi</button>
+              <button type="button" @click="contentType='muzik'" class="px-3 py-1.5 rounded-full border text-sm transition"
+                :class="contentType==='muzik' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Müzik</button>
+            </div>
 
             <!-- Video Ebat Seçimi -->
             <label class="block mb-2 text-sm font-semibold text-gray-700">Video Ebatı</label>
@@ -136,6 +168,17 @@
                 📐 Görsel & Video Ebatı: <span class="font-bold" x-text="videoWidth + ' x ' + videoHeight + ' px'"></span>
               </span>
               <span class="text-xs text-blue-500" x-text="videoWidth > videoHeight ? 'Yatay' : (videoWidth < videoHeight ? 'Dikey' : 'Kare')"></span>
+            </div>
+
+            <label class="block mb-2 text-sm font-semibold text-gray-700">Script (Opsiyonel)</label>
+            <div class="flex flex-wrap gap-2 mb-4">
+              <button type="button" @click="scriptId=''" class="px-3 py-1.5 rounded-full border text-sm transition"
+                :class="scriptId==='' ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Otomatik Varsayılan</button>
+              <template x-for="script in contextScripts" :key="script.id">
+                <button type="button" @click="scriptId=script.id" class="px-3 py-1.5 rounded-full border text-sm transition"
+                  :class="scriptId===script.id ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'"
+                  x-text="script.name"></button>
+              </template>
             </div>
 
             <!-- Altyazı Stili Seçimi -->
@@ -208,6 +251,14 @@
                     <div>
                       <label class="block text-xs font-medium text-gray-600 mb-1">Alt Boşluk: <span x-text="customSubtitle.MarginV + 'px'"></span></label>
                       <input type="range" min="20" max="300" x-model.number="customSubtitle.MarginV" class="w-full accent-indigo-600">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-600 mb-1">Sol Boşluk: <span x-text="customSubtitle.MarginL + 'px'"></span></label>
+                      <input type="range" min="0" max="200" x-model.number="customSubtitle.MarginL" class="w-full accent-indigo-600">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-600 mb-1">Sağ Boşluk: <span x-text="customSubtitle.MarginR + 'px'"></span></label>
+                      <input type="range" min="0" max="200" x-model.number="customSubtitle.MarginR" class="w-full accent-indigo-600">
                     </div>
                     <div>
                       <label class="block text-xs font-medium text-gray-600 mb-1">Yazı Rengi</label>

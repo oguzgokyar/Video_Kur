@@ -61,12 +61,12 @@ $show_status = true;
     const jobId  = params.get('id') || '';
 
     const SUBTITLE_PRESETS = {
-      classic:    { label:'Classic',      FontName:'Arial', FontSize:20, PrimaryColour:'#FFFFFF', OutlineColour:'#000000', BorderStyle:3, Outline:2, Shadow:0, MarginV:80,  Alignment:2, Bold:0 },
-      bold_bottom:{ label:'Bold Alt',     FontName:'Arial', FontSize:24, PrimaryColour:'#FFFFFF', OutlineColour:'#000000', BorderStyle:3, Outline:3, Shadow:1, MarginV:100, Alignment:2, Bold:1 },
-      yellow_bold:{ label:'Sarı Kalın',   FontName:'Arial', FontSize:22, PrimaryColour:'#FFFF00', OutlineColour:'#000000', BorderStyle:1, Outline:2, Shadow:1, MarginV:80,  Alignment:2, Bold:1 },
-      box_white:  { label:'Kutu Beyaz',   FontName:'Arial', FontSize:20, PrimaryColour:'#000000', OutlineColour:'#FFFFFF', BorderStyle:4, Outline:0, Shadow:0, MarginV:80,  Alignment:2, Bold:0 },
-      tiktok:     { label:'TikTok',       FontName:'Arial', FontSize:26, PrimaryColour:'#FFFFFF', OutlineColour:'#0000FF', BorderStyle:3, Outline:3, Shadow:0, MarginV:120, Alignment:2, Bold:1 },
-      minimal:    { label:'Minimal',      FontName:'Arial', FontSize:18, PrimaryColour:'#FFFFFF', OutlineColour:'#000000', BorderStyle:1, Outline:1, Shadow:0, MarginV:60,  Alignment:2, Bold:0 },
+      classic:    { label:'Classic',      FontName:'Arial', FontSize:20, PrimaryColour:'#FFFFFF', OutlineColour:'#000000', BorderStyle:3, Outline:2, Shadow:0, MarginV:80,  MarginL:40, MarginR:40, Alignment:2, Bold:0 },
+      bold_bottom:{ label:'Bold Alt',     FontName:'Arial', FontSize:24, PrimaryColour:'#FFFFFF', OutlineColour:'#000000', BorderStyle:3, Outline:3, Shadow:1, MarginV:100, MarginL:40, MarginR:40, Alignment:2, Bold:1 },
+      yellow_bold:{ label:'Sarı Kalın',   FontName:'Arial', FontSize:22, PrimaryColour:'#FFFF00', OutlineColour:'#000000', BorderStyle:1, Outline:2, Shadow:1, MarginV:80,  MarginL:40, MarginR:40, Alignment:2, Bold:1 },
+      box_white:  { label:'Kutu Beyaz',   FontName:'Arial', FontSize:20, PrimaryColour:'#000000', OutlineColour:'#FFFFFF', BorderStyle:4, Outline:0, Shadow:0, MarginV:80,  MarginL:40, MarginR:40, Alignment:2, Bold:0 },
+      tiktok:     { label:'TikTok',       FontName:'Arial', FontSize:26, PrimaryColour:'#FFFFFF', OutlineColour:'#0000FF', BorderStyle:3, Outline:3, Shadow:0, MarginV:120, MarginL:40, MarginR:40, Alignment:2, Bold:1 },
+      minimal:    { label:'Minimal',      FontName:'Arial', FontSize:18, PrimaryColour:'#FFFFFF', OutlineColour:'#000000', BorderStyle:1, Outline:1, Shadow:0, MarginV:60,  MarginL:40, MarginR:40, Alignment:2, Bold:0 },
     };
 
     const statusLabel = { pending:'Bekliyor', scraping:'Haber Çekiliyor', scripting:'Script Yazılıyor', imaging:'Görseller Üretiliyor', tts:'Seslendirme', subtitling:'Altyazı', composing:'Video Birleştirme', done:'Tamamlandı', failed:'Hata' };
@@ -136,7 +136,7 @@ $show_status = true;
               this.customStyle = { ...this.SUBTITLE_PRESETS[d.subtitleStyle] };
             } else if (typeof d.subtitleStyle === 'object') {
               this.subtitleMode = 'custom';
-              this.customStyle = { ...d.subtitleStyle };
+              this.customStyle = { ...this.SUBTITLE_PRESETS.classic, ...d.subtitleStyle };
             }
           }
         } catch(e) { this.pageError = 'Sunucu hatası: ' + e.message; this.loading = false; return; }
@@ -634,11 +634,10 @@ $show_status = true;
         this.uploadingToYouTube = true;
         
         try {
-          const response = await fetch('/api/youtube.php', {
+          const response = await fetch('/api/youtube_upload.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-              action: 'upload',
               job_id: this.jobId,
               video_path: this.job.previewUrl,
               metadata: {
@@ -847,7 +846,7 @@ $show_status = true;
                           </div>
                           <p class="text-xs text-purple-800 leading-snug" x-show="editingPrompt !== (sc.scene||(si+1))" x-text="sc.image_prompt"></p>
                           <div x-show="editingPrompt === (sc.scene||(si+1))" class="space-y-2">
-                            <textarea x-model="promptDraft" rows="3" class="w-full text-xs border border-purple-300 rounded p-2 bg-white focus:outline-none focus:ring-2 focus:ring-purple-400" style="resize:vertical"></textarea>
+                            <textarea x-model="promptDraft" rows="3" class="w-full text-xs border border-purple-300 rounded p-2 bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 resize-y"></textarea>
                             <div class="flex flex-wrap gap-2">
                               <button @click="savePrompt(sc.scene||(si+1))" class="text-xs px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 font-semibold">💾 Kaydet</button>
                               <button @click="saveAndRegenPrompt(sc.scene||(si+1))" class="text-xs px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-semibold">🔄 Kaydet &amp; Görsel Yenile</button>
@@ -1087,6 +1086,10 @@ $show_status = true;
                         <input type="range" min="12" max="40" x-model.number="customStyle.FontSize" class="w-full accent-indigo-600"></div>
                       <div><label class="text-xs font-semibold text-gray-600 block mb-1">Alt Boşluk: <span x-text="customStyle.MarginV+'px'"></span></label>
                         <input type="range" min="20" max="300" x-model.number="customStyle.MarginV" class="w-full accent-indigo-600"></div>
+                      <div><label class="text-xs font-semibold text-gray-600 block mb-1">Sol Boşluk: <span x-text="customStyle.MarginL+'px'"></span></label>
+                        <input type="range" min="0" max="200" x-model.number="customStyle.MarginL" class="w-full accent-indigo-600"></div>
+                      <div><label class="text-xs font-semibold text-gray-600 block mb-1">Sağ Boşluk: <span x-text="customStyle.MarginR+'px'"></span></label>
+                        <input type="range" min="0" max="200" x-model.number="customStyle.MarginR" class="w-full accent-indigo-600"></div>
                       <div><label class="text-xs font-semibold text-gray-600 block mb-1">Yazı Rengi</label>
                         <input type="color" x-model="customStyle.PrimaryColour" class="w-full h-8 rounded border border-gray-200 cursor-pointer p-0.5"></div>
                       <div><label class="text-xs font-semibold text-gray-600 block mb-1">Dış Hat Rengi</label>
@@ -1208,8 +1211,7 @@ $show_status = true;
                   </template>
                   <template x-if="editingYouTubeMetadata">
                     <textarea x-model="youtubeMetadata.description" rows="8" maxlength="5000"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" 
-                      style="resize: vertical"></textarea>
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"></textarea>
                   </template>
                 </div>
                 

@@ -1,19 +1,39 @@
-<?php $page_title = 'Hesaplar - YouTube Shorts Otomasyon'; $active_page = 'accounts'; ?>
+<?php $page_title = 'YouTube Hesapları - Çoklu Kanal Yönetimi'; $active_page = 'accounts'; ?>
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" x-data="{ darkMode: localStorage.getItem('darkMode') === '1' }" :class="{ 'dark': darkMode }">
 <head>
   <?php include __DIR__ . '/components/_head.php'; ?>
   <style>
-    .platform-tab {
-      transition: all 0.2s ease;
-    }
-    .platform-tab.active {
-      border-bottom: 3px solid currentColor;
-    }
-    .platform-icon {
-      width: 24px;
-      height: 24px;
-    }
+    /* Minimalist Table Styles */
+    .table-minimal { width: 100%; border-collapse: collapse; }
+    .table-minimal thead { background: rgba(239, 68, 68, 0.05); }
+    .table-minimal th { padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; }
+    .table-minimal td { padding: 10px 12px; border-top: 1px solid #e5e7eb; }
+    .dark .table-minimal thead { background: rgba(239, 68, 68, 0.1); }
+    .dark .table-minimal th { color: #9ca3af; }
+    .dark .table-minimal td { border-color: #374151; }
+    
+    /* Accordion Styles */
+    .accordion-header { cursor: pointer; transition: background 0.15s; }
+    .accordion-header:hover { background: rgba(0,0,0,0.02); }
+    .dark .accordion-header:hover { background: rgba(255,255,255,0.03); }
+    
+    /* Quota Progress Bar */
+    .quota-bar { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+    .quota-fill { height: 100%; transition: width 0.3s; }
+    .quota-fill.good { background: #10b981; }
+    .quota-fill.warning { background: #f59e0b; }
+    .quota-fill.danger { background: #ef4444; }
+    .dark .quota-bar { background: #374151; }
+    
+    /* Status Badges */
+    .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .status-active { background: rgba(34, 197, 94, 0.1); color: #16a34a; }
+    .status-inactive { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+    .status-pending { background: rgba(234, 179, 8, 0.1); color: #ca8a04; }
+    .dark .status-active { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+    .dark .status-inactive { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .dark .status-pending { background: rgba(234, 179, 8, 0.15); color: #fbbf24; }
   </style>
   <script>
   function accountsApp() {
@@ -21,83 +41,120 @@
       // App State
       sidebarOpen: false,
       darkMode: localStorage.getItem('darkMode') === '1',
-      activeTab: 'youtube',
+      loading: true,
       
-      // YouTube State
-      youtubeChannels: [],
-      youtubeLoading: true,
-      youtubeAuthenticating: false,
+      // YouTube Unified Channels State
+      channels: [],
+      expandedChannels: {},
       
-      // Instagram State
-      instagramAccounts: [],
-      instagramLoading: true,
-      instagramAuthenticating: false,
+      // Modals
+      addChannelModal: false,
+      addApiModal: false,
+      editCategoryModal: false,
+      currentChannelId: null,
+      submitting: false,
       
-      // TikTok State
-      tiktokAccounts: [],
-      tiktokLoading: true,
-      tiktokAuthenticating: false,
+      // Forms
+      channelForm: { channel_title: '', channel_id: '', description: '' },
+      apiForm: { name: '', client_secrets_file: null, project_id: '', daily_quota: 10000, notes: '' },
+      categoryForm: { channel_id: '', category_id: '28' },
       
-      // ==================== YOUTUBE ====================
-      async loadYoutubeChannels() {
-        this.youtubeLoading = true;
+      // ==================== CHANNEL OPERATIONS ====================
+      async loadChannels() {
+        this.loading = true;
         try {
-          const r = await fetch('/api/youtube.php?action=channels');
+          const r = await fetch('/api/youtube_channels.php?action=list');
           const d = await r.json();
-          this.youtubeChannels = d.channels || [];
+          if (d.success) {
+            this.channels = d.channels || [];
+            // Auto-expand first channel
+            if (this.channels.length > 0 && Object.keys(this.expandedChannels).length === 0) {
+              this.expandedChannels[this.channels[0].id] = true;
+            }
+          }
         } catch(e) {
-          console.error('YouTube kanal yükleme hatası:', e);
+          console.error('Kanal yükleme hatası:', e);
         }
-        this.youtubeLoading = false;
+        this.loading = false;
       },
       
-      async authenticateYoutube() {
-        if (this.youtubeAuthenticating) return;
-        
-        if (!confirm('YouTube hesabınızı bağlamak için tarayıcınızda yeni bir pencere açılacak. Devam etmek istiyor musunuz?')) {
+      toggleChannel(channelId) {
+        this.expandedChannels[channelId] = !this.expandedChannels[channelId];
+      },
+      
+      isExpanded(channelId) {
+        return this.expandedChannels[channelId] === true;
+      },
+      
+      getQuotaClass(used, total) {
+        const pct = (used / total) * 100;
+        if (pct >= 90) return 'danger';
+        if (pct >= 70) return 'warning';
+        return 'good';
+      },
+      
+      getCategoryName(id) {
+        const categories = {
+          '1': 'Film & Animasyon', '2': 'Otomobil & Araçlar', '10': 'Müzik',
+          '15': 'Hayvanlar', '17': 'Spor', '19': 'Seyahat', '20': 'Oyun',
+          '22': 'İnsanlar & Bloglar', '23': 'Komedi', '24': 'Eğlence',
+          '25': 'Haber & Politika', '26': 'Nasıl Yapılır', '27': 'Eğitim',
+          '28': 'Bilim & Teknoloji'
+        };
+        return categories[id] || 'Bilim & Teknoloji';
+      },
+      
+      // ==================== ADD CHANNEL ====================
+      openAddChannelModal() {
+        this.channelForm = { channel_title: '', channel_id: '', description: '' };
+        this.addChannelModal = true;
+      },
+      
+      async addChannel() {
+        if (!this.channelForm.channel_title) {
+          alert('❌ Kanal adı gerekli');
           return;
         }
-        
-        this.youtubeAuthenticating = true;
-        
+        this.submitting = true;
         try {
-          const r = await fetch('/api/youtube.php', {
+          const r = await fetch('/api/youtube_channels.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({action: 'auth'})
+            body: JSON.stringify({ action: 'add_channel', ...this.channelForm })
           });
-          
           const d = await r.json();
-          
           if (d.success) {
             alert('✅ ' + d.message);
-            this.youtubeChannels = d.channels || [];
+            this.addChannelModal = false;
+            await this.loadChannels();
           } else {
-            alert('❌ ' + (d.error || 'Kimlik doğrulama başarısız'));
-            console.error(d.output);
+            alert('❌ ' + d.error);
           }
         } catch(e) {
           alert('❌ Hata: ' + e.message);
         }
-        
-        this.youtubeAuthenticating = false;
+        this.submitting = false;
       },
       
-      async disconnectYoutube(channelId) {
-        if (!confirm('Bu kanalın bağlantısını kesmek istediğinizden emin misiniz?')) return;
+      // ==================== DELETE CHANNEL ====================
+      async deleteChannel(channelId, channelTitle) {
+        const apiCount = this.channels.find(c => c.id === channelId)?.apis?.length || 0;
+        const msg = apiCount > 0 
+          ? `"${channelTitle}" kanalı ve ${apiCount} API silinecek. Devam edilsin mi?`
+          : `"${channelTitle}" kanalı silinecek. Devam edilsin mi?`;
+        
+        if (!confirm(msg)) return;
         
         try {
-          const r = await fetch('/api/youtube.php', {
+          const r = await fetch('/api/youtube_channels.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({action: 'disconnect', channel_id: channelId})
+            body: JSON.stringify({ action: 'delete_channel', channel_id: channelId })
           });
-          
           const d = await r.json();
-          
           if (d.success) {
             alert('✅ ' + d.message);
-            this.loadYoutubeChannels();
+            await this.loadChannels();
           } else {
             alert('❌ ' + d.error);
           }
@@ -106,93 +163,121 @@
         }
       },
       
-      async setDefaultYoutubeChannel(channelId) {
-        try {
-          const r = await fetch('/api/youtube.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({action: 'set_default', channel_id: channelId})
-          });
-          
-          const d = await r.json();
-          
-          if (d.success) {
-            this.loadYoutubeChannels();
-          } else {
-            alert('❌ ' + d.error);
-          }
-        } catch(e) {
-          alert('❌ Hata: ' + e.message);
+      // ==================== ADD API ====================
+      openAddApiModal(channelId) {
+        this.currentChannelId = channelId;
+        this.apiForm = { name: '', client_secrets_file: null, project_id: '', daily_quota: 10000, notes: '' };
+        this.addApiModal = true;
+      },
+      
+      handleApiFileSelect(event) {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const data = JSON.parse(e.target.result);
+              this.apiForm.client_secrets_file = file.name;
+              this.apiForm.fileData = data;
+              // Extract project_id and auto-fill name
+              const config = data.installed || data.web;
+              if (config?.project_id) {
+                this.apiForm.project_id = config.project_id;
+                // Auto-fill API name if empty
+                if (!this.apiForm.name) {
+                  this.apiForm.name = config.project_id;
+                }
+              }
+            } catch(err) {
+              alert('❌ Geçersiz JSON dosyası');
+            }
+          };
+          reader.readAsText(file);
         }
       },
       
-      // ==================== INSTAGRAM ====================
-      async loadInstagramAccounts() {
-        this.instagramLoading = true;
-        try {
-          const r = await fetch('/api/accounts.php?action=list&platform=instagram');
-          const d = await r.json();
-          this.instagramAccounts = d.accounts || [];
-        } catch(e) {
-          console.error('Instagram hesap yükleme hatası:', e);
+      async addApi() {
+        if (!this.apiForm.name || !this.apiForm.fileData) {
+          alert('❌ API adı ve client secrets dosyası gerekli');
+          return;
         }
-        this.instagramLoading = false;
-      },
-      
-      async authenticateInstagram() {
-        if (this.instagramAuthenticating) return;
-        
-        // Instagram OAuth için kullanıcıdan bilgi al
-        const username = prompt('Instagram kullanıcı adınızı girin:');
-        if (!username) return;
-        
-        this.instagramAuthenticating = true;
-        
+        this.submitting = true;
         try {
-          const r = await fetch('/api/accounts.php', {
+          const r = await fetch('/api/youtube_channels.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-              action: 'connect',
-              platform: 'instagram',
-              username: username
+              action: 'add_api',
+              channel_id: this.currentChannelId,
+              name: this.apiForm.name,
+              project_id: this.apiForm.project_id,
+              daily_quota: this.apiForm.daily_quota,
+              notes: this.apiForm.notes,
+              client_secrets: this.apiForm.fileData
             })
           });
-          
           const d = await r.json();
-          
           if (d.success) {
             alert('✅ ' + d.message);
-            this.loadInstagramAccounts();
+            this.addApiModal = false;
+            await this.loadChannels();
           } else {
-            alert('❌ ' + (d.error || 'Bağlantı başarısız'));
+            alert('❌ ' + d.error);
           }
         } catch(e) {
           alert('❌ Hata: ' + e.message);
         }
-        
-        this.instagramAuthenticating = false;
+        this.submitting = false;
       },
       
-      async disconnectInstagram(accountId) {
-        if (!confirm('Bu Instagram hesabının bağlantısını kesmek istediğinizden emin misiniz?')) return;
-        
+      // ==================== API OPERATIONS ====================
+      async loginApi(channelId, apiId) {
+        if (!confirm('OAuth login başlatılsın mı?')) return;
         try {
-          const r = await fetch('/api/accounts.php', {
+          const r = await fetch('/api/youtube_channels.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-              action: 'disconnect',
-              platform: 'instagram',
-              account_id: accountId
-            })
+            body: JSON.stringify({ action: 'login_api', channel_id: channelId, api_id: apiId })
           });
-          
           const d = await r.json();
-          
+          if (d.success && d.oauth_url) {
+            window.open(d.oauth_url, '_blank');
+            alert('OAuth sayfası yeni sekmede açıldı. İşlemi tamamladıktan sonra sayfayı yenileyin.');
+          } else {
+            alert('❌ ' + (d.error || 'OAuth başlatılamadı'));
+          }
+        } catch(e) {
+          alert('❌ Hata: ' + e.message);
+        }
+      },
+      
+      async toggleApiStatus(channelId, apiId, currentStatus) {
+        try {
+          const r = await fetch('/api/youtube_channels.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: 'update_api', channel_id: channelId, api_id: apiId, is_active: !currentStatus })
+          });
+          const d = await r.json();
+          if (d.success) await this.loadChannels();
+          else alert('❌ ' + d.error);
+        } catch(e) {
+          alert('❌ Hata: ' + e.message);
+        }
+      },
+      
+      async deleteApi(channelId, apiId, apiName) {
+        if (!confirm(`"${apiName}" API'sini silmek istediğinize emin misiniz?`)) return;
+        try {
+          const r = await fetch('/api/youtube_channels.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: 'delete_api', channel_id: channelId, api_id: apiId })
+          });
+          const d = await r.json();
           if (d.success) {
             alert('✅ ' + d.message);
-            this.loadInstagramAccounts();
+            await this.loadChannels();
           } else {
             alert('❌ ' + d.error);
           }
@@ -201,146 +286,45 @@
         }
       },
       
-      async setDefaultInstagram(accountId) {
+      editChannelCategory(channel) {
+        this.categoryForm = {
+          channel_id: channel.id,
+          category_id: channel.default_category_id || '28'
+        };
+        this.editCategoryModal = true;
+      },
+      
+      async updateChannelCategory() {
+        this.submitting = true;
         try {
-          const r = await fetch('/api/accounts.php', {
+          const r = await fetch('/api/youtube_channels.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-              action: 'set_default',
-              platform: 'instagram',
-              account_id: accountId
+              action: 'update_channel_category',
+              channel_id: this.categoryForm.channel_id,
+              category_id: this.categoryForm.category_id
             })
           });
-          
           const d = await r.json();
-          
           if (d.success) {
-            this.loadInstagramAccounts();
+            alert('✅ Kategori güncellendi');
+            this.editCategoryModal = false;
+            await this.loadChannels();
           } else {
             alert('❌ ' + d.error);
           }
         } catch(e) {
           alert('❌ Hata: ' + e.message);
         }
-      },
-      
-      // ==================== TIKTOK ====================
-      async loadTiktokAccounts() {
-        this.tiktokLoading = true;
-        try {
-          const r = await fetch('/api/accounts.php?action=list&platform=tiktok');
-          const d = await r.json();
-          this.tiktokAccounts = d.accounts || [];
-        } catch(e) {
-          console.error('TikTok hesap yükleme hatası:', e);
-        }
-        this.tiktokLoading = false;
-      },
-      
-      async authenticateTiktok() {
-        if (this.tiktokAuthenticating) return;
-        
-        // TikTok OAuth için kullanıcıdan bilgi al
-        const username = prompt('TikTok kullanıcı adınızı girin (@username):');
-        if (!username) return;
-        
-        this.tiktokAuthenticating = true;
-        
-        try {
-          const r = await fetch('/api/accounts.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-              action: 'connect',
-              platform: 'tiktok',
-              username: username.replace('@', '')
-            })
-          });
-          
-          const d = await r.json();
-          
-          if (d.success) {
-            alert('✅ ' + d.message);
-            this.loadTiktokAccounts();
-          } else {
-            alert('❌ ' + (d.error || 'Bağlantı başarısız'));
-          }
-        } catch(e) {
-          alert('❌ Hata: ' + e.message);
-        }
-        
-        this.tiktokAuthenticating = false;
-      },
-      
-      async disconnectTiktok(accountId) {
-        if (!confirm('Bu TikTok hesabının bağlantısını kesmek istediğinizden emin misiniz?')) return;
-        
-        try {
-          const r = await fetch('/api/accounts.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-              action: 'disconnect',
-              platform: 'tiktok',
-              account_id: accountId
-            })
-          });
-          
-          const d = await r.json();
-          
-          if (d.success) {
-            alert('✅ ' + d.message);
-            this.loadTiktokAccounts();
-          } else {
-            alert('❌ ' + d.error);
-          }
-        } catch(e) {
-          alert('❌ Hata: ' + e.message);
-        }
-      },
-      
-      async setDefaultTiktok(accountId) {
-        try {
-          const r = await fetch('/api/accounts.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-              action: 'set_default',
-              platform: 'tiktok',
-              account_id: accountId
-            })
-          });
-          
-          const d = await r.json();
-          
-          if (d.success) {
-            this.loadTiktokAccounts();
-          } else {
-            alert('❌ ' + d.error);
-          }
-        } catch(e) {
-          alert('❌ Hata: ' + e.message);
-        }
+        this.submitting = false;
       },
       
       // ==================== UTILITIES ====================
       formatNumber(num) {
-        if (!num) return '0';
-        if (num >= 1000000) return (num/1000000).toFixed(1) + 'M';
-        if (num >= 1000) return (num/1000).toFixed(1) + 'K';
-        return num.toString();
-      },
-      
-      switchTab(tab) {
-        this.activeTab = tab;
-        if (tab === 'youtube' && this.youtubeChannels.length === 0) {
-          this.loadYoutubeChannels();
-        } else if (tab === 'instagram' && this.instagramAccounts.length === 0) {
-          this.loadInstagramAccounts();
-        } else if (tab === 'tiktok' && this.tiktokAccounts.length === 0) {
-          this.loadTiktokAccounts();
-        }
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num?.toString() || '0';
       },
       
       toggleDark() {
@@ -350,9 +334,7 @@
       },
       
       init() {
-        this.loadYoutubeChannels();
-        this.loadInstagramAccounts();
-        this.loadTiktokAccounts();
+        this.loadChannels();
       }
     };
   }
@@ -360,7 +342,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js" defer></script>
 </head>
-<body class="bg-gray-100 min-h-screen" x-data="accountsApp()" x-init="init()">
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen" x-data="accountsApp()" x-init="init()">
   <div class="flex flex-col h-screen">
     <?php include __DIR__ . '/components/_header.php'; ?>
 
@@ -370,812 +352,359 @@
       <main class="flex-1 overflow-y-auto p-6 md:p-8">
         <div class="max-w-5xl mx-auto">
           
-          <!-- Header -->
+          <!-- Page Header -->
           <div class="flex items-center justify-between mb-6">
             <div>
-              <h1 class="text-2xl font-bold text-gray-900">🔗 Hesaplar</h1>
-              <p class="text-gray-600 mt-1">Sosyal medya hesaplarınızı bağlayın ve yönetin</p>
+              <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                📺 YouTube Hesapları
+              </h1>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Çoklu kanal ve API yönetimi</p>
             </div>
+            <button @click="openAddChannelModal()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 text-sm font-medium">
+              ➕ Yeni Kanal
+            </button>
           </div>
 
-          <!-- Platform Tabs -->
-          <div class="bg-white rounded-t-lg shadow-sm border-b">
-            <div class="flex">
-              <!-- YouTube Tab -->
-              <button 
-                @click="switchTab('youtube')"
-                :class="activeTab === 'youtube' ? 'border-red-500 text-red-600 bg-red-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
-                class="platform-tab flex items-center gap-2 px-6 py-4 border-b-2 font-medium transition-colors"
-              >
-                <svg class="platform-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                </svg>
-                <span>YouTube</span>
-                <span 
-                  x-show="youtubeChannels.length > 0" 
-                  class="ml-1 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700"
-                  x-text="youtubeChannels.length"
-                ></span>
-              </button>
-              
-              <!-- Instagram Tab -->
-              <button 
-                @click="switchTab('instagram')"
-                :class="activeTab === 'instagram' ? 'border-pink-500 text-pink-600 bg-pink-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
-                class="platform-tab flex items-center gap-2 px-6 py-4 border-b-2 font-medium transition-colors"
-              >
-                <svg class="platform-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                </svg>
-                <span>Instagram</span>
-                <span 
-                  x-show="instagramAccounts.length > 0" 
-                  class="ml-1 px-2 py-0.5 text-xs rounded-full bg-pink-100 text-pink-700"
-                  x-text="instagramAccounts.length"
-                ></span>
-              </button>
-              
-              <!-- TikTok Tab -->
-              <button 
-                @click="switchTab('tiktok')"
-                :class="activeTab === 'tiktok' ? 'border-gray-900 text-gray-900 bg-gray-100' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
-                class="platform-tab flex items-center gap-2 px-6 py-4 border-b-2 font-medium transition-colors"
-              >
-                <svg class="platform-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
-                </svg>
-                <span>TikTok</span>
-                <span 
-                  x-show="tiktokAccounts.length > 0" 
-                  class="ml-1 px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700"
-                  x-text="tiktokAccounts.length"
-                ></span>
-              </button>
-            </div>
+          <!-- Loading State -->
+          <div x-show="loading" class="text-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+            <p class="mt-4 text-gray-600 dark:text-gray-400">Yükleniyor...</p>
           </div>
 
-          <!-- Tab Content Container -->
-          <div class="bg-white rounded-b-lg shadow p-6">
+          <!-- Empty State -->
+          <template x-if="!loading && channels.length === 0">
+            <div class="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border">
+              <div class="text-6xl mb-4">📺</div>
+              <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Henüz Kanal Yok</h3>
+              <p class="text-gray-600 dark:text-gray-400 mb-6">İlk YouTube kanalınızı ekleyin</p>
+              <button @click="openAddChannelModal()" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700">
+                ➕ Kanal Ekle
+              </button>
+            </div>
+          </template>
+
+          <!-- Channels List (Accordion) -->
+          <div x-show="!loading && channels.length > 0" class="space-y-4">
+            <template x-for="channel in channels" :key="channel.id">
+              <div class="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 overflow-hidden">
+                
+                <!-- Channel Header (Accordion Toggle) -->
+                <div @click="toggleChannel(channel.id)" class="accordion-header px-5 py-4 flex items-center justify-between">
+                  <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-2xl">
+                      📺
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <h3 class="font-semibold text-gray-900 dark:text-white" x-text="channel.channel_title"></h3>
+                      </div>
+                      <div class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-4 mt-1">
+                        <span x-text="(channel.apis?.length || 0) + ' API'"></span>
+                        <span>•</span>
+                        <span x-text="channel.apis?.filter(a => a.is_active).length + ' aktif'"></span>
+                        <span>•</span>
+                        <span>📁 Kategori: <span x-text="getCategoryName(channel.default_category_id || '28')"></span></span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <button @click.stop="editChannelCategory(channel)" class="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 rounded text-blue-600 dark:text-blue-400" title="Kategori Ayarla">
+                      📁 Kategori
+                    </button>
+                    <button @click.stop="deleteChannel(channel.id, channel.channel_title)" class="text-sm px-3 py-1 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 rounded text-red-600 dark:text-red-400" title="Kanalı Sil">
+                      🗑️
+                    </button>
+                    <svg class="w-5 h-5 text-gray-400 transition-transform" :class="isExpanded(channel.id) ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- Channel Content (API Table) -->
+                <div x-show="isExpanded(channel.id)" x-collapse class="border-t dark:border-gray-700">
+                  
+                  <!-- API Table -->
+                  <div x-show="channel.apis?.length > 0" class="overflow-x-auto">
+                    <table class="w-full">
+                      <thead class="bg-gray-50 dark:bg-gray-800/50">
+                        <tr>
+                          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">API Adı</th>
+                          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Durum</th>
+                          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Kota</th>
+                          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">İşlemler</th>
+                        </tr>
+                      </thead>
+                      <tbody x-ref="apiTableBody">
+                        <template x-for="(api, idx) in channel.apis" :key="api.api_id + '_' + idx">
+                          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 border-b dark:border-gray-700">
+                            <td class="px-4 py-3">
+                              <div class="font-medium text-gray-900 dark:text-white text-sm" x-text="api.name || api.project_id"></div>
+                              <div class="text-xs text-gray-500" x-text="api.project_id"></div>
+                            </td>
+                            <td class="px-4 py-3">
+                              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium" :class="api.is_authenticated && api.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : api.is_authenticated ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'">
+                                <span x-text="api.is_authenticated && api.is_active ? '🟢 Aktif' : api.is_authenticated ? '⏸️ Pasif' : '🔴 Login Gerekli'"></span>
+                              </span>
+                            </td>
+                            <td class="px-4 py-3">
+                              <div class="w-32">
+                                <div class="flex justify-between text-xs mb-1">
+                                  <span class="text-gray-500" x-text="(api.quota_used_today || 0).toLocaleString()"></span>
+                                  <span class="text-gray-700 dark:text-gray-300 font-medium" x-text="(api.daily_quota || 10000).toLocaleString()"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                  <div class="h-2 rounded-full transition-all" :class="((api.quota_used_today || 0) / (api.daily_quota || 10000)) >= 0.9 ? 'bg-red-500' : ((api.quota_used_today || 0) / (api.daily_quota || 10000)) >= 0.7 ? 'bg-yellow-500' : 'bg-green-500'" :style="'width:' + Math.min(100, ((api.quota_used_today || 0) / (api.daily_quota || 10000)) * 100) + '%'"></div>
+                                </div>
+                              </div>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                              <div class="flex items-center justify-end gap-2">
+                                <button x-show="!api.is_authenticated" @click="loginApi(channel.id, api.api_id)" class="text-xs px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50">
+                                  🔑 Login
+                                </button>
+                                <button x-show="api.is_authenticated" @click="toggleApiStatus(channel.id, api.api_id, api.is_active)" class="text-xs px-3 py-1 rounded" :class="api.is_active ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200' : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200'">
+                                  <span x-text="api.is_active ? '⏸️ Duraklat' : '▶️ Aktif Et'"></span>
+                                </button>
+                                <button @click="deleteApi(channel.id, api.api_id, api.name)" class="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50">
+                                  🗑️
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <!-- Add API Button -->
+                  <div class="px-5 py-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                    <button @click="openAddApiModal(channel.id)" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center gap-2">
+                      ➕ Bu kanala API ekle
+                    </button>
+                  </div>
+                  
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Setup Guide (Collapsible) -->
+          <div class="mt-6 bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 overflow-hidden" x-data="{ showGuide: false }">
+            <button @click="showGuide = !showGuide" class="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700/50">
+              <div class="flex items-center gap-3">
+                <span class="text-2xl">📖</span>
+                <div>
+                  <h3 class="font-semibold text-gray-900 dark:text-white">YouTube API Kurulum Rehberi</h3>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">Google Cloud Console'dan API oluşturma adımları</p>
+                </div>
+              </div>
+              <svg class="w-5 h-5 text-gray-400 transition-transform" :class="showGuide ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
             
-            <!-- ==================== YOUTUBE TAB ==================== -->
-            <div x-show="activeTab === 'youtube'" x-cloak>
-              
-              <!-- YouTube Loading -->
-              <div x-show="youtubeLoading" class="text-center py-12">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-                <p class="mt-4 text-gray-600">Yükleniyor...</p>
-              </div>
-
-              <!-- YouTube No Channels -->
-              <template x-if="!youtubeLoading && youtubeChannels.length === 0">
-                <div class="text-center py-8">
-                  <div class="text-6xl mb-4">📺</div>
-                  <h3 class="text-xl font-semibold text-gray-900 mb-2">Bağlı YouTube Hesabı Yok</h3>
-                  <p class="text-gray-600 mb-6">YouTube hesabınızı bağlayarak video yüklemeye başlayın</p>
-                  
-                  <button 
-                    @click="authenticateYoutube()"
-                    :disabled="youtubeAuthenticating"
-                    class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center"
-                  >
-                    <span x-show="!youtubeAuthenticating">➕ YouTube Hesabı Bağla</span>
-                    <span x-show="youtubeAuthenticating">⏳ Bağlanıyor...</span>
-                  </button>
-                  
-                  <div class="mt-6 p-4 bg-yellow-50 rounded-lg text-left max-w-lg mx-auto">
-                    <h4 class="font-semibold text-yellow-900 mb-2">⚠️ Gereksinimler:</h4>
-                    <ul class="text-sm text-yellow-800 space-y-1">
-                      <li>• Google Cloud Console'dan <code class="bg-yellow-100 px-1 rounded">client_secrets.json</code> dosyası</li>
-                      <li>• YouTube Data API v3 aktif</li>
-                      <li>• OAuth 2.0 credentials</li>
-                    </ul>
+            <div x-show="showGuide" x-collapse class="border-t dark:border-gray-700">
+              <div class="p-5 space-y-6 text-sm">
+                
+                <!-- Step 1 -->
+                <div class="flex gap-4">
+                  <div class="flex-shrink-0 w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 font-bold">1</div>
+                  <div>
+                    <h4 class="font-semibold text-gray-900 dark:text-white mb-1">Google Cloud Console'a Gidin</h4>
+                    <p class="text-gray-600 dark:text-gray-400">
+                      <a href="https://console.cloud.google.com" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">console.cloud.google.com</a> adresine gidin ve Google hesabınızla giriş yapın.
+                    </p>
                   </div>
                 </div>
-              </template>
-
-              <!-- YouTube Channels List -->
-              <div x-show="!youtubeLoading && youtubeChannels.length > 0" class="space-y-4">
                 
-                <div class="flex justify-between items-center mb-4">
-                  <h3 class="text-lg font-semibold text-gray-900">Bağlı YouTube Kanalları</h3>
-                  <button 
-                    @click="authenticateYoutube()"
-                    :disabled="youtubeAuthenticating"
-                    class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm inline-flex items-center"
-                  >
-                    <span x-show="!youtubeAuthenticating">➕ Yeni Hesap Bağla</span>
-                    <span x-show="youtubeAuthenticating">⏳ Bağlanıyor...</span>
-                  </button>
+                <!-- Step 2 -->
+                <div class="flex gap-4">
+                  <div class="flex-shrink-0 w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 font-bold">2</div>
+                  <div>
+                    <h4 class="font-semibold text-gray-900 dark:text-white mb-1">Yeni Proje Oluşturun</h4>
+                    <p class="text-gray-600 dark:text-gray-400">
+                      Üst menüden "Select a project" → "New Project" tıklayın. Projeye anlamlı bir isim verin (örn: "video-kur-1").
+                    </p>
+                  </div>
                 </div>
-
-                <template x-for="channel in youtubeChannels" :key="channel.channel_id">
-                  <div class="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div class="flex items-start justify-between">
-                      <div class="flex items-center space-x-4">
-                        <img 
-                          :src="channel.thumbnail" 
-                          :alt="channel.channel_title"
-                          class="w-14 h-14 rounded-full"
-                        />
-                        <div>
-                          <h4 class="font-semibold text-gray-900" x-text="channel.channel_title"></h4>
-                          <div class="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-                            <span>📊 <span x-text="formatNumber(channel.subscriber_count)"></span> abone</span>
-                            <span>🎬 <span x-text="channel.video_count"></span> video</span>
-                          </div>
-                          <div class="mt-2">
-                            <span 
-                              x-show="channel.is_default" 
-                              class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800"
-                            >
-                              ✅ Varsayılan
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div class="flex items-center space-x-2">
-                        <button 
-                          x-show="!channel.is_default"
-                          @click="setDefaultYoutubeChannel(channel.channel_id)"
-                          class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded"
-                        >
-                          ⭐ Varsayılan Yap
-                        </button>
-                        <button 
-                          @click="disconnectYoutube(channel.channel_id)"
-                          class="px-3 py-1.5 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded"
-                        >
-                          ❌ Bağlantıyı Kes
-                        </button>
-                      </div>
+                
+                <!-- Step 3 -->
+                <div class="flex gap-4">
+                  <div class="flex-shrink-0 w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 font-bold">3</div>
+                  <div>
+                    <h4 class="font-semibold text-gray-900 dark:text-white mb-1">YouTube Data API v3'ü Etkinleştirin</h4>
+                    <p class="text-gray-600 dark:text-gray-400">
+                      Sol menüden "APIs & Services" → "Library" gidin. "YouTube Data API v3" arayın ve "Enable" tıklayın.
+                    </p>
+                  </div>
+                </div>
+                
+                <!-- Step 4 -->
+                <div class="flex gap-4">
+                  <div class="flex-shrink-0 w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 font-bold">4</div>
+                  <div>
+                    <h4 class="font-semibold text-gray-900 dark:text-white mb-1">OAuth Consent Screen Ayarlayın</h4>
+                    <p class="text-gray-600 dark:text-gray-400">
+                      "APIs & Services" → "OAuth consent screen" gidin. "External" seçin. Uygulama adı, e-posta ve logo ekleyin. Test kullanıcısı olarak kendi e-postanızı ekleyin.
+                    </p>
+                  </div>
+                </div>
+                
+                <!-- Step 5 -->
+                <div class="flex gap-4">
+                  <div class="flex-shrink-0 w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 font-bold">5</div>
+                  <div>
+                    <h4 class="font-semibold text-gray-900 dark:text-white mb-1">OAuth Credentials Oluşturun</h4>
+                    <p class="text-gray-600 dark:text-gray-400">
+                      "Credentials" → "Create Credentials" → "OAuth client ID" tıklayın. Application type: <strong>"Web application"</strong> seçin.
+                    </p>
+                    <div class="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-amber-800 dark:text-amber-300">
+                      <strong>⚠️ Önemli:</strong> "Authorized redirect URIs" bölümüne şunu ekleyin:<br>
+                      <code class="text-xs bg-amber-100 dark:bg-amber-900/40 px-2 py-1 rounded mt-1 inline-block">http://localhost:8000/api/youtube_oauth.php</code>
                     </div>
                   </div>
-                </template>
-              </div>
-              
-              <!-- YouTube Setup Guide -->
-              <div class="mt-8 border-t pt-6" x-data="{ guideOpen: false }">
-                <button 
-                  @click="guideOpen = !guideOpen" 
-                  class="flex items-center justify-between w-full text-left"
-                >
-                  <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    📖 YouTube Hesap Bağlama Rehberi
-                  </h3>
-                  <svg 
-                    class="w-5 h-5 text-gray-500 transition-transform" 
-                    :class="guideOpen ? 'rotate-180' : ''"
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                  </svg>
-                </button>
+                </div>
                 
-                <div x-show="guideOpen" x-collapse class="mt-4 space-y-6">
-                  
-                  <!-- Step 1 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm">1</span>
-                      Google Cloud Console'da Proje Oluşturma
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li><a href="https://console.cloud.google.com/" target="_blank" class="text-blue-600 hover:underline">Google Cloud Console</a>'a gidin</li>
-                      <li>Yeni bir proje oluşturun veya mevcut projenizi seçin</li>
-                      <li>Projenizin adını ve ID'sini not edin</li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Step 2 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm">2</span>
-                      YouTube Data API v3'ü Etkinleştirme
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li>Sol menüden <strong>"APIs & Services"</strong> → <strong>"Library"</strong> seçin</li>
-                      <li>Arama kutusuna <code class="bg-gray-200 px-1 rounded">YouTube Data API v3</code> yazın</li>
-                      <li>API'yi bulun ve <strong>"Enable"</strong> butonuna tıklayın</li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Step 3 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm">3</span>
-                      OAuth 2.0 Credentials Oluşturma
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li><strong>"APIs & Services"</strong> → <strong>"Credentials"</strong> bölümüne gidin</li>
-                      <li><strong>"+ CREATE CREDENTIALS"</strong> → <strong>"OAuth client ID"</strong> seçin</li>
-                      <li>İlk kez yapıyorsanız <strong>"Configure Consent Screen"</strong> tıklayın:
-                        <ul class="list-disc ml-4 mt-1 text-gray-600">
-                          <li>User Type: <strong>External</strong> seçin</li>
-                          <li>App name, User support email ve Developer email doldurun</li>
-                          <li>Scopes bölümünde <code class="bg-gray-200 px-1 rounded">youtube.upload</code> ve <code class="bg-gray-200 px-1 rounded">youtube.readonly</code> ekleyin</li>
-                          <li>Test users bölümüne kendi Gmail adresinizi ekleyin</li>
-                        </ul>
-                      </li>
-                      <li>Application type: <strong>"Desktop app"</strong> seçin</li>
-                      <li><strong>"Create"</strong> tıklayın</li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Step 4 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm">4</span>
-                      JSON Dosyasını İndirme ve Yerleştirme
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li>Oluşturduğunuz credential'ın yanındaki <strong>indirme ikonuna</strong> tıklayın</li>
-                      <li>İndirilen dosyanın adını <code class="bg-gray-200 px-1 rounded">client_secrets.json</code> olarak değiştirin</li>
-                      <li>Dosyayı şu klasöre kopyalayın: <code class="bg-gray-200 px-1 rounded">data/youtube_credentials/</code></li>
-                    </ol>
-                    <div class="mt-3 p-3 bg-yellow-100 rounded text-sm text-yellow-800">
-                      ⚠️ <strong>Önemli:</strong> Bu dosyayı asla paylaşmayın veya Git'e commit etmeyin!
-                    </div>
-                  </div>
-                  
-                  <!-- Step 5 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm">5</span>
-                      Hesabı Bağlama
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li>Yukarıdaki <strong>"YouTube Hesabı Bağla"</strong> butonuna tıklayın</li>
-                      <li>Açılan pencerede Google hesabınızla giriş yapın</li>
-                      <li>Gerekli izinleri onaylayın</li>
-                      <li>İşlem tamamlandığında kanal bilgileriniz burada görünecek</li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Troubleshooting -->
-                  <div class="bg-red-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-red-900 mb-3">🔧 Sorun Giderme</h4>
-                    <ul class="text-sm text-red-800 space-y-2">
-                      <li><strong>"Access blocked" hatası:</strong> OAuth consent screen'de uygulamanızı yayınlayın veya test users'a email ekleyin</li>
-                      <li><strong>"File not found" hatası:</strong> <code class="bg-red-100 px-1 rounded">client_secrets.json</code> dosyasının doğru konumda olduğundan emin olun</li>
-                      <li><strong>"Quota exceeded" hatası:</strong> Günlük API kotanızı aştınız, yarın tekrar deneyin</li>
-                    </ul>
+                <!-- Step 6 -->
+                <div class="flex gap-4">
+                  <div class="flex-shrink-0 w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center text-green-600 dark:text-green-400 font-bold">6</div>
+                  <div>
+                    <h4 class="font-semibold text-gray-900 dark:text-white mb-1">JSON Dosyasını İndirin</h4>
+                    <p class="text-gray-600 dark:text-gray-400">
+                      Oluşturulan credential'ın yanındaki <strong>⬇ Download</strong> butonuna tıklayın. İndirilen <code>client_secret_xxx.json</code> dosyasını yukarıdaki "API Ekle" bölümünde kullanın.
+                    </p>
                   </div>
                 </div>
+                
+                <!-- Tips -->
+                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <h4 class="font-semibold text-blue-800 dark:text-blue-300 mb-2">💡 İpuçları</h4>
+                  <ul class="text-blue-700 dark:text-blue-400 space-y-1 text-xs">
+                    <li>• Her API günlük 10.000 kota sağlar (~6 video yükleme)</li>
+                    <li>• Birden fazla API ekleyerek kota limitini artırabilirsiniz</li>
+                    <li>• Farklı Google hesaplarıyla farklı projeler oluşturabilirsiniz</li>
+                    <li>• Test kullanıcısı olarak eklenmeden OAuth çalışmaz</li>
+                  </ul>
+                </div>
+                
               </div>
             </div>
-            <div x-show="activeTab === 'instagram'" x-cloak>
-              
-              <!-- Instagram Loading -->
-              <div x-show="instagramLoading" class="text-center py-12">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto"></div>
-                <p class="mt-4 text-gray-600">Yükleniyor...</p>
-              </div>
-
-              <!-- Instagram No Accounts -->
-              <template x-if="!instagramLoading && instagramAccounts.length === 0">
-                <div class="text-center py-8">
-                  <div class="text-6xl mb-4">📸</div>
-                  <h3 class="text-xl font-semibold text-gray-900 mb-2">Bağlı Instagram Hesabı Yok</h3>
-                  <p class="text-gray-600 mb-6">Instagram hesabınızı bağlayarak Reels paylaşmaya başlayın</p>
-                  
-                  <button 
-                    @click="authenticateInstagram()"
-                    :disabled="instagramAuthenticating"
-                    class="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 text-white px-6 py-3 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center"
-                  >
-                    <span x-show="!instagramAuthenticating">➕ Instagram Hesabı Bağla</span>
-                    <span x-show="instagramAuthenticating">⏳ Bağlanıyor...</span>
-                  </button>
-                  
-                  <div class="mt-6 p-4 bg-pink-50 rounded-lg text-left max-w-lg mx-auto">
-                    <h4 class="font-semibold text-pink-900 mb-2">ℹ️ Not:</h4>
-                    <ul class="text-sm text-pink-800 space-y-1">
-                      <li>• Instagram Basic Display API veya Graph API gereklidir</li>
-                      <li>• Meta Developer Console'dan uygulama oluşturmanız gerekir</li>
-                      <li>• İşletme hesabı ile daha fazla özellik kullanabilirsiniz</li>
-                    </ul>
-                  </div>
-                </div>
-              </template>
-
-              <!-- Instagram Accounts List -->
-              <div x-show="!instagramLoading && instagramAccounts.length > 0" class="space-y-4">
-                
-                <div class="flex justify-between items-center mb-4">
-                  <h3 class="text-lg font-semibold text-gray-900">Bağlı Instagram Hesapları</h3>
-                  <button 
-                    @click="authenticateInstagram()"
-                    :disabled="instagramAuthenticating"
-                    class="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 text-white px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 text-sm inline-flex items-center"
-                  >
-                    <span x-show="!instagramAuthenticating">➕ Yeni Hesap Bağla</span>
-                    <span x-show="instagramAuthenticating">⏳ Bağlanıyor...</span>
-                  </button>
-                </div>
-
-                <template x-for="account in instagramAccounts" :key="account.account_id">
-                  <div class="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div class="flex items-start justify-between">
-                      <div class="flex items-center space-x-4">
-                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center text-white text-xl font-bold">
-                          <span x-text="account.username.charAt(0).toUpperCase()"></span>
-                        </div>
-                        <div>
-                          <h4 class="font-semibold text-gray-900">@<span x-text="account.username"></span></h4>
-                          <div class="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-                            <span x-show="account.followers_count">👥 <span x-text="formatNumber(account.followers_count)"></span> takipçi</span>
-                            <span x-show="account.media_count">📷 <span x-text="account.media_count"></span> gönderi</span>
-                          </div>
-                          <div class="mt-2">
-                            <span 
-                              x-show="account.is_default" 
-                              class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800"
-                            >
-                              ✅ Varsayılan
-                            </span>
-                            <span 
-                              x-show="account.account_type" 
-                              class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-pink-100 text-pink-800 ml-1"
-                              x-text="account.account_type === 'business' ? '💼 İşletme' : '👤 Kişisel'"
-                            ></span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div class="flex items-center space-x-2">
-                        <button 
-                          x-show="!account.is_default"
-                          @click="setDefaultInstagram(account.account_id)"
-                          class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded"
-                        >
-                          ⭐ Varsayılan Yap
-                        </button>
-                        <button 
-                          @click="disconnectInstagram(account.account_id)"
-                          class="px-3 py-1.5 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded"
-                        >
-                          ❌ Bağlantıyı Kes
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </template>
-              </div>
-              
-              <!-- Instagram Setup Guide -->
-              <div class="mt-8 border-t pt-6" x-data="{ guideOpen: false }">
-                <button 
-                  @click="guideOpen = !guideOpen" 
-                  class="flex items-center justify-between w-full text-left"
-                >
-                  <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    📖 Instagram Hesap Bağlama Rehberi
-                  </h3>
-                  <svg 
-                    class="w-5 h-5 text-gray-500 transition-transform" 
-                    :class="guideOpen ? 'rotate-180' : ''"
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                  </svg>
-                </button>
-                
-                <div x-show="guideOpen" x-collapse class="mt-4 space-y-6">
-                  
-                  <!-- Overview -->
-                  <div class="bg-pink-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-pink-900 mb-2">📋 Genel Bakış</h4>
-                    <p class="text-sm text-pink-800">
-                      Instagram API entegrasyonu için <strong>Meta Developer</strong> platformunu kullanmanız gerekmektedir. 
-                      İki farklı API seçeneği bulunmaktadır:
-                    </p>
-                    <ul class="text-sm text-pink-800 mt-2 space-y-1">
-                      <li>• <strong>Instagram Basic Display API:</strong> Kişisel hesaplar için (okuma)</li>
-                      <li>• <strong>Instagram Graph API:</strong> İşletme/Creator hesapları için (okuma + yazma)</li>
-                    </ul>
-                  </div>
-                  
-                  <!-- Step 1 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full flex items-center justify-center text-sm">1</span>
-                      Meta Developer Hesabı Oluşturma
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li><a href="https://developers.facebook.com/" target="_blank" class="text-blue-600 hover:underline">Meta for Developers</a> sitesine gidin</li>
-                      <li>Facebook hesabınızla giriş yapın</li>
-                      <li><strong>"My Apps"</strong> → <strong>"Create App"</strong> tıklayın</li>
-                      <li>Use case olarak <strong>"Other"</strong> → <strong>"Consumer"</strong> seçin</li>
-                      <li>Uygulama adını ve iletişim email'inizi girin</li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Step 2 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full flex items-center justify-center text-sm">2</span>
-                      Instagram Basic Display API Ekleme
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li>App Dashboard'da <strong>"Add Products"</strong> bölümüne gidin</li>
-                      <li><strong>"Instagram Basic Display"</strong> yanındaki <strong>"Set Up"</strong> tıklayın</li>
-                      <li>Settings'de şunları doldurun:
-                        <ul class="list-disc ml-4 mt-1 text-gray-600">
-                          <li><strong>Valid OAuth Redirect URIs:</strong> <code class="bg-gray-200 px-1 rounded">https://yourdomain.com/callback</code></li>
-                          <li><strong>Deauthorize Callback URL:</strong> <code class="bg-gray-200 px-1 rounded">https://yourdomain.com/deauth</code></li>
-                          <li><strong>Data Deletion Request URL:</strong> <code class="bg-gray-200 px-1 rounded">https://yourdomain.com/delete</code></li>
-                        </ul>
-                      </li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Step 3 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full flex items-center justify-center text-sm">3</span>
-                      Instagram Test Kullanıcısı Ekleme
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li><strong>"Roles"</strong> → <strong>"Instagram Testers"</strong> bölümüne gidin</li>
-                      <li><strong>"Add Instagram Testers"</strong> tıklayın</li>
-                      <li>Instagram kullanıcı adınızı ekleyin</li>
-                      <li>Instagram uygulamasında: <strong>Ayarlar</strong> → <strong>Web Sitesi İzinleri</strong> → <strong>Tester Davetleri</strong> → daveti kabul edin</li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Step 4 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full flex items-center justify-center text-sm">4</span>
-                      Credentials'ları Kaydetme
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li>App Dashboard'da <strong>"Settings"</strong> → <strong>"Basic"</strong> gidin</li>
-                      <li>Şu bilgileri not edin:
-                        <ul class="list-disc ml-4 mt-1 text-gray-600">
-                          <li><strong>App ID</strong> (Instagram App ID)</li>
-                          <li><strong>App Secret</strong> (Show butonuna tıklayın)</li>
-                        </ul>
-                      </li>
-                      <li>Bu bilgileri <code class="bg-gray-200 px-1 rounded">data/social_credentials/instagram_config.json</code> dosyasına kaydedin</li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Step 5 - Business Account -->
-                  <div class="bg-purple-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-purple-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm">⭐</span>
-                      İşletme Hesabı (İçerik Paylaşımı İçin Gerekli)
-                    </h4>
-                    <p class="text-sm text-purple-800 mb-2">
-                      Instagram'a içerik yükleyebilmek için <strong>İşletme veya Creator hesabı</strong> gereklidir:
-                    </p>
-                    <ol class="text-sm text-purple-700 space-y-2 ml-4 list-decimal">
-                      <li>Instagram'da <strong>Ayarlar</strong> → <strong>Hesap</strong> → <strong>Profesyonel hesaba geç</strong></li>
-                      <li><strong>İşletme</strong> veya <strong>İçerik Üretici</strong> seçin</li>
-                      <li>Bir Facebook Sayfası bağlayın (veya yeni oluşturun)</li>
-                      <li>Meta Developer'da <strong>Instagram Graph API</strong> ürününü ekleyin</li>
-                      <li>Facebook Page'i uygulamanıza bağlayın</li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Troubleshooting -->
-                  <div class="bg-red-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-red-900 mb-3">🔧 Sorun Giderme</h4>
-                    <ul class="text-sm text-red-800 space-y-2">
-                      <li><strong>"Invalid OAuth access token":</strong> Token süresi dolmuş, yeniden yetkilendirin</li>
-                      <li><strong>"This user is not a test user":</strong> Instagram Test Kullanıcısı eklemeyi ve daveti kabul etmeyi unutmayın</li>
-                      <li><strong>Reels paylaşılamıyor:</strong> İşletme hesabına geçin ve Instagram Graph API kullanın</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- ==================== TIKTOK TAB ==================== -->
-            <div x-show="activeTab === 'tiktok'" x-cloak>
-              
-              <!-- TikTok Loading -->
-              <div x-show="tiktokLoading" class="text-center py-12">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-                <p class="mt-4 text-gray-600">Yükleniyor...</p>
-              </div>
-
-              <!-- TikTok No Accounts -->
-              <template x-if="!tiktokLoading && tiktokAccounts.length === 0">
-                <div class="text-center py-8">
-                  <div class="text-6xl mb-4">🎵</div>
-                  <h3 class="text-xl font-semibold text-gray-900 mb-2">Bağlı TikTok Hesabı Yok</h3>
-                  <p class="text-gray-600 mb-6">TikTok hesabınızı bağlayarak video paylaşmaya başlayın</p>
-                  
-                  <button 
-                    @click="authenticateTiktok()"
-                    :disabled="tiktokAuthenticating"
-                    class="bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center"
-                  >
-                    <span x-show="!tiktokAuthenticating">➕ TikTok Hesabı Bağla</span>
-                    <span x-show="tiktokAuthenticating">⏳ Bağlanıyor...</span>
-                  </button>
-                  
-                  <div class="mt-6 p-4 bg-gray-100 rounded-lg text-left max-w-lg mx-auto">
-                    <h4 class="font-semibold text-gray-900 mb-2">ℹ️ Not:</h4>
-                    <ul class="text-sm text-gray-700 space-y-1">
-                      <li>• TikTok for Developers'dan uygulama oluşturmanız gerekir</li>
-                      <li>• Video Upload API erişimi için başvuru yapmanız gerekebilir</li>
-                      <li>• Creator veya Business hesabı önerilir</li>
-                    </ul>
-                  </div>
-                </div>
-              </template>
-
-              <!-- TikTok Accounts List -->
-              <div x-show="!tiktokLoading && tiktokAccounts.length > 0" class="space-y-4">
-                
-                <div class="flex justify-between items-center mb-4">
-                  <h3 class="text-lg font-semibold text-gray-900">Bağlı TikTok Hesapları</h3>
-                  <button 
-                    @click="authenticateTiktok()"
-                    :disabled="tiktokAuthenticating"
-                    class="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 disabled:opacity-50 text-sm inline-flex items-center"
-                  >
-                    <span x-show="!tiktokAuthenticating">➕ Yeni Hesap Bağla</span>
-                    <span x-show="tiktokAuthenticating">⏳ Bağlanıyor...</span>
-                  </button>
-                </div>
-
-                <template x-for="account in tiktokAccounts" :key="account.account_id">
-                  <div class="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div class="flex items-start justify-between">
-                      <div class="flex items-center space-x-4">
-                        <div class="w-14 h-14 rounded-full bg-gray-900 flex items-center justify-center text-white text-xl font-bold">
-                          <span x-text="account.username.charAt(0).toUpperCase()"></span>
-                        </div>
-                        <div>
-                          <h4 class="font-semibold text-gray-900">@<span x-text="account.username"></span></h4>
-                          <div class="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-                            <span x-show="account.followers_count">👥 <span x-text="formatNumber(account.followers_count)"></span> takipçi</span>
-                            <span x-show="account.likes_count">❤️ <span x-text="formatNumber(account.likes_count)"></span> beğeni</span>
-                          </div>
-                          <div class="mt-2">
-                            <span 
-                              x-show="account.is_default" 
-                              class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800"
-                            >
-                              ✅ Varsayılan
-                            </span>
-                            <span 
-                              x-show="account.is_verified" 
-                              class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 ml-1"
-                            >
-                              ✓ Doğrulanmış
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div class="flex items-center space-x-2">
-                        <button 
-                          x-show="!account.is_default"
-                          @click="setDefaultTiktok(account.account_id)"
-                          class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded"
-                        >
-                          ⭐ Varsayılan Yap
-                        </button>
-                        <button 
-                          @click="disconnectTiktok(account.account_id)"
-                          class="px-3 py-1.5 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded"
-                        >
-                          ❌ Bağlantıyı Kes
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </template>
-              </div>
-              
-              <!-- TikTok Setup Guide -->
-              <div class="mt-8 border-t pt-6" x-data="{ guideOpen: false }">
-                <button 
-                  @click="guideOpen = !guideOpen" 
-                  class="flex items-center justify-between w-full text-left"
-                >
-                  <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    📖 TikTok Hesap Bağlama Rehberi
-                  </h3>
-                  <svg 
-                    class="w-5 h-5 text-gray-500 transition-transform" 
-                    :class="guideOpen ? 'rotate-180' : ''"
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                  </svg>
-                </button>
-                
-                <div x-show="guideOpen" x-collapse class="mt-4 space-y-6">
-                  
-                  <!-- Overview -->
-                  <div class="bg-gray-100 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-2">📋 Genel Bakış</h4>
-                    <p class="text-sm text-gray-700">
-                      TikTok API entegrasyonu için <strong>TikTok for Developers</strong> platformunu kullanmanız gerekmektedir.
-                      Video yükleme için <strong>Content Posting API</strong> erişimine başvurmanız gerekir.
-                    </p>
-                    <div class="mt-2 p-2 bg-yellow-100 rounded text-sm text-yellow-800">
-                      ⚠️ <strong>Önemli:</strong> TikTok API erişimi için uygulama incelemesi gerekebilir ve bu süreç birkaç gün sürebilir.
-                    </div>
-                  </div>
-                  
-                  <!-- Step 1 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center text-sm">1</span>
-                      TikTok Developer Hesabı Oluşturma
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li><a href="https://developers.tiktok.com/" target="_blank" class="text-blue-600 hover:underline">TikTok for Developers</a> sitesine gidin</li>
-                      <li>TikTok hesabınızla giriş yapın veya yeni hesap oluşturun</li>
-                      <li>Developer Agreement'ı kabul edin</li>
-                      <li>Profil bilgilerinizi tamamlayın</li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Step 2 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center text-sm">2</span>
-                      Uygulama Oluşturma
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li><strong>"Manage Apps"</strong> → <strong>"Create App"</strong> tıklayın</li>
-                      <li>Uygulama tipini seçin:
-                        <ul class="list-disc ml-4 mt-1 text-gray-600">
-                          <li><strong>Live Display:</strong> Sadece okuma (veri çekme)</li>
-                          <li><strong>Content Posting:</strong> Okuma + Yazma (video yükleme) - <strong>Bunu seçin</strong></li>
-                        </ul>
-                      </li>
-                      <li>Uygulama adı, açıklama ve kategori girin</li>
-                      <li>Uygulama ikonunu yükleyin</li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Step 3 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center text-sm">3</span>
-                      API Ürünlerini Ekleme
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li>Uygulama detaylarında <strong>"Add products"</strong> bölümüne gidin</li>
-                      <li>Şu ürünleri ekleyin:
-                        <ul class="list-disc ml-4 mt-1 text-gray-600">
-                          <li><strong>Login Kit:</strong> Kullanıcı girişi için</li>
-                          <li><strong>Content Posting API:</strong> Video yükleme için</li>
-                          <li><strong>User Info (isteğe bağlı):</strong> Profil bilgisi için</li>
-                        </ul>
-                      </li>
-                      <li>Her ürün için gerekli scope'ları seçin</li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Step 4 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center text-sm">4</span>
-                      OAuth Ayarları
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li><strong>"Configuration"</strong> bölümünde OAuth ayarlarını yapın:
-                        <ul class="list-disc ml-4 mt-1 text-gray-600">
-                          <li><strong>Redirect URI:</strong> <code class="bg-gray-200 px-1 rounded">https://yourdomain.com/tiktok/callback</code></li>
-                          <li><strong>Redirect URI (Web):</strong> Aynı URL'yi ekleyin</li>
-                        </ul>
-                      </li>
-                      <li>Scopes seçin:
-                        <ul class="list-disc ml-4 mt-1 text-gray-600">
-                          <li><code class="bg-gray-200 px-1 rounded">user.info.basic</code></li>
-                          <li><code class="bg-gray-200 px-1 rounded">video.upload</code></li>
-                          <li><code class="bg-gray-200 px-1 rounded">video.publish</code></li>
-                        </ul>
-                      </li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Step 5 -->
-                  <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center text-sm">5</span>
-                      Credentials'ları Kaydetme
-                    </h4>
-                    <ol class="text-sm text-gray-700 space-y-2 ml-8 list-decimal">
-                      <li>Uygulama detaylarından şu bilgileri not edin:
-                        <ul class="list-disc ml-4 mt-1 text-gray-600">
-                          <li><strong>Client Key</strong></li>
-                          <li><strong>Client Secret</strong></li>
-                        </ul>
-                      </li>
-                      <li>Bu bilgileri <code class="bg-gray-200 px-1 rounded">data/social_credentials/tiktok_config.json</code> dosyasına kaydedin</li>
-                    </ol>
-                    <div class="mt-3 p-3 bg-yellow-100 rounded text-sm text-yellow-800">
-                      ⚠️ <strong>Önemli:</strong> Client Secret'ı asla paylaşmayın!
-                    </div>
-                  </div>
-                  
-                  <!-- Step 6 - Submit for Review -->
-                  <div class="bg-blue-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                      <span class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm">6</span>
-                      Uygulama İncelemesine Gönderme
-                    </h4>
-                    <p class="text-sm text-blue-800 mb-2">
-                      Content Posting API kullanmak için uygulamanızı incelemeye göndermeniz gerekir:
-                    </p>
-                    <ol class="text-sm text-blue-700 space-y-2 ml-4 list-decimal">
-                      <li><strong>"Submit for review"</strong> butonuna tıklayın</li>
-                      <li>Uygulamanızın ne yaptığını açıklayan detaylı bir açıklama yazın</li>
-                      <li>Ekran görüntüleri veya demo video ekleyin</li>
-                      <li>Privacy Policy ve Terms of Service URL'lerini ekleyin</li>
-                      <li>İnceleme genellikle 1-5 iş günü sürer</li>
-                    </ol>
-                  </div>
-                  
-                  <!-- Sandbox Mode -->
-                  <div class="bg-green-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-green-900 mb-3 flex items-center gap-2">
-                      🧪 Sandbox Modu (Test)
-                    </h4>
-                    <p class="text-sm text-green-800">
-                      Uygulama onaylanmadan önce <strong>Sandbox modunda</strong> test yapabilirsiniz:
-                    </p>
-                    <ul class="text-sm text-green-700 mt-2 space-y-1">
-                      <li>• Sadece developer hesabınızla çalışır</li>
-                      <li>• Günlük API çağrı limiti vardır</li>
-                      <li>• Yüklenen videolar sadece size görünür</li>
-                    </ul>
-                  </div>
-                  
-                  <!-- Troubleshooting -->
-                  <div class="bg-red-50 rounded-lg p-4">
-                    <h4 class="font-semibold text-red-900 mb-3">🔧 Sorun Giderme</h4>
-                    <ul class="text-sm text-red-800 space-y-2">
-                      <li><strong>"Access token expired":</strong> Token 24 saat geçerlidir, refresh token kullanarak yenileyin</li>
-                      <li><strong>"Scope not authorized":</strong> Uygulamanız için gerekli scope'lar onaylanmamış olabilir</li>
-                      <li><strong>"Video upload failed":</strong> Video formatı TikTok gereksinimlerini karşılamıyor olabilir (MP4, max 4GB, 3-60 saniye)</li>
-                      <li><strong>"Rate limit exceeded":</strong> API çağrı limitini aştınız, bir süre bekleyin</li>
-                    </ul>
-                  </div>
-                  
-                  <!-- Video Requirements -->
-                  <div class="bg-gray-100 rounded-lg p-4">
-                    <h4 class="font-semibold text-gray-900 mb-3">📹 TikTok Video Gereksinimleri</h4>
-                    <div class="grid md:grid-cols-2 gap-4 text-sm text-gray-700">
-                      <div>
-                        <strong>Format:</strong>
-                        <ul class="mt-1 space-y-1">
-                          <li>• Dosya tipi: MP4, WebM</li>
-                          <li>• Codec: H.264</li>
-                          <li>• Max boyut: 4GB</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <strong>Boyutlar:</strong>
-                        <ul class="mt-1 space-y-1">
-                          <li>• En boy oranı: 9:16 (dikey)</li>
-                          <li>• Çözünürlük: 1080x1920 önerilir</li>
-                          <li>• Süre: 3-180 saniye</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
           </div>
 
         </div>
       </main>
     </div>
   </div>
+
+  <!-- Add Channel Modal -->
+  <div x-show="addChannelModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="addChannelModal = false" x-cloak>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">➕ Yeni Kanal Ekle</h3>
+        <button @click="addChannelModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kanal Adı *</label>
+          <input type="text" x-model="channelForm.channel_title" class="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white" placeholder="Video Kur Ana Kanalı">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kanal ID (opsiyonel)</label>
+          <input type="text" x-model="channelForm.channel_id" class="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white" placeholder="UCxxxxxxx">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açıklama (opsiyonel)</label>
+          <textarea x-model="channelForm.description" class="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white" rows="2" placeholder="Kanal hakkında not..."></textarea>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-3">
+        <button @click="addChannelModal = false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg">İptal</button>
+        <button @click="addChannel()" :disabled="submitting" class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
+          <span x-show="!submitting">Kanal Ekle</span>
+          <span x-show="submitting">⏳ Ekleniyor...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Channel Category Modal -->
+  <div x-show="editCategoryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="editCategoryModal = false" x-cloak>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">📁 Varsayılan Kategori</h3>
+        <button @click="editCategoryModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <p class="text-sm text-gray-600 dark:text-gray-400">Bu kanaldan yüklenen videolar için varsayılan kategori seçin.</p>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kategori</label>
+          <select x-model="categoryForm.category_id" class="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white">
+            <option value="1">Film & Animasyon</option>
+            <option value="2">Otomobil & Araçlar</option>
+            <option value="10">Müzik</option>
+            <option value="15">Hayvanlar</option>
+            <option value="17">Spor</option>
+            <option value="19">Seyahat & Etkinlikler</option>
+            <option value="20">Oyun</option>
+            <option value="22">İnsanlar & Bloglar</option>
+            <option value="23">Komedi</option>
+            <option value="24">Eğlence</option>
+            <option value="25">Haber & Politika</option>
+            <option value="26">Nasıl Yapılır & Stil</option>
+            <option value="27">Eğitim</option>
+            <option value="28">Bilim & Teknoloji</option>
+          </select>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-3">
+        <button @click="editCategoryModal = false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg">İptal</button>
+        <button @click="updateChannelCategory()" :disabled="submitting" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+          <span x-show="!submitting">✓ Kaydet</span>
+          <span x-show="submitting">⏳ Kaydediliyor...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add API Modal -->
+  <div x-show="addApiModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="addApiModal = false" x-cloak>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">🔑 Yeni API Ekle</h3>
+        <button @click="addApiModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Secrets Dosyası *</label>
+          <input type="file" @change="handleApiFileSelect($event)" accept=".json" class="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Google Cloud Console'dan indirdiğiniz JSON dosyası</p>
+        </div>
+        <div x-show="apiForm.project_id" class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+          <div class="text-xs text-green-700 dark:text-green-400">✅ Project ID algılandı: <strong x-text="apiForm.project_id"></strong></div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Adı *</label>
+          <input type="text" x-model="apiForm.name" class="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white" :placeholder="apiForm.project_id || 'Proje adı (otomatik dolar)'">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">JSON'dan otomatik dolar, değiştirebilirsiniz</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Günlük Kota</label>
+          <input type="number" x-model="apiForm.daily_quota" class="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white" placeholder="10000">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not (opsiyonel)</label>
+          <input type="text" x-model="apiForm.notes" class="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-white" placeholder="API hakkında not...">
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-3">
+        <button @click="addApiModal = false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg">İptal</button>
+        <button @click="addApi()" :disabled="submitting || !apiForm.fileData" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+          <span x-show="!submitting">API Ekle</span>
+          <span x-show="submitting">⏳ Ekleniyor...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

@@ -45,8 +45,10 @@
       queueModal: null,
       selectedQueueId: '',
       addingToQueue: false,
-      productionFilter: 'waiting',
-      queueFilter: 'all',
+      searchQuery: '',
+      statusFilter: 'all',
+      dateFilter: '7d',
+      sortOrder: 'new',
       statusMeta,
       getMeta(s) { return statusMeta[s] || statusMeta.pending; },
       isActive(s) { return !['done','failed','pending','paused'].includes(s); },
@@ -58,23 +60,55 @@
       isProductionWaiting(job) {
         return !this.isProductionDone(job);
       },
+      parseJobDate(job) {
+        const raw = job?.created_at || job?.createdAt || null;
+        if (!raw) return null;
+        const d = new Date(raw);
+        return Number.isNaN(d.getTime()) ? null : d;
+      },
+      matchesStatusFilter(job) {
+        const status = (job?.status || '').toLowerCase();
+        if (this.statusFilter === 'all') return true;
+        if (this.statusFilter === 'active') return this.isActive(status);
+        if (this.statusFilter === 'done') return this.isProductionDone(job);
+        if (this.statusFilter === 'failed') return status === 'failed';
+        if (this.statusFilter === 'queued') return !!job?.queue_status?.queue_id;
+        return true;
+      },
+      inDateRange(jobDate) {
+        if (this.dateFilter === 'all') return true;
+        if (!jobDate) return false;
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (this.dateFilter === 'today') return jobDate >= startOfToday;
+        const daysMap = { '7d': 7, '30d': 30 };
+        const days = daysMap[this.dateFilter];
+        if (!days) return true;
+        const cutoff = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+        return jobDate >= cutoff;
+      },
+      clearFilters() {
+        this.searchQuery = '';
+        this.statusFilter = 'all';
+        this.dateFilter = '7d';
+        this.sortOrder = 'new';
+      },
       get filteredJobs() {
-        let items = [...this.jobs];
-
-        if (this.productionFilter === 'waiting') {
-          items = items.filter(job => this.isProductionWaiting(job));
-        } else if (this.productionFilter === 'done') {
-          items = items.filter(job => this.isProductionDone(job));
-        }
-
-        if (this.queueFilter === 'in_queue') {
-          items = items.filter(job => !!job.queue_status?.queue_id);
-        } else if (this.queueFilter === 'no_queue') {
-          items = items.filter(job => !job.queue_status?.queue_id);
-        } else if (this.queueFilter !== 'all') {
-          items = items.filter(job => (job.queue_status?.queue_id || '') === this.queueFilter);
-        }
-
+        const q = this.searchQuery.trim().toLowerCase();
+        let items = this.jobs.filter(job => {
+          const title = (job?.title || '').toLowerCase();
+          const url = (job?.url || '').toLowerCase();
+          const id = (job?.id || '').toLowerCase();
+          const matchesQuery = !q || title.includes(q) || url.includes(q) || id.includes(q);
+          if (!matchesQuery) return false;
+          if (!this.matchesStatusFilter(job)) return false;
+          return this.inDateRange(this.parseJobDate(job));
+        });
+        items.sort((a, b) => {
+          const da = this.parseJobDate(a)?.getTime() || 0;
+          const db = this.parseJobDate(b)?.getTime() || 0;
+          return this.sortOrder === 'old' ? da - db : db - da;
+        });
         return items;
       },
       progressPercent(s) {
@@ -94,6 +128,12 @@
           await fetch('/api/jobs.php', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({jobId, action:'resume'}) });
           this.loadJobs();
         } catch(e) {}
+      },
+      async retryJob(jobId) {
+        try {
+          await fetch('/api/jobs.php', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({jobId, action:'retry'}) });
+          this.loadJobs();
+        } catch(e) { alert('Retry hatası: ' + e.message); }
       },
       async deleteJob(jobId) {
         if (!confirm('Bu işi silmek istediğinizden emin misiniz? Tüm içerik kalıcı olarak silinecek.')) return;
@@ -134,13 +174,15 @@
         this.addingToQueue = true;
         
         try {
-          const response = await fetch('/api/queues.php', {
+          // Use requeue API for better scheduling support
+          const response = await fetch('/api/social.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              action: 'add_video',
+              action: 'requeue',
+              job_id: this.queueModal.id,
               queue_id: this.selectedQueueId,
-              job_id: this.queueModal.id
+              platforms: ['youtube']
             })
           });
           
@@ -148,7 +190,8 @@
           
           if (result.success) {
             const queue = this.queues.find(q => q.id === this.selectedQueueId);
-            alert('✅ Video "' + (queue?.name || 'Kuyruk') + '" kuyruğuna eklendi!');
+            const scheduledTime = result.scheduled_time ? new Date(result.scheduled_time).toLocaleString('tr-TR') : 'Hemen';
+            alert('✅ Video "' + (queue?.name || 'Kuyruk') + '" kuyruğuna eklendi!\n📅 Planlanmış: ' + scheduledTime);
             this.closeQueueModal();
             this.loadJobs();
           } else {
@@ -177,6 +220,7 @@
       init() {
         this.darkMode = localStorage.getItem('darkMode') === '1';
         this.loadJobs();
+        this.loadQueues();
         this.autoRefresh = setInterval(() => this.loadJobs(), 3000);
       },
       destroy() { clearInterval(this.autoRefresh); }
@@ -201,25 +245,45 @@
             </span>
           </div>
 
-          <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-medium text-gray-500 mb-1">Üretim Durumu</label>
-              <select x-model="productionFilter" class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm">
-                <option value="waiting">Üretimi Bekleyen (Varsayılan)</option>
-                <option value="done">Üretimi Tamamlanan</option>
-                <option value="all">Tümü</option>
-              </select>
+          <div class="mb-6 bg-white border border-gray-100 rounded-xl p-4 space-y-3">
+            <div class="flex flex-col md:flex-row gap-3">
+              <input
+                x-model.trim="searchQuery"
+                type="text"
+                placeholder="Başlık, URL veya Job ID ara..."
+                class="flex-1 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+              <button
+                @click="sortOrder = sortOrder === 'new' ? 'old' : 'new'"
+                type="button"
+                class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium hover:bg-gray-50"
+                x-text="sortOrder === 'new' ? 'Yeni → Eski' : 'Eski → Yeni'"
+              ></button>
             </div>
-            <div>
-              <label class="block text-xs font-medium text-gray-500 mb-1">Kuyruk</label>
-              <select x-model="queueFilter" class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm">
-                <option value="all">Tüm Kuyruklar</option>
-                <option value="in_queue">Kuyruğa Dahil</option>
-                <option value="no_queue">Kuyruğa Dahil Değil</option>
-                <template x-for="queue in queues" :key="'filter-' + queue.id">
-                  <option :value="queue.id" x-text="queue.name"></option>
-                </template>
-              </select>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <button @click="statusFilter='all'" type="button" class="px-3 py-1.5 rounded-full text-sm border transition"
+                :class="statusFilter==='all' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Tümü</button>
+              <button @click="statusFilter='active'" type="button" class="px-3 py-1.5 rounded-full text-sm border transition"
+                :class="statusFilter==='active' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Üretiliyor</button>
+              <button @click="statusFilter='done'" type="button" class="px-3 py-1.5 rounded-full text-sm border transition"
+                :class="statusFilter==='done' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Tamamlandı</button>
+              <button @click="statusFilter='failed'" type="button" class="px-3 py-1.5 rounded-full text-sm border transition"
+                :class="statusFilter==='failed' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Hata</button>
+              <button @click="statusFilter='queued'" type="button" class="px-3 py-1.5 rounded-full text-sm border transition"
+                :class="statusFilter==='queued' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Kuyrukta</button>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <button @click="dateFilter='today'" type="button" class="px-3 py-1.5 rounded-full text-sm border transition"
+                  :class="dateFilter==='today' ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Bugün</button>
+                <button @click="dateFilter='7d'" type="button" class="px-3 py-1.5 rounded-full text-sm border transition"
+                  :class="dateFilter==='7d' ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">7 Gün</button>
+                <button @click="dateFilter='30d'" type="button" class="px-3 py-1.5 rounded-full text-sm border transition"
+                  :class="dateFilter==='30d' ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">30 Gün</button>
+              </div>
+              <button @click="clearFilters()" type="button" class="text-sm text-gray-500 hover:text-gray-700 underline">Temizle</button>
             </div>
           </div>
 
@@ -322,16 +386,30 @@
                         </button>
                       </template>
                       
-                      <!-- Kuyruğa Ekle Butonu -->
+                      <!-- Kuyruğa Ekle / Tekrar Kuyruğa Al Butonu -->
                       <template x-if="job.status === 'done' && job.previewUrl">
                         <button 
                           @click="openQueueModal(job)" 
                           class="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg text-sm font-semibold transition shadow-sm"
-                          title="Kuyruğa Ekle"
+                          :title="job.youtube_upload || job.social_upload ? 'Tekrar Kuyruğa Al' : 'Kuyruğa Ekle'"
                         >
-                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-                          Kuyruğa Ekle
+                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <template x-if="job.youtube_upload || job.social_upload">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </template>
+                            <template x-if="!(job.youtube_upload || job.social_upload)">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                            </template>
+                          </svg>
+                          <span x-text="(job.youtube_upload || job.social_upload) ? 'Tekrar Kuyruğa Al' : 'Kuyruğa Ekle'"></span>
                         </button>
+                      </template>
+                      
+                      <!-- YouTube Upload Durumu -->
+                      <template x-if="job.youtube_upload && job.youtube_upload.video_url">
+                        <a :href="job.youtube_upload.video_url" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg text-xs font-semibold hover:bg-red-200 dark:hover:bg-red-900/60 transition" title="YouTube'da İzle">
+                          📺 Yüklendi
+                        </a>
                       </template>
                       
                       <!-- Kuyruk Durumu -->
@@ -339,16 +417,23 @@
                         <span 
                           class="px-3 py-1.5 rounded-lg text-xs font-semibold"
                           :class="{
-                            'bg-blue-100 text-blue-700': job.queue_status.status === 'queued',
-                            'bg-green-100 text-green-700': job.queue_status.status === 'published',
-                            'bg-yellow-100 text-yellow-700': job.queue_status.status === 'publishing'
+                            'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300': job.queue_status.status === 'queued',
+                            'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300': job.queue_status.status === 'published',
+                            'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300': job.queue_status.status === 'publishing'
                           }"
                         >
                           📋 <span x-text="job.queue_status.queue_name"></span>
                         </span>
                       </template>
                       
-                      <button @click="deleteJob(job.id)" class="inline-flex items-center gap-1.5 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-semibold transition" title="Sil">
+                      <!-- Retry Butonu (failed durumunda) -->
+                      <template x-if="job.status === 'failed'">
+                        <button @click="retryJob(job.id)" class="inline-flex items-center gap-1 px-3 py-2 bg-indigo-100 dark:bg-indigo-900/40 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-semibold transition" title="Yeniden Başlat">
+                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        </button>
+                      </template>
+                      
+                      <button @click="deleteJob(job.id)" class="inline-flex items-center gap-1.5 px-3 py-2 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 rounded-lg text-sm font-semibold transition" title="Sil">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                       </button>
                     </div>
