@@ -1,9 +1,1353 @@
 {
-    "content": [],
+    "content": [
+        {
+            "id": "content_b3bc04367ed9",
+            "url": "https:\/\/onedio.com\/haber\/gunun-firsati-kawa-d5-2k-arac-kamerasi-indirimde-1351068",
+            "title": "Günün Fırsatı: Kawa D5 2K Araç Kamerası İndirimde!",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183338+00:00",
+            "published_at": "2026-04-01T14:06:33+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Araç kullanırken güvenliğini bir adım öteye taşımak isteyenler için günün fırsatları arasında harika bir fırsat var. Kawa D5 2K Araç Kamerası, yüksek çözünürlüklü kayıt, geniş açı lensi ve akıllı özel"
+            }
+        },
+        {
+            "id": "content_2783aee6e6ee",
+            "url": "https:\/\/onedio.com\/haber\/vodafone-turkcell-turk-telekom-5g-bedava-internet-nasil-alinir-1351051",
+            "title": "Vodafone, Turkcell, Türk Telekom 5G Bedava İnternet Nasıl Alınır?",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183376+00:00",
+            "published_at": "2026-04-01T10:42:46+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Türkiye’de 5G teknolojisinin kullanıma sunulmasıyla birlikte operatörlerden dikkat çeken kampanyalar gelmeye başladı. Vodafone, Turkcell ve Türk Telekom kullanıcılarına bedava internet fırsatları sunu"
+            }
+        },
+        {
+            "id": "content_62b8327a4284",
+            "url": "https:\/\/onedio.com\/haber\/savasin-ilk-kursunu-artik-silahtan-cikmiyor-1351045",
+            "title": "Savaşın İlk Kurşunu Artık Silahtan Çıkmıyor",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183392+00:00",
+            "published_at": "2026-04-01T10:13:25+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Bir savaş başladığında ilk ölen hakikattir derler. Klişe. Ama klişe olması yanlış olduğu anlamına gelmiyor. Tam tersine, bu cümle her yeni çatışmayla birlikte biraz daha haklı çıkıyor.Eskiden savaş pr"
+            }
+        },
+        {
+            "id": "content_8dc5512ad35b",
+            "url": "https:\/\/onedio.com\/haber\/turkiye-de-5g-kullanima-sunuldu-cumhurbaskani-erdogan-butona-basti-1350843",
+            "title": "Türkiye&apos;de 5G Kullanıma Sunuldu: Cumhurbaşkanı Erdoğan Butona Bastı!",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183405+00:00",
+            "published_at": "2026-03-31T12:40:25+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Cumhurbaşkanı Recep Tayyip Erdoğan, 5G butonuna basarak 81 ilde 5G dönemini başlattı. Turkcell, Türk Telekom ve Vodafone&apos;da 5G şebekesi kullanıma sunuldu. 5G teknolojisiyle 10 kata varan hız ve d"
+            }
+        },
+        {
+            "id": "content_ae13e5455d2d",
+            "url": "https:\/\/onedio.com\/haber\/yapay-zekanin-5-yil-icinde-yok-edecegi-meslekler-aciklandi-peki-akademisyenler-ne-oneriyor-1350820",
+            "title": "Yapay Zekanın 5 Yıl İçinde Yok Edeceği Meslekler Açıklandı: Peki Akademisyenler Ne Öneriyor?",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183417+00:00",
+            "published_at": "2026-03-31T10:28:42+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Geleceğin iş gücü piyasasına dair hazırlanan yeni bir bilimsel rapor, önümüzdeki beş yıl içerisinde milyonlarca istihdamın ve milyarlarca dolarlık hane halkı gelirinin dijital dönüşüm nedeniyle risk a"
+            }
+        },
+        {
+            "id": "content_858636d42ae6",
+            "url": "https:\/\/onedio.com\/haber\/5g-internet-paketinin-daha-hizli-bitmesine-neden-olur-mu-1350812",
+            "title": "5G İnternet Paketinin Daha Hızlı Bitmesine Neden Olur mu?",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183433+00:00",
+            "published_at": "2026-03-31T09:22:50+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Türkiye’de 5G teknolojisi 1 Nisan 2026 itibarıyla 81 ilde kullanılmaya başlanıyor. 4,5G’ye göre 10 kat daha hızlı internet sunan teknoloji, kullanıcılar arasında önemli soruları da beraberinde getiriy"
+            }
+        },
+        {
+            "id": "content_3f0bfaf3d920",
+            "url": "https:\/\/onedio.com\/haber\/son-2-gun-turkiye-de-mobil-iletisim-kullanimi-degisecek-hangi-telefonlar-5g-ye-uyumlu-1350656",
+            "title": "Son 2 Gün: Türkiye&apos;de Mobil İletişim Kullanımı Değişecek: Hangi Telefonlar 5G&apos;ye Uyumlu?",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183444+00:00",
+            "published_at": "2026-03-30T11:42:27+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Türkiye&apos;de 1994&apos;te başlayan mobil iletişim serüveni, 1 Nisan&apos;da hizmete sunulacak 5G teknolojisi ile birçok alanda yeni imkanların kapısını açacak.Ulaştırma ve Altyapı Bakanı Abdulkadir"
+            }
+        },
+        {
+            "id": "content_666c7b2fd4b0",
+            "url": "https:\/\/onedio.com\/haber\/lise-ogrencisinden-nobel-odulluk-bulus-mikroplastiklerin-yuzde-95-ini-yok-eden-su-filtresi-icat-etti-1350644",
+            "title": "Lise Öğrencisinden Nobel Ödüllük Buluş: Mikroplastiklerin Yüzde 95&apos;ini Yok Eden Su Filtresi İcat Etti!",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183458+00:00",
+            "published_at": "2026-03-30T10:06:38+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Amerika Birleşik Devletleri’nin Virginia eyaletinde yaşayan 18 yaşındaki lise öğrencisi Mia Heller, içme suyundaki mikroplastiklerin %95,5’ini temizleyebilen yenilikçi bir filtrasyon sistemi geliştird"
+            }
+        },
+        {
+            "id": "content_eac04c2f692c",
+            "url": "https:\/\/onedio.com\/haber\/sahte-tiklamalar-gercek-kayiplar-yeni-nesil-dolandiricilik-1350613",
+            "title": "Sahte Tıklamalar, Gerçek Kayıplar: Yeni Nesil Dolandırıcılık",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183470+00:00",
+            "published_at": "2026-03-30T07:31:30+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Hayali köprüler satan Sülün Osman’dan, sahte trafikle aldatan dijital ajanslara, aldatmanın değişen yüzü. Dijital Reklamcılığın en görünmeyen ama en maliyetli sorunlarından biri: Geçersiz Trafik.1960’"
+            }
+        },
+        {
+            "id": "content_8d1faf145102",
+            "url": "https:\/\/onedio.com\/haber\/tarihi-adim-dunyanin-ilk-fuzyon-roketinde-plazma-ateslemesi-gerceklesti-1350605",
+            "title": "Tarihi Adım: Dünyanın İlk Füzyon Roketinde Plazma Ateşlemesi Gerçekleşti",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183482+00:00",
+            "published_at": "2026-03-30T06:46:56+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Uzay teknolojilerinde sınırları zorlayan yeni bir gelişme, bilim dünyasında geniş yankı uyandırdı. Birleşik Krallık merkezli bir girişim, füzyon temelli roket motorunda dünyanın ilk plazma ateşlemesin"
+            }
+        },
+        {
+            "id": "content_fc5b07d1e749",
+            "url": "https:\/\/onedio.com\/haber\/iphone-kullanicilarina-mujde-kulaklikla-aninda-ceviri-ozelligi-geldi-1350314",
+            "title": "iPhone Kullanıcılarına Müjde: Kulaklıkla Anında Çeviri Özelliği Geldi",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183493+00:00",
+            "published_at": "2026-03-28T13:47:34+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Dil engeli, seyahatlerde en büyük sorunlardan biri olmaya devam ediyor. Google Translate, kulaklıkla canlı çeviri özelliğini artık iPhone kullanıcılarına açtı. 70’ten fazla dili destekleyen sistem, ko"
+            }
+        },
+        {
+            "id": "content_2c55862c9dc7",
+            "url": "https:\/\/onedio.com\/haber\/5g-donemi-basliyor-telefonlarda-5g-yi-kullanmak-icin-yapmaniz-gereken-ayarlar-1350288",
+            "title": "5G Dönemi Başlıyor: Telefonlarda 5G’yi Kullanmak İçin Yapmanız Gereken Ayarlar",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183505+00:00",
+            "published_at": "2026-03-28T10:49:32+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Türkiye, mobil iletişimde devrim yaratacak 5G teknolojisine geçiş için geri sayıma başladı. Uzun süredir devam eden test çalışmalarının ardından, 1 Nisan itibarıyla 81 il merkezinde 5G sinyalleri akti"
+            }
+        },
+        {
+            "id": "content_ded52f9f7c5c",
+            "url": "https:\/\/onedio.com\/haber\/beynin-algoritmasi-dijital-suruye-karsi-icsel-anlati-1350255",
+            "title": "Beynin Algoritması: Dijital Sürüye Karşı İçsel Anlatı",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183516+00:00",
+            "published_at": "2026-03-28T01:07:26+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Sosyal medyada “Algoritma bizi yönetiyor!” diye feryat ediyoruz ya… Haklıyız da ama biraz da komik. Milyarlarca dolarlık, binlerce mühendisin gecesini gündüzüne kattığı dev bir psikolojik tuzak kurmuş"
+            }
+        },
+        {
+            "id": "content_bbbb9af1416e",
+            "url": "https:\/\/onedio.com\/haber\/gunun-firsati-evin-her-kosesine-tasiyabileceginiz-tasinabilir-akilli-ekran-indirimde-1350121",
+            "title": "Günün Fırsatı: Evin Her Köşesine Taşıyabileceğiniz Taşınabilir Akıllı Ekran İndirimde!",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183528+00:00",
+            "published_at": "2026-03-27T12:34:33+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Evde, ofiste ya da mutfağın ortasında bile kullanabileceğiniz bir ekran hayal edin… İşte bu model tam olarak onu sunuyor. LG Swing 32U889SA-W, dokunmatik ekranı, akıllı özellikleri ve hareket edebilen"
+            }
+        },
+        {
+            "id": "content_75d36480768f",
+            "url": "https:\/\/onedio.com\/haber\/uzun-tirnakla-yazmak-mumkun-olacak-dokunmatik-ekranlari-algilayan-oje-gelistirildi-1350126",
+            "title": "Uzun Tırnakla Yazmak Mümkün Olacak: Dokunmatik Ekranları Algılayan Oje Geliştirildi",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183541+00:00",
+            "published_at": "2026-03-27T11:37:50+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Uzun tırnak kullananların en büyük sorunlarından biri olan dokunmatik ekran problemi için çözüm bulundu. ABD’li araştırmacılar, tırnakla ekran kullanımını mümkün kılan özel bir oje geliştirdi. Yeni fo"
+            }
+        },
+        {
+            "id": "content_9680bfa08111",
+            "url": "https:\/\/onedio.com\/haber\/bakan-yardimcisi-acikladi-starlink-turkiye-de-hizmete-girebilir-1350096",
+            "title": "Bakan Yardımcısı Açıkladı: Starlink Türkiye&apos;de Hizmete Girebilir",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183556+00:00",
+            "published_at": "2026-03-27T08:25:53+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Uydu interneti dünyanın pek çok yerinde uzun süredir kullanılan bir teknoloji. Türkiye&apos;de de uydu internetinin ne zaman hizmete gireceği merak konusuydu. Ulaştırma ve Altyapı Bakan Yardımcısı Öme"
+            }
+        },
+        {
+            "id": "content_dd375b6e143f",
+            "url": "https:\/\/onedio.com\/haber\/open-ai-chatgpt-icin-gelistirdigi-yetiskin-modunu-rafa-kaldirma-karari-aldi-1350032",
+            "title": "Open AI, ChatGPT İçin Geliştirdiği Yetişkin Modunu Rafa Kaldırma Kararı Aldı",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183567+00:00",
+            "published_at": "2026-03-26T14:39:21+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "İddialara göre OpenAI, ChatGPT için planladığı “yetişkin modu” özelliğini, çalışanlar ve yatırımcılardan gelen eleştiriler sonrası süresiz olarak askıya aldı. Sora uygulamasının kapatılmasının ardında"
+            }
+        },
+        {
+            "id": "content_6b35de7b44a4",
+            "url": "https:\/\/onedio.com\/haber\/82-yasindaki-ciftciden-26-milyon-dolarlik-teklife-ret-teknoloji-devleri-eli-bos-dondu-1350004",
+            "title": "82 Yaşındaki Çiftçiden 26 Milyon Dolarlık Teklife Ret: Teknoloji Devleri Eli Boş Döndü",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183578+00:00",
+            "published_at": "2026-03-26T11:24:07+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "ABD’nin Kentucky eyaletinin kuzeyinde, nesillerdir tarımla uğraşan Huddleston ailesi, modern teknoloji dünyasının sunduğu devasa bir yatırım teklifini reddederek dikkatleri üzerine çekti. Edinilen bil"
+            }
+        },
+        {
+            "id": "content_4f06957d8800",
+            "url": "https:\/\/onedio.com\/haber\/bildiginiz-gibi-degil-yapay-zeka-dunyasinin-son-zamanlardaki-bas-donduren-gelismeleri-1349910",
+            "title": "Bildiğiniz Gibi Değil: Yapay Zeka Dünyasının Son Zamanlardaki Baş Döndüren Gelişmeleri",
+            "source": "onedio-teknolji",
+            "source_id": "source_bfce7b29fbfc",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:09.183589+00:00",
+            "published_at": "2026-03-26T07:35:23+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "Dünyamızda en hızlı gelişen teknolojilerden biri yapay zeka oldu. Yalnızca bir sene içerisinde gerçeğinden ayırt edilemeyen görseller üretmeye başlayan yapay zeka platformları, artık görselle sınırlı "
+            }
+        },
+        {
+            "id": "content_d4a69595d8c1",
+            "url": "https:\/\/www.ahaber.com.tr\/saglik\/2026\/04\/02\/kanserle-mucadelede-buyuk-adim-77-milyon-kisiye-tarama-yapildi",
+            "title": "Kanserle mücadelede büyük adım: 7,7 milyon kişiye tarama yapıldı",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470702+00:00",
+            "published_at": "2026-04-01T22:09:39+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"Kanserle mücadelede büyük adım: 7,7 milyon kişiye tarama yapıldı\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/5e2355\/1200\/1200\/259\/0\/744\/486?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/02\/kanserle-mucadeled"
+            }
+        },
+        {
+            "id": "content_0a44f2ee945b",
+            "url": "https:\/\/www.ahaber.com.tr\/video\/televizyon-videolari\/sultan-orhan-flaviusun-beyligini-ilan-etti",
+            "title": "Sultan Orhan Flavius’un beyliğini ilan etti",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470736+00:00",
+            "published_at": "2026-04-01T21:46:17+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"Sultan Orhan Flavius’un beyliğini ilan etti\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/23babe\/1200\/1200\/606\/0\/1685\/1080?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/02\/sultan-orhan-flaviusun-beyligini-ilan"
+            }
+        },
+        {
+            "id": "content_80ac21774e85",
+            "url": "https:\/\/www.ahaber.com.tr\/video\/televizyon-videolari\/sultan-orhan-prenses-asporca-ile-evlenecegiz",
+            "title": "Sultan Orhan: Prenses Asporça ile evleneceğiz!",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470753+00:00",
+            "published_at": "2026-04-01T21:42:50+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"Sultan Orhan: Prenses Asporça ile evleneceğiz!\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/48ab2c\/1200\/1200\/353\/0\/1432\/1080?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/02\/sultan-orhan-prenses-asporca-ile-e"
+            }
+        },
+        {
+            "id": "content_b303ce94fb67",
+            "url": "https:\/\/www.ahaber.com.tr\/yasam\/2026\/04\/02\/siirtte-korkunc-olum-agac-budamak-isterken-can-verdi",
+            "title": "Siirt'te korkunç ölüm: Ağaç budamak isterken can verdi",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470769+00:00",
+            "published_at": "2026-04-01T21:14:22+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"Siirt'te korkunç ölüm: Ağaç budamak isterken can verdi\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/99579d\/1200\/1200\/210\/0\/560\/350?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/02\/siirtte-korkunc-olum-agac-bu"
+            }
+        },
+        {
+            "id": "content_4d4a21d723ae",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/tc-susehrisulh-hukuk-mahkemesi",
+            "title": "T.C. SUŞEHRİ SULH HUKUK MAHKEMESİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470785+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"T.C. SUŞEHRİ SULH HUKUK MAHKEMESİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/003873\/1200\/675\/1\/0\/864\/485?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/tc-susehrisulh-hukuk-mahkemesi-1775052781676.jpeg\" \/"
+            }
+        },
+        {
+            "id": "content_e72c125b5fbd",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/tc-karaisali-sulh-hukuk-mah-satis-memurlugu",
+            "title": "T.C. KARAİSALI (SULH HUKUK MAH.) SATIŞ MEMURLUĞU",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470807+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"T.C. KARAİSALI (SULH HUKUK MAH.) SATIŞ MEMURLUĞU\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/d2d3af\/1200\/1200\/235\/0\/720\/486?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/tc-karaisali-sulh-hukuk-mah-satis-"
+            }
+        },
+        {
+            "id": "content_24b9f3d502b4",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/tc-serik-icra-dairesi",
+            "title": "T.C. SERİK İCRA DAİRESİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470824+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"T.C. SERİK İCRA DAİRESİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/983cdf\/1200\/675\/0\/0\/864\/486?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/tc-serik-icra-dairesi-1775052482150.jpeg\" \/><br \/>T.C. SERİK İ"
+            }
+        },
+        {
+            "id": "content_58f33bb55b7b",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/denizli-6-asliye-ceza-mahkemesi-hakimligi",
+            "title": "DENİZLİ 6. ASLİYE CEZA MAHKEMESİ HAKİMLİĞİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470842+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"DENİZLİ 6. ASLİYE CEZA MAHKEMESİ HAKİMLİĞİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/699f9c\/1200\/675\/0\/0\/568\/319?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/1775072400946.jpg\" \/><br \/>T.C. DENİZLİ 6. "
+            }
+        },
+        {
+            "id": "content_1a38487042e8",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/antalya-21-asliye-ceza-mahkemesi",
+            "title": "ANTALYA 21. ASLİYE CEZA MAHKEMESİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470859+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"ANTALYA 21. ASLİYE CEZA MAHKEMESİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/04dda8\/1200\/675\/0\/48\/548\/357?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/1775072290568.jpg\" \/><br \/>T.C. ANTALYA 21. ASLİYE "
+            }
+        },
+        {
+            "id": "content_cd219421ed25",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/kahramanmaras-2-sulh-hukuk-mahkemesi",
+            "title": "KAHRAMANMARAŞ 2. SULH HUKUK MAHKEMESİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470875+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"KAHRAMANMARAŞ 2. SULH HUKUK MAHKEMESİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/a9447d\/1200\/675\/0\/0\/571\/321?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/1775072490344.jpg\" \/><br \/>T.C. KAHRAMANMARAŞ 2."
+            }
+        },
+        {
+            "id": "content_60c944e93ab6",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/batman-1-sulh-hukuk-mahkemesi-hakimligi",
+            "title": "BATMAN 1. SULH HUKUK MAHKEMESİ HAKİMLİĞİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470892+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"BATMAN 1. SULH HUKUK MAHKEMESİ HAKİMLİĞİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/8ca274\/1200\/675\/0\/0\/570\/320?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/1775072597497.jpg\" \/><br \/>T.C. BATMAN 1. SUL"
+            }
+        },
+        {
+            "id": "content_09602a541f33",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/serik-2-sulh-hukuk-mahkemesi",
+            "title": "SERİK 2. SULH HUKUK MAHKEMESİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470908+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"SERİK 2. SULH HUKUK MAHKEMESİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/3ae5e9\/1200\/675\/0\/12\/560\/327?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/1775072771875.jpg\" \/><br \/>SERİK 2. SULH HUKUK MAHKEMES"
+            }
+        },
+        {
+            "id": "content_5a3b75bf8c05",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/ipsala-asliye-hukuk-mahkemesi",
+            "title": "İPSALA ASLİYE HUKUK MAHKEMESİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470924+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"İPSALA ASLİYE HUKUK MAHKEMESİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/0f5445\/1200\/675\/0\/0\/573\/321?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/ipsala-asliye-hukuk-mahkemesi-1775072982222.jpg\" \/><br \/"
+            }
+        },
+        {
+            "id": "content_f81dde79d1d7",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/kilis-5-asliye-ceza-mahkemesi-hakimligi",
+            "title": "KİLİS 5. ASLİYE CEZA MAHKEMESİ HAKİMLİĞİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470940+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"KİLİS 5. ASLİYE CEZA MAHKEMESİ HAKİMLİĞİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/ce2fdb\/1200\/675\/0\/56\/529\/354?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/1775073058442.jpg\" \/><br \/>T.C. KİLİS 5. ASL"
+            }
+        },
+        {
+            "id": "content_319c837bcc87",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/ipsala-asliye-hukuk-mahkemesi-1775081895",
+            "title": "İPSALA ASLİYE HUKUK MAHKEMESİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470959+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"İPSALA ASLİYE HUKUK MAHKEMESİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/e15d83\/1200\/675\/0\/40\/542\/345?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/1775073168586.jpg\" \/><br \/>T.C. İPSALA 2. ASLİYE HUKUK "
+            }
+        },
+        {
+            "id": "content_f5015026410c",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/kilis-6-asliye-ceza-mahkemesi-hakimligi",
+            "title": "KİLİS 6. ASLİYE CEZA MAHKEMESİ HAKİMLİĞİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470976+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"KİLİS 6. ASLİYE CEZA MAHKEMESİ HAKİMLİĞİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/abc499\/1200\/675\/0\/56\/580\/382?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/1775073268908.jpg\" \/><br \/>T.C. KİLİS 6. ASL"
+            }
+        },
+        {
+            "id": "content_cb562c2dcf09",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/erdemli-sulh-hukuk-mahkemesi-satis-memurlugu",
+            "title": "ERDEMLİ SULH HUKUK MAHKEMESİ SATIŞ MEMURLUĞU",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.470991+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"ERDEMLİ SULH HUKUK MAHKEMESİ SATIŞ MEMURLUĞU\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/8519b8\/1200\/675\/0\/27\/580\/353?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/1775073374433.jpg\" \/><br \/>T.C.ERDEMLİ(S"
+            }
+        },
+        {
+            "id": "content_10a3442d1c1c",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/elbistan-5-asliye-hukuk-mahkemesi-hakimligi",
+            "title": "ELBİSTAN 5. ASLİYE HUKUK MAHKEMESİ HAKİMLİĞİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.471007+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"ELBİSTAN 5. ASLİYE HUKUK MAHKEMESİ HAKİMLİĞİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/5e276d\/1200\/675\/0\/34\/516\/323?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/1775073526860.jpg\" \/><br \/>ELBİSTAN 5. A"
+            }
+        },
+        {
+            "id": "content_df9162b90592",
+            "url": "https:\/\/www.ahaber.com.tr\/resmi-ilan\/2026\/04\/02\/pinarbasi-milli-emlak-sefligi",
+            "title": "PINARBAŞI MİLLİ EMLAK ŞEFLİĞİ",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.471022+00:00",
+            "published_at": "2026-04-01T21:00:11+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"PINARBAŞI MİLLİ EMLAK ŞEFLİĞİ\" src=\"https:\/\/iaahbr.tmgrup.com.tr\/c7f367\/1200\/675\/0\/21\/537\/324?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/1775073616859.jpg\" \/><br \/>PINARBAŞI MİLLİ EMLAK ŞEFLİĞ"
+            }
+        },
+        {
+            "id": "content_2d6321f695a3",
+            "url": "https:\/\/www.ahaber.com.tr\/video\/ozel-haber\/trump-harekat-emrini-verir-mi-iranda-uranyumu-yok-et-plani",
+            "title": "Trump harekat emrini verir mi? İran'da \"Uranyumu yok et\" planı",
+            "source": "Ahaber",
+            "source_id": "source_f7c48b28ee91",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:11.471039+00:00",
+            "published_at": "2026-04-01T20:57:50+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img alt=\"Trump harekat emrini verir mi? İran'da \" src=\"https:\/\/iaahbr.tmgrup.com.tr\/eaf269\/1200\/1200\/183\/0\/668\/486?u=https:\/\/iahbr.tmgrup.com.tr\/2026\/04\/01\/trump-harekat-emrini-verir-mi-iranda-uranyu"
+            }
+        },
+        {
+            "id": "content_213dd3613822",
+            "url": "https:\/\/www.trthaber.com\/haber\/gundem\/bakan-ciftci-hedefimiz-ceza-degil-kurallara-uyulmasi-939963.html",
+            "title": "Bakan Çiftçi: Hedefimiz ceza değil, kurallara uyulması",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528216+00:00",
+            "published_at": "2026-04-01T14:47:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2450000\/mustafa-ciftci-2450528.jpg\" \/>İçişleri Bakanı Mustafa Çiftçi, APP plaka kullanan vatandaşlara tanınan sürenin sona erdiğini belirter"
+            }
+        },
+        {
+            "id": "content_ebfe70c76a76",
+            "url": "https:\/\/www.trthaber.com\/haber\/gundem\/cumhurbaskani-erdogan-darbeciligin-ve-cuntaciligin-kitabini-chp-yazmistir-939912.html",
+            "title": "Cumhurbaşkanı Erdoğan: Darbeciliğin ve cuntacılığın kitabını CHP yazmıştır",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528240+00:00",
+            "published_at": "2026-04-01T08:44:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2450000\/recep-tayyip-erdoganaa-2450447.jpg\" \/>Cumhurbaşkanı Erdoğan, \"Türkiye'nin siyasi terimler sözlüğünde darbeci ve cuntacı sıfatının ka"
+            }
+        },
+        {
+            "id": "content_3d5f386c627f",
+            "url": "https:\/\/www.trthaber.com\/haber\/dunya\/iran-disisleri-bakanligi-sozcusu-trumpin-ateskese-dair-aciklamalarinin-gercekligi-yok-939964.html",
+            "title": "İran Dışişleri Bakanlığı Sözcüsü: Trumpın ateşkese dair açıklamalarının gerçekliği yok",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528251+00:00",
+            "published_at": "2026-04-01T14:51:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2440000\/trump-iran-2440352.jpg\" \/>İran Dışişleri Bakanlığı Sözcüsü İsmail Bekayi, ABD Başkanı Donald Trump’n, \"İran'ın yeni rejiminin lideri"
+            }
+        },
+        {
+            "id": "content_1aea01140ed0",
+            "url": "https:\/\/www.trthaber.com\/haber\/gundem\/turkiye-genelinde-sokak-hayvanlarinin-yuzde-75i-toplandi-939972.html",
+            "title": "Türkiye genelinde sokak hayvanlarının yüzde 75'i toplandı",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528261+00:00",
+            "published_at": "2026-04-01T16:30:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2260000\/sokak-kopegi-getty-2261602.jpg\" \/>İçişleri Bakanı Mustafa Çiftçi, sahipsiz sokak hayvanlarına yönelik yürütülen çalışmalar kapsamınd"
+            }
+        },
+        {
+            "id": "content_1afa21169f32",
+            "url": "https:\/\/www.trthaber.com\/haber\/turkiye\/16-il-icin-sari-kodlu-uyari-saganak-bekleniyor-939961.html",
+            "title": "16 il için sarı kodlu uyarı: Sağanak bekleniyor",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528270+00:00",
+            "published_at": "2026-04-01T21:01:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2410000\/saganak-2411202.jpg\" \/>İçişleri Bakanlığı, 16 ilde beklenen gök gürültülü sağanak için \"sarı\" kodlu meteorolojik uyarıda bulundu."
+            }
+        },
+        {
+            "id": "content_a573c74514f2",
+            "url": "https:\/\/www.trthaber.com\/haber\/dunya\/trump-iran-ateskes-istedi-939951.html",
+            "title": "Trump: İran ateşkes istedi",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528279+00:00",
+            "published_at": "2026-04-01T12:50:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2380000\/trump-re-2380153.jpg\" \/>ABD Başkanı Donald Trump, İran'ın ateşkes istediğini belirterek \"Hürmüz Boğazı ne zaman açık, serbest ve güv"
+            }
+        },
+        {
+            "id": "content_1cd337fe977d",
+            "url": "https:\/\/www.trthaber.com\/haber\/gundem\/bakan-fidandan-diplomasi-trafigi-939939.html",
+            "title": "Bakan Fidan'dan diplomasi trafiği",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528287+00:00",
+            "published_at": "2026-04-01T11:44:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2446000\/hakan-fidan-aa-2446395.jpg\" \/>Dışişleri Bakanı Hakan Fidan, Japon mevkidaşı Motegi, Ürdünlü mevkidaşı Safedi, Katar Başbakanı ve Dış"
+            }
+        },
+        {
+            "id": "content_9982fd3db1fe",
+            "url": "https:\/\/www.trthaber.com\/haber\/dunya\/iran-trumpin-rejim-degisti-iddiasini-alaya-aldi-939915.html",
+            "title": "İran, Trump'ın rejim değişti iddiasını alaya aldı",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528299+00:00",
+            "published_at": "2026-04-01T08:48:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2442000\/iran-mozaik-savunma-stratejisi-2443678.jpg\" \/>İran Meclisi Ulusal Güvenlik ve Dış Politika Komisyonu Başkanı İbrahim Azizi, ABD Başk"
+            }
+        },
+        {
+            "id": "content_00ab63cea784",
+            "url": "https:\/\/www.trthaber.com\/haber\/dunya\/trump-abdyi-natodan-cekmeyi-dusunuyorum-939919.html",
+            "title": "Trump: ABD'yi NATO'dan çekmeyi düşünüyorum",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528307+00:00",
+            "published_at": "2026-04-01T09:15:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2448000\/trump-reu-2448108.jpg\" \/>ABD Başkanı Donald Trump, müttefiklerin İran'a yönelik olası bir ABD askeri harekatına destek vermemesi dur"
+            }
+        },
+        {
+            "id": "content_72404100e917",
+            "url": "https:\/\/www.trthaber.com\/haber\/turkiye\/bodrum-aciklarinda-duzensiz-gocmenleri-tasiyan-bot-batti-19-olu-939885.html",
+            "title": "Bodrum açıklarında düzensiz göçmenleri taşıyan bot battı: 19 ölü",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528316+00:00",
+            "published_at": "2026-04-01T06:31:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2450000\/gocmen-dha-2450261.jpg\" \/>Muğla'nın Bodrum ilçesi açıklarında, düzensiz göçmenleri taşıyan lastik botun batması sonucu 19 kişi öldü,"
+            }
+        },
+        {
+            "id": "content_378e221bf53a",
+            "url": "https:\/\/www.trthaber.com\/haber\/turkiye\/app-plakalar-icin-taninan-sure-sona-erdi-939888.html",
+            "title": "APP plakalar için tanınan süre sona erdi",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528326+00:00",
+            "published_at": "2026-04-01T06:46:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2444000\/app-plaka-aa-2444653.jpg\" \/>'APP plaka' olarak bilinen standart dışı plakaların denetimlerine bugün başlanıyor. Mühürsüz, diğer güve"
+            }
+        },
+        {
+            "id": "content_39c6cd4efa57",
+            "url": "https:\/\/www.trthaber.com\/haber\/turkiye\/ankara-kuzey-cevre-yolunda-kaza-5-olu-939884.html",
+            "title": "Ankara Kuzey Çevre Yolu'nda kaza: 5 ölü",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528334+00:00",
+            "published_at": "2026-04-01T06:29:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2450000\/kaza-trt-haber-2450280.jpg\" \/>Ankara Kuzey Çevre Yolu'nda iki aracın karıştığı kazada 5 kişi hayatını kaybetti."
+            }
+        },
+        {
+            "id": "content_0445feeb9a6d",
+            "url": "https:\/\/www.trthaber.com\/haber\/gundem\/bizim-cocuklar-dunya-kupasinda-939845.html",
+            "title": "Bizim Çocuklar Dünya Kupası'nda",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528342+00:00",
+            "published_at": "2026-03-31T20:25:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2450000\/milli-takim-aa-2450192.jpg\" \/>A Milli Futbol Takımımız, Kosova'yı 1-0 yenerek 2026 Dünya Kupası'na gitmeye hak kazandı."
+            }
+        },
+        {
+            "id": "content_482f92366f05",
+            "url": "https:\/\/www.trthaber.com\/haber\/dunya\/iran-bolgedeki-abd-sirketlerini-hedef-alacak-939823.html",
+            "title": "İran, bölgedeki ABD şirketlerini hedef alacak",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528350+00:00",
+            "published_at": "2026-03-31T14:42:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2446000\/iran-missile-archive-reu-2446033.jpg\" \/>İran Devrim Muhafızları, İran'a yönelik saldırılara misilleme olarak yarından itibaren bölge"
+            }
+        },
+        {
+            "id": "content_a6b130b4da43",
+            "url": "https:\/\/www.trthaber.com\/haber\/dunya\/yunan-basini-dunya-enerji-krizi-yasarken-turkiye-enerjide-uc-kitaya-yayiliyor-939805.html",
+            "title": "Yunan basını: Dünya enerji krizi yaşarken Türkiye enerjide üç kıtaya yayılıyor",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528359+00:00",
+            "published_at": "2026-03-31T12:02:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2366000\/sondaj-enerji-dogalgaz-kaynak-aa-2367232.jpg\" \/>Türkiye’nin enerji alanında daha geniş bir coğrafyada aktif hale gelmesi Yunan basın"
+            }
+        },
+        {
+            "id": "content_2a20da01ec9d",
+            "url": "https:\/\/www.trthaber.com\/haber\/gundem\/usak-belediye-baskani-ozkan-yalim-gorevden-uzaklastirildi-939834.html",
+            "title": "Uşak Belediye Başkanı Özkan Yalım görevden uzaklaştırıldı",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528368+00:00",
+            "published_at": "2026-03-31T17:31:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2448000\/ozkan-yalim-2449103.jpg\" \/>Uşak Belediye Başkanı Özkan Yalım, hakkındaki tutuklama kararının ardından, İçişleri Bakanlığı tarafından"
+            }
+        },
+        {
+            "id": "content_acd286acaee9",
+            "url": "https:\/\/www.trthaber.com\/haber\/dunya\/abdden-nato-mesaji-savastan-sonra-iliskimizi-degerlendirecegiz-939890.html",
+            "title": "ABD'den NATO mesajı: Savaştan sonra ilişkimizi değerlendireceğiz",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528376+00:00",
+            "published_at": "2026-04-01T06:52:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/1502000\/nato-1502045.jpg\" \/>ABD Dışişleri Bakanı Marco Rubio, ABD ve İsrail'in İran'a saldırılarıyla başlayan savaşta NATO müttefiklerinden "
+            }
+        },
+        {
+            "id": "content_b34c58e6e9d8",
+            "url": "https:\/\/www.trthaber.com\/haber\/gundem\/turkiye-5g-teknolojisine-gecti-939806.html",
+            "title": "Türkiye 5G teknolojisine geçti",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528384+00:00",
+            "published_at": "2026-03-31T12:30:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2448000\/5g-2449840.jpg\" \/>Türkiye, 5G'ye geçerek dijital yarışta hızlanıyor. Yeni teknoloji, internet hızını artırıp saniyeler içinde veri i"
+            }
+        },
+        {
+            "id": "content_ea95b6c6c316",
+            "url": "https:\/\/www.trthaber.com\/haber\/gundem\/kurtulmus-israilin-idam-cezasi-yasasini-degerlendirdi-tehlikeli-bir-esik-939814.html",
+            "title": "Kurtulmuş, İsrail'in idam cezası yasasını değerlendirdi: Tehlikeli bir eşik",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528395+00:00",
+            "published_at": "2026-03-31T13:28:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2380000\/numan-kurtulmusaa-2381810.jpg\" \/>TBMM Başkanı Numan Kurtulmuş, İsrail Meclisi'nin Filistinli esirleri hedef alacak skandal 'idam cez"
+            }
+        },
+        {
+            "id": "content_cbca52f78d0e",
+            "url": "https:\/\/www.trthaber.com\/haber\/gundem\/cumhurbaskani-erdogan-5g-ile-uretkenligin-zirveye-ulastigi-yeni-bir-doneme-giriyoruz-939800.html",
+            "title": "Cumhurbaşkanı Erdoğan: 5G ile üretkenliğin zirveye ulaştığı yeni bir döneme giriyoruz",
+            "source": "TRT-MANŞET",
+            "source_id": "source_bac725dfeef5",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:18.528404+00:00",
+            "published_at": "2026-03-31T11:38:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "genel",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2450000\/cumhurbaskani-erdogan-aa-2450128.jpg\" \/>Cumhurbaşkanı Erdoğan'ın tablet ekranından butona basmasıyla Türkiye'de 5G teknolojisine geç"
+            }
+        },
+        {
+            "id": "content_c73c06331e2a",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/teknofest-girisim-programi-2026-basvurulari-basladi-939976.html",
+            "title": "TEKNOFEST Girişim Programı 2026 başvuruları başladı",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961693+00:00",
+            "published_at": "2026-04-01T17:44:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2450000\/teknofest-2450530.jpg\" \/>Türkiye Teknoloji Takımı Vakfı (T3 Vakfı) bünyesinde faaliyet gösteren T3 Girişim Merkezi yürütücülüğünde h"
+            }
+        },
+        {
+            "id": "content_cc86c93528ad",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/turkiyede-21-milyon-abone-5g-teknolojisiyle-bulustu-939941.html",
+            "title": "Türkiye'de 21 milyon abone 5G teknolojisiyle buluştu",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961717+00:00",
+            "published_at": "2026-04-01T11:54:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2412000\/5g-2413466.jpg\" \/>Bakan Uraloğlu, Cumhurbaşkanı Recep Tayyip Erdoğan'ın dün 5G dönemini başlatmasıyla tarihi bir eşiğin geride bırak"
+            }
+        },
+        {
+            "id": "content_4fba737453c7",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/5g-yapay-zeka-ekonomisini-de-hizlandiracak-939906.html",
+            "title": "5G, yapay zeka ekonomisini de hızlandıracak",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961727+00:00",
+            "published_at": "2026-04-01T08:09:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2412000\/5g-2413466.jpg\" \/>Türkiye'nin 5G teknolojisine geçişiyle başlayan dönüşüm sürecinin, \"yapay zeka ekonomisini\" de hızlandırması bekle"
+            }
+        },
+        {
+            "id": "content_bf5f32542b4f",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/gida-ve-cevre-konulu-uluslararasi-projelere-destek-saglanacak-939904.html",
+            "title": "Gıda ve çevre konulu uluslararası projelere destek sağlanacak",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961737+00:00",
+            "published_at": "2026-04-01T08:04:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/1506000\/tubitak-odul-aa-1507275.jpg\" \/>Akdeniz Bölgesi'nde su yönetimi, gıda sistemleri ve tarım-gıda değer zinciri temalarında çok ortaklı "
+            }
+        },
+        {
+            "id": "content_3cff4bd51ebf",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/turkiye-5gye-geciyor-939721.html",
+            "title": "Türkiye 5G'ye geçiyor",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961746+00:00",
+            "published_at": "2026-03-31T04:35:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2446000\/5g-2447529.jpg\" \/>Türkiye'de 1994'te başlayan mobil iletişim 1 Nisan'da hizmete sunulacak 5G ile yeni bir boyuta taşınacak, mobil in"
+            }
+        },
+        {
+            "id": "content_51788db3459d",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/ferganinin-besinci-uydusu-uzayda-939705.html",
+            "title": "Fergani'nin beşinci uydusu uzayda",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961756+00:00",
+            "published_at": "2026-03-30T19:47:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2448000\/fergani-2449917.jpg\" \/>Fergani Uzay’ın tamamen milli imkânlarla geliştirdiği beşinci  deneme uydusu olan FGN-100-D3 uzaya çıktı. Hab"
+            }
+        },
+        {
+            "id": "content_6795c4216f95",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/iletisimde-yeni-donem-5gye-gecis-yarin-torenle-ilan-edilecek-939618.html",
+            "title": "İletişimde yeni dönem: 5G'ye geçiş yarın törenle ilan edilecek",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961765+00:00",
+            "published_at": "2026-03-30T07:38:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2448000\/5g-2449637.jpg\" \/>Cumhurbaşkanı Recep Tayyip Erdoğan, düzenlenecek törenle Türkiye’nin 5G dönemine resmen geçişini ilan edecek. Yeni"
+            }
+        },
+        {
+            "id": "content_e777d2aca727",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/deneyap-teknoloji-atolyeleri-gelecegin-teknoloji-yildizlarini-ariyor-939458.html",
+            "title": "Deneyap Teknoloji Atölyeleri 'geleceğin teknoloji yıldızları'nı arıyor",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961779+00:00",
+            "published_at": "2026-03-28T13:25:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2448000\/deneyap-2026-2449489.jpg\" \/>Sanayi ve Teknoloji Bakanlığı, Gençlik ve Spor Bakanlığı, TÜBİTAK ve T3 Vakfı paydaşlığında yürütülen DE"
+            }
+        },
+        {
+            "id": "content_35bb0bb43a4e",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/turkiye-imzali-uzay-hackathonu-dunyaya-yayilacak-939457.html",
+            "title": "Türkiye imzalı uzay hackathonu dünyaya yayılacak",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961788+00:00",
+            "published_at": "2026-03-28T13:04:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2448000\/hackathon-2449488.jpg\" \/>Gençlerin uzay alanında farkındalığını artırmak üzere Türkiye'de başlatılan \"TUA Astro Hackathon\" ağının 78"
+            }
+        },
+        {
+            "id": "content_cda71b7f8b12",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/dijital-ipek-yolu-turkiyeden-gececek-939293.html",
+            "title": "Dijital İpek Yolu Türkiye'den geçecek",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961800+00:00",
+            "published_at": "2026-03-27T08:27:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/1566000\/turk-bayragi-aa-1566803.jpg\" \/>TÜBİSAD Başkanı Mehmet Ali Tombalak, Türkiye'nin artık sadece oyuna dahil olan değil, iddiasını güçle"
+            }
+        },
+        {
+            "id": "content_e8b8a81b3fa3",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/turkiyeden-alcak-yorunge-uydulari-icin-dunya-devleriyle-masada-939156.html",
+            "title": "Türkiye'den alçak yörünge uyduları için dünya devleriyle masada",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961810+00:00",
+            "published_at": "2026-03-26T08:42:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/1924000\/starlink-uydulari-1924321.jpg\" \/>Ulaştırma ve Altyapı Bakan Yardımcısı Ömer Fatih Sayan, SpaceX ve Amazon gibi firmalarla alçak yörü"
+            }
+        },
+        {
+            "id": "content_b616f226ddd2",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/turkiyede-uzay-seferberligi-37-sehirde-hackathon-939155.html",
+            "title": "Türkiyede uzay seferberliği: 37 şehirde hackathon",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961819+00:00",
+            "published_at": "2026-03-26T08:44:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2428000\/turkiye-uzay-2428100.jpg\" \/>Gençlerin uzay teknolojilerine ilgisini artırmak amacıyla düzenlenen Türkiye’nin ilk uzay temalı hackath"
+            }
+        },
+        {
+            "id": "content_d6834a3cf580",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/turksat-yeni-is-birliklerine-imza-atti-939154.html",
+            "title": "TÜRKSAT yeni iş birliklerine imza attı",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961827+00:00",
+            "published_at": "2026-03-26T08:37:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2312000\/turksat-2313808.jpg\" \/>Uydu dünyasının büyük buluşmalarından Satellite 2026 fuarında yer alan TÜRKSAT, iki küresel şirketle strateji"
+            }
+        },
+        {
+            "id": "content_69eff9844ee8",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/tusas-satellite-2026da-turkiyenin-uzaydaki-gucunu-sergiledi-939136.html",
+            "title": "TUSAŞ Satellite 2026da Türkiye'nin uzaydaki gücünü sergiledi",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961836+00:00",
+            "published_at": "2026-03-26T07:18:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2448000\/tusas-uydu-aa-2448781.jpg\" \/>Türk Havacılık ve Uzay Sanayii (TUSAŞ), küresel uzay ve uydu endüstrisinin en önemli buluşmalarından bi"
+            }
+        },
+        {
+            "id": "content_9339c1ba831f",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/turk-firmalari-uydu-sektorunun-en-buyuk-bulusmasinda-939126.html",
+            "title": "Türk firmaları, uydu sektörünün en büyük buluşmasında",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961844+00:00",
+            "published_at": "2026-03-26T06:26:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2448000\/uydu-fuar-aa-2448745.jpg\" \/>Türkiye'nin uydu teknolojileri alanında faaliyet gösteren firmaları TÜRKSAT, Türk Havacılık ve Uzay Sana"
+            }
+        },
+        {
+            "id": "content_ef66a9c88554",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/tayfun-balistik-ve-som-seyir-fuzesinin-teslimatlari-hiz-kesmeden-suruyor-939083.html",
+            "title": "TAYFUN balistik ve SOM seyir füzesinin teslimatları hız kesmeden sürüyor",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961855+00:00",
+            "published_at": "2026-03-25T18:03:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2448000\/roketsan-2448726.jpg\" \/>Türk savunma sanayisinin lider füze, roket ve mühimmat üreticisi ROKETSAN tarafından geliştirilen TAYFUN Bal"
+            }
+        },
+        {
+            "id": "content_6b4855100141",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/otonom-sistemlerde-yeni-cag-hava-ve-kara-araclari-artik-birlikte-dusunuyor-939070.html",
+            "title": "Otonom sistemlerde yeni çağ: Hava ve kara araçları artık birlikte düşünüyor",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961864+00:00",
+            "published_at": "2026-03-25T14:40:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2448000\/ileri-otonomteknofest-2448719.jpg\" \/>TEKNOFEST kapsamında ilk kez düzenlenen İleri Otonom Sistemler Tasarım ve Operasyon Yarışması, "
+            }
+        },
+        {
+            "id": "content_4100393a6ec4",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/turkiyede-5g-donemi-31-martta-toren-duzenlenecek-939025.html",
+            "title": "Türkiyede 5G dönemi: 31 Mart'ta tören düzenlenecek",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961872+00:00",
+            "published_at": "2026-03-25T09:33:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2446000\/5g-2447529.jpg\" \/>Türkiye 31 Mart'ta Cumhurbaşkanlığı Külliyesi'nde Cumhurbaşkanı Recep Tayyip Erdoğan'ın katılımıyla düzenlenecek t"
+            }
+        },
+        {
+            "id": "content_797038ce14e5",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/arilarin-genetigini-bozan-gizli-tehlike-939014.html",
+            "title": "Arıların genetiğini bozan gizli tehlike",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961972+00:00",
+            "published_at": "2026-03-25T08:21:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2448000\/ari-2448548.jpg\" \/>Düzce Üniversitesi (DAGEM) tarafından yapılan araştırma, arıların küresel ısınmadan ziyade baz istasyonları, Wi-F"
+            }
+        },
+        {
+            "id": "content_3e50fb960147",
+            "url": "https:\/\/www.trthaber.com\/haber\/bilim-teknoloji\/teknofestte-lojistikte-verimlilik-icin-yenilikci-cozumler-araniyor-938872.html",
+            "title": "TEKNOFESTte lojistikte verimlilik için yenilikçi çözümler aranıyor",
+            "source": "TRT-BİLİM TEKNOLOJİ",
+            "source_id": "source_a4f4a1ef75d1",
+            "source_type": "rss",
+            "discovered_at": "2026-04-01T22:19:20.961987+00:00",
+            "published_at": "2026-03-24T07:34:00+00:00",
+            "status": "pending",
+            "processed_job_id": null,
+            "metadata": {
+                "keywords": [],
+                "category": "teknoloji",
+                "description": "<img src=\"https:\/\/trthaberstatic.cdn.wp.trt.com.tr\/resimler\/2112000\/teknofest-aa-2113123.jpg\" \/>TEKNOFEST kapsamında, Hepsiburada iş birliğiyle düzenlenen “Yapay Zeka Destekli Lojistik Anahat Optimiza"
+            }
+        }
+    ],
     "metadata": {
-        "created_at": "2026-03-26T13:19:34Z",
-        "last_updated": "2026-03-26T13:19:34Z",
-        "total_items": 0,
+        "created_at": "2026-04-01T22:18:51Z",
+        "last_updated": "2026-04-01T22:34:27Z",
+        "total_items": 79,
         "version": "1.0"
     }
 }

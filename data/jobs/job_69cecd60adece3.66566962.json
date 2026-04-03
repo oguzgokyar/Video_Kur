@@ -1,0 +1,31 @@
+{
+  "id": "job_69cecd60adece3.66566962",
+  "url": "https://www.bbc.com/turkce",
+  "template": "short_haber",
+  "scriptId": "",
+  "contentType": "haber",
+  "videoWidth": 1080,
+  "videoHeight": 1920,
+  "subtitleStyle": null,
+  "status": "done",
+  "created_at": "2026-04-02 22:11:12",
+  "previewUrl": "/output/job_69cecd60adece3.66566962/final_video.mp4",
+  "subtitles": "1\n00:00:00,000 --> 00:00:02,040\n15 yaşındaki Sophia'nın hayatını değiştiren\n\n2\n00:00:02,040 --> 00:00:04,080\no an! Bu yürek burkan\n\n3\n00:00:04,080 --> 00:00:06,120\nsendromla tanışın.\n\n4\n00:00:06,120 --> 00:00:08,153\nSophia, dört yaşına kadar tıpkı\n\n5\n00:00:08,153 --> 00:00:10,186\ndiğer çocuklar gibiydi, oyun oynar,\n\n6\n00:00:10,186 --> 00:00:12,219\ngülümserdi.\n\n7\n00:00:12,219 --> 00:00:14,906\nAncak Sanfilippo Sendromu tanısıyla hayatı\n\n8\n00:00:14,906 --> 00:00:17,593\ntamamen değişti. Bu nadir genetik\n\n9\n00:00:17,593 --> 00:00:20,280\nhastalık, her şeyi altüst etti.\n\n10\n00:00:20,280 --> 00:00:23,456\nŞimdi 15 yaşında. Artık yürüyemiyor,\n\n11\n00:00:23,456 --> 00:00:26,633\nkonuşamıyor. Bedenindeki yıkım akıl almaz\n\n12\n00:00:26,633 --> 00:00:29,809\nboyutlarda.\n\n13\n00:00:29,809 --> 00:00:32,363\nAilesi, Sophia'nın 16. yaş gününü\n\n14\n00:00:32,363 --> 00:00:34,916\ngörüp göremeyeceği endişesiyle yaşıyor. Her\n\n15\n00:00:34,916 --> 00:00:37,469\ngün bir mücadele.\n\n16\n00:00:37,469 --> 00:00:39,379\nSophia'nın bu zorlu mücadelesinde ona\n\n17\n00:00:39,379 --> 00:00:41,289\ndestek olmak için lütfen kanalımıza\n\n18\n00:00:41,289 --> 00:00:43,199\nabone ol, videoyu beğen ve\n\n19\n00:00:43,199 --> 00:00:45,109\nyorum yap! Abone ol, Beğen\n\n20\n00:00:45,109 --> 00:00:47,019\nve Yorum yap!\n",
+  "error": "",
+  "title": "Turkce",
+  "ttsProvider": "elevenlabs",
+  "social_upload": {
+    "queue_id": "y1-b82b67_job_69cecd60adece3.66566962",
+    "status": "completed",
+    "platforms": {
+      "youtube": "published"
+    },
+    "updated_at": "2026-04-02T21:11:11.804176+00:00"
+  },
+  "queue_status": {
+    "queue_id": "y1-b82b67",
+    "queue_name": "y1",
+    "status": "queued",
+    "added_at": "2026-04-02T23:10:11+02:00"
+  }
+}
