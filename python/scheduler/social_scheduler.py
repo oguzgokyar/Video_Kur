@@ -8,18 +8,25 @@ import time
 import json
 import traceback
 from pathlib import Path
-from datetime import datetime, timezone
-from typing import Dict, Optional
+from datetime import datetime, timezone, timedelta
+from typing import Dict, Optional, Tuple
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scheduler.social_queue_manager import SocialQueueManager
+# Queue manager is imported inside __init__ to avoid circular imports
 from social.platform_optimizer import PlatformMetadataOptimizer
 from youtube.metadata_optimizer import MetadataOptimizer
 
 # Platform uploaders
 from youtube.uploader import YouTubeUploader
+
+# Multi-project manager
+try:
+    from youtube.project_manager import YouTubeProjectManager
+    MULTI_PROJECT_AVAILABLE = True
+except ImportError:
+    MULTI_PROJECT_AVAILABLE = False
 
 # Try to import social uploaders
 try:
@@ -64,8 +71,11 @@ class SocialMediaScheduler:
         # Ensure directories exist
         self.creds_dir.mkdir(parents=True, exist_ok=True)
         
-        # Initialize queue manager
-        self.queue_manager = SocialQueueManager(str(self.data_dir))
+        # Initialize UNIFIED queue manager (new system!)
+        from scheduler.unified_queue_manager import UnifiedQueueManager
+        from scheduler.error_logger import SchedulerErrorLogger
+        self.queue_manager = UnifiedQueueManager(str(self.data_dir))
+        self.error_logger = SchedulerErrorLogger(str(self.data_dir))
         
         # Initialize metadata optimizers
         config = self._load_config()
@@ -79,10 +89,11 @@ class SocialMediaScheduler:
         # Initialize uploaders
         self.uploaders = self._init_uploaders()
         
-        print(f"[SOCIAL] Scheduler başlatıldı")
+        print(f"[SOCIAL] Scheduler başlatıldı (UNIFIED QUEUE)")
         print(f"[SOCIAL] Kontrol aralığı: {check_interval} saniye")
         print(f"[SOCIAL] Base directory: {base_dir}")
         print(f"[SOCIAL] Aktif platformlar: {', '.join(self.uploaders.keys())}")
+        print(f"[SOCIAL] ℹ️  Unified queue system (queues.json)")
     
     def _load_config(self) -> Dict:
         """Load application config"""
@@ -91,18 +102,37 @@ class SocialMediaScheduler:
             try:
                 with open(config_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except:
-                pass
+            except Exception as e:
+                print(f"[WARN] Config loading failed: {e}")
         return {}
     
     def _init_uploaders(self) -> Dict:
         """Initialize available platform uploaders"""
         uploaders = {}
         
+        # Initialize YouTube project manager for multi-project support
+        self.youtube_project_manager = None
+        if MULTI_PROJECT_AVAILABLE:
+            try:
+                self.youtube_project_manager = YouTubeProjectManager(str(self.data_dir))
+                projects = self.youtube_project_manager.get_projects(active_only=True)
+                if projects:
+                    print(f"  [OK] YouTube Multi-Project: {len(projects)} proje aktif")
+                    self.youtube_project_manager.print_status()
+            except Exception as e:
+                print(f"  [WARN] YouTube Project Manager başlatılamadı: {e}")
+        
         # YouTube (always available if configured)
+        # Note: We don't create a single uploader here for multi-project mode
+        # Instead, we'll create one dynamically based on best available project
         try:
-            uploaders['youtube'] = YouTubeUploader(str(self.youtube_creds))
-            print("  [OK] YouTube uploader hazır")
+            # Check if multi-project mode has available projects
+            if self.youtube_project_manager and self.youtube_project_manager.get_projects():
+                uploaders['youtube'] = 'multi_project'  # Marker for multi-project mode
+                print("  [OK] YouTube uploader hazır (Multi-Project Modu)")
+            else:
+                uploaders['youtube'] = YouTubeUploader(str(self.youtube_creds))
+                print("  [OK] YouTube uploader hazır (Tek Proje)")
         except Exception as e:
             print(f"  [WARN] YouTube uploader başlatılamadı: {e}")
         
@@ -161,13 +191,264 @@ class SocialMediaScheduler:
         
         print(f"\n📋 {len(pending)} yükleme işleniyor...")
         
+        # Load queues data to check daily limits
+        queues_data = self._load_queues()
+        
         for item in pending:
             try:
+                # Check daily limit before processing
+                limit_check = self._check_daily_limit_with_reschedule(item, queues_data)
+                if not limit_check['allowed']:
+                    queue_id = item.get('queue_id', 'unknown')
+                    job_id = item.get('job_id', 'unknown')
+                    if limit_check.get('rescheduled'):
+                        new_date = limit_check.get('new_scheduled_date', 'bilinmiyor')
+                        print(f"📅 Günlük limit doldu - sonraki güne aktarıldı: {job_id}")
+                        print(f"   Yeni tarih: {new_date}")
+                    else:
+                        print(f"⏸️  Günlük limit doldu, atlanıyor: {queue_id}")
+                    continue
+                
                 self._process_item(item)
             except Exception as e:
                 queue_id = item.get('queue_id', 'unknown') if isinstance(item, dict) else 'unknown'
                 print(f"\n❌ Queue item işlenemedi ({queue_id}): {e}")
                 traceback.print_exc()
+    
+    def _load_queues(self) -> dict:
+        """Load queues configuration"""
+        queues_file = self.data_dir / 'queues.json'
+        if not queues_file.exists():
+            return {'queues': []}
+        try:
+            with open(queues_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return {'queues': []}
+    
+    def _get_queue_settings(self, queue_id: str, original_queue_id: str = None) -> dict:
+        """Get settings for a specific queue by ID"""
+        if not queue_id:
+            return {}
+        
+        # Use provided original_queue_id if available, otherwise try to extract it
+        if not original_queue_id:
+            original_queue_id = queue_id
+            if '_' in queue_id:
+                original_queue_id = queue_id.rsplit('_', 1)[0]
+        
+        queues_data = self._load_queues()
+        for queue in queues_data.get('queues', []):
+            if queue.get('id') == original_queue_id:
+                return queue
+        return {}
+    
+    def _check_daily_limit(self, item: Dict, queues_data: dict) -> bool:
+        """
+        Check if daily upload limit has been reached for this queue
+        
+        Args:
+            item: Queue item to check
+            queues_data: Full queues configuration
+            
+        Returns:
+            True if upload is allowed, False if daily limit reached
+        """
+        result = self._check_daily_limit_with_reschedule(item, queues_data)
+        return result['allowed']
+    
+    def _check_daily_limit_with_reschedule(self, item: Dict, queues_data: dict) -> Dict:
+        """
+        Check if daily upload limit has been reached. If reached, reschedule to next day.
+        
+        Args:
+            item: Queue item to check
+            queues_data: Full queues configuration
+            
+        Returns:
+            Dict with:
+                - allowed: True if upload is allowed
+                - rescheduled: True if item was rescheduled
+                - new_scheduled_date: New scheduled date if rescheduled
+        """
+        result = {'allowed': True, 'rescheduled': False, 'new_scheduled_date': None}
+        
+        # Find the queue this item belongs to
+        queue_id_prefix = item.get('queue_id', '').split('_')[0]  # Extract queue ID
+        queue = None
+        
+        for q in queues_data.get('queues', []):
+            if queue_id_prefix in q.get('id', ''):
+                queue = q
+                break
+        
+        if not queue:
+            # Queue not found, allow upload
+            return result
+        
+        # Get daily limit from platform_settings only (global schedule no longer has this)
+        platform_settings = queue.get('platform_settings', {})
+        daily_limit = 0
+        
+        # Get the platform for this item
+        item_platform = item.get('platform', 'youtube')
+        
+        # Check if this platform has a daily limit set
+        if item_platform in platform_settings:
+            settings = platform_settings[item_platform]
+            if settings.get('enabled'):
+                platform_limit = settings.get('dailyLimit')
+                if platform_limit:
+                    try:
+                        daily_limit = int(platform_limit)
+                    except (ValueError, TypeError):
+                        daily_limit = 0
+        
+        # If no limit set (0 or None), allow upload
+        if not daily_limit or daily_limit <= 0:
+            return result
+        
+        # Count uploads today for this queue
+        today_uploads = self._count_today_uploads(queue.get('id'))
+        
+        if today_uploads >= daily_limit:
+            result['allowed'] = False
+            
+            # Reschedule to next day
+            rescheduled = self._reschedule_to_next_day(item, queue, queues_data)
+            if rescheduled:
+                result['rescheduled'] = True
+                result['new_scheduled_date'] = rescheduled
+            
+            return result
+        
+        return result
+    
+    def _reschedule_to_next_day(self, item: Dict, queue: Dict, queues_data: dict) -> Optional[str]:
+        """
+        Reschedule an item to the next available day
+        
+        Args:
+            item: Queue item to reschedule
+            queue: Queue configuration
+            queues_data: Full queues configuration
+            
+        Returns:
+            New scheduled date string if successful, None otherwise
+        """
+        try:
+            schedule = queue.get('schedule', {})
+            platform_settings = queue.get('platform_settings', {})
+            timezone_str = schedule.get('timezone', 'Europe/Istanbul')
+            
+            # Get the start time from schedule or platform settings
+            start_time = schedule.get('start_time', '09:00')
+            
+            # Check platform settings for start time
+            for platform, settings in platform_settings.items():
+                if settings.get('enabled') and settings.get('startTime'):
+                    start_time = settings.get('startTime')
+                    break
+            
+            # Parse start time
+            try:
+                hour, minute = map(int, start_time.split(':'))
+            except Exception as e:
+                print(f"[WARN] Invalid start time format '{start_time}': {e}, using default 09:00")
+                hour, minute = 9, 0
+            
+            # Calculate next day
+            now = datetime.now(timezone.utc)
+            tomorrow = now + timedelta(days=1)
+            
+            # Create new scheduled time for tomorrow at start_time
+            new_scheduled = tomorrow.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            new_scheduled_str = new_scheduled.isoformat()
+            
+            # Update queues.json video entry with scheduled_publish_date
+            self._update_queue_video_scheduled_date(item.get('job_id'), queue.get('id'), new_scheduled_str, queues_data)
+            
+            return new_scheduled_str
+            
+        except Exception as e:
+            print(f"⚠️  Yeniden zamanlama hatası: {e}")
+            return None
+    
+    def _update_queue_video_scheduled_date(self, job_id: str, queue_id: str, scheduled_date: str, queues_data: dict):
+        """
+        Update the scheduled_publish_date for a video in queues.json
+        
+        Args:
+            job_id: Job ID of the video
+            queue_id: Queue ID
+            scheduled_date: New scheduled date
+            queues_data: Full queues configuration (will be modified and saved)
+        """
+        try:
+            for queue in queues_data.get('queues', []):
+                if queue.get('id') == queue_id:
+                    for video in queue.get('videos', []):
+                        if video.get('job_id') == job_id:
+                            video['scheduled_publish_date'] = scheduled_date
+                            video['reschedule_reason'] = 'daily_limit_reached'
+                            break
+                    break
+            
+            # Save updated queues.json
+            queues_file = self.data_dir / 'queues.json'
+            with open(queues_file, 'w', encoding='utf-8') as f:
+                json.dump(queues_data, f, ensure_ascii=False, indent=2)
+                
+        except Exception as e:
+            print(f"⚠️  queues.json güncelleme hatası: {e}")
+    
+    def _count_today_uploads(self, queue_id: str) -> int:
+        """
+        Count how many videos were uploaded today from this queue
+        
+        Args:
+            queue_id: Queue ID to check
+            
+        Returns:
+            Number of uploads today
+        """
+        try:
+            queues_file = self.data_dir / 'queues.json'
+            if not queues_file.exists():
+                return 0
+            
+            with open(queues_file, 'r', encoding='utf-8') as f:
+                queues_data = json.load(f)
+            
+            # Get today's date in UTC
+            today = datetime.now(timezone.utc).date()
+            
+            count = 0
+            for queue in queues_data.get('queues', []):
+                if queue.get('id') != queue_id:
+                    continue
+                
+                for video in queue.get('videos', []):
+                    if video.get('status') == 'completed':
+                        # Check platform_status for today's publishes
+                        platform_status = video.get('platform_status', {})
+                        for platform, status_info in platform_status.items():
+                            if status_info.get('status') == 'published':
+                                published_at = status_info.get('published_at', '')
+                                if published_at:
+                                    try:
+                                        published_date = datetime.fromisoformat(published_at.replace('Z', '+00:00')).date()
+                                        if published_date == today:
+                                            count += 1
+                                            break  # Count each video once
+                                    except Exception:
+                                        pass
+            
+            return count
+            
+        except Exception as e:
+            print(f"⚠️  Upload sayımı hatası: {e}")
+            return 0
     
     def _get_script_text(self, job_id: str) -> str:
         """output/job_id/script.json dosyasindan seslendirme metnini birlestirerek dondurur.
@@ -249,7 +530,12 @@ class SocialMediaScheduler:
         print(f"\n📱 [{platform.upper()}] Yükleniyor...")
         
         # Mark as processing
-        self.queue_manager.mark_platform_processing(queue_id, platform)
+        self.queue_manager.mark_platform_processing(
+            queue_id, 
+            platform, 
+            original_queue_id=item.get('original_queue_id'),
+            job_id=item.get('job_id')
+        )
         
         # Get platform-specific metadata
         platform_meta_map = item.get('platform_metadata', {})
@@ -310,6 +596,44 @@ class SocialMediaScheduler:
             uploader = self.uploaders[platform]
             
             if platform == 'youtube':
+                # Get queue settings to check for channel_id
+                queue_data = self._get_queue_settings(
+                    item.get('queue_id'),
+                    original_queue_id=item.get('original_queue_id')
+                )
+                
+                # Multi-project mode: get best available project
+                selected_project = None
+                if uploader == 'multi_project' and self.youtube_project_manager:
+                    # Check if queue has specific channel_id preference
+                    channel_id = None
+                    if queue_data:
+                        platform_settings = queue_data.get('platform_settings', {}).get('youtube', {})
+                        channel_id = platform_settings.get('channelId')
+                    
+                    # Use channel-specific project or fallback to best available
+                    if channel_id:
+                        print(f"   [YT] Kanal belirtildi: {channel_id}")
+                        selected_project = self.youtube_project_manager.get_best_project_for_channel(channel_id)
+                    else:
+                        selected_project = self.youtube_project_manager.get_best_project()
+                    
+                    if selected_project:
+                        project_id = selected_project['id']
+                        remaining_quota = selected_project['daily_quota'] - selected_project.get('quota_used_today', 0)
+                        print(f"   [YT] Proje: {selected_project['name']} (Kalan kota: {remaining_quota})")
+                        uploader = YouTubeUploader(str(self.youtube_creds), project_id=project_id)
+                    else:
+                        print(f"   ⚠️  [YT] Tüm projelerin kotası dolmuş!")
+                        self.queue_manager.mark_platform_failed(
+                            queue_id, 
+                            platform, 
+                            "Tüm projelerin kotası dolmuş",
+                            original_queue_id=item.get('original_queue_id'),
+                            job_id=item.get('job_id')
+                        )
+                        return
+                
                 # Optimize edilmis title'i kullan (MetadataOptimizer'dan geliyor)
                 yt_title = (
                     platform_meta.get('title')
@@ -325,26 +649,179 @@ class SocialMediaScheduler:
                     or platform_meta.get('hashtags')
                     or base_metadata.get('tags', [])
                 )
+                
+                # Get scheduled time from item and determine privacy settings
+                scheduled_time = item.get('scheduled_time')
+                privacy_status = base_metadata.get('privacy_status', 'public')
+                publish_at = None
+                
+                # If scheduled_time is in the future, use YouTube's publishAt feature
+                if scheduled_time:
+                    from datetime import datetime, timezone
+                    try:
+                        scheduled_dt = datetime.fromisoformat(scheduled_time.replace('Z', '+00:00'))
+                        now = datetime.now(timezone.utc)
+                        
+                        # If scheduled time is in the future (>5 min), use publishAt
+                        if (scheduled_dt - now).total_seconds() > 300:
+                            publish_at = scheduled_time
+                            privacy_status = 'private'  # Required for publishAt
+                            print(f"   [YT] Planlanmış yayın: {scheduled_time}")
+                    except Exception as e:
+                        print(f"   [WARN] scheduled_time parse hatası: {e}")
+                
+                # Get thumbnail path from job folder
+                job_id = item.get('job_id', '')
+                thumbnail_path = None
+                if job_id:
+                    for ext in ['jpg', 'png', 'jpeg']:
+                        thumb_candidate = self.base_dir / 'output' / job_id / f'thumbnail.{ext}'
+                        if thumb_candidate.exists():
+                            thumbnail_path = str(thumb_candidate)
+                            print(f"   [YT] Thumbnail bulundu: {thumb_candidate.name}")
+                            break
+                
+                # Get playlist_id, category and privacy settings from queue settings
+                playlist_id = None
+                category_id = '28'  # Default: Science & Technology
+                if queue_data:
+                    platform_settings = queue_data.get('platform_settings', {}).get('youtube', {})
+                    playlist_id = platform_settings.get('playlistId')
+                    channel_id = platform_settings.get('channelId')
+                    
+                    # Try to get category from channel settings
+                    if channel_id:
+                        try:
+                            channels_file = self.base_dir / 'data' / 'youtube_channels.json'
+                            if channels_file.exists():
+                                with open(channels_file, 'r', encoding='utf-8') as f:
+                                    channels_data = json.load(f)
+                                for ch in channels_data.get('channels', []):
+                                    if ch.get('id') == channel_id:
+                                        category_id = ch.get('default_category_id', '28')
+                                        print(f"   [YT] Kanal kategorisi: {category_id}")
+                                        break
+                        except Exception as e:
+                            print(f"   [WARN] Kanal kategorisi okunamadı: {e}")
+                    
+                    # Get privacy setting from queue platform settings
+                    if 'privacy' in platform_settings:
+                        privacy_status = platform_settings['privacy']
+                        print(f"   [YT] Görünürlük (kuyruk ayarı): {privacy_status}")
+                    if playlist_id:
+                        print(f"   [YT] Playlist: {playlist_id}")
+                
                 print(f"   [YT] Baslik: {yt_title[:60]}")
                 result = uploader.upload_video(
                     video_path=video_path,
                     title=yt_title,
                     description=yt_description,
                     tags=yt_tags,
-                    privacy_status=base_metadata.get('privacy_status', 'public')
+                    category_id=category_id,
+                    privacy_status=privacy_status,
+                    publish_at=publish_at,
+                    thumbnail_path=thumbnail_path,
+                    playlist_id=playlist_id
                 )
                 
                 if result and result.get('status') == 'success':
-                    self.queue_manager.mark_platform_success(
-                        queue_id, platform,
-                        result['video_id'],
-                        result['video_url']
+                    video_url = result.get('video_url', '')
+                    self.queue_manager.mark_platform_published(
+                        queue_id, 
+                        platform, 
+                        video_url,
+                        original_queue_id=item.get('original_queue_id'),
+                        job_id=item.get('job_id')
                     )
                     print(f"   [OK] YouTube başarılı: {result['video_url']}")
+                    if selected_project:
+                        print(f"   📊 Proje: {selected_project['name']}")
+                    
+                    # Resolve previous errors
+                    self.error_logger.resolve_error(item.get('job_id', ''), 'youtube')
+                        
+                elif result and result.get('quota_exceeded'):
+                    # Quota exceeded - try next project if available
+                    error = result.get('error', 'Kota aşıldı')
+                    print(f"   ⚠️  [YT] Kota aşıldı: {error}")
+                    
+                    # Record quota error for this project
+                    if self.youtube_project_manager and selected_project:
+                        self.youtube_project_manager.record_quota_error(selected_project['id'])
+                    
+                    # Prevent infinite recursion - check retry count
+                    retry_count = item.get('_quota_retry_count', 0)
+                    max_retries = 2  # Maximum number of project switches
+                    
+                    if retry_count >= max_retries:
+                        print(f"   ❌ Tüm projeler denendi, başarısız")
+                        self.queue_manager.mark_platform_failed(
+                            queue_id, 
+                            platform, 
+                            f"Quota exceeded on all projects: {error}",
+                            original_queue_id=item.get('original_queue_id'),
+                            job_id=item.get('job_id')
+                        )
+                    elif self.youtube_project_manager:
+                        # Try another project
+                        next_project = self.youtube_project_manager.get_best_project()
+                        if next_project and next_project['id'] != (selected_project['id'] if selected_project else None):
+                            print(f"   🔄 Başka proje deneniyor: {next_project['name']} (retry {retry_count + 1}/{max_retries})")
+                            # Mark retry count to prevent infinite loop
+                            item['_quota_retry_count'] = retry_count + 1
+                            # Reset uploader for new project
+                            self.uploaders['youtube'] = 'multi_project'
+                            return self._upload_to_platform(item, platform)
+                        else:
+                            print(f"   ❌ Başka kullanılabilir proje yok")
+                            self.queue_manager.mark_platform_failed(
+                                queue_id, 
+                                platform, 
+                                f"All projects quota exceeded: {error}",
+                                original_queue_id=item.get('original_queue_id'),
+                                job_id=item.get('job_id')
+                            )
+                            # Log quota error
+                            self.error_logger.log_error(
+                                job_id=item.get('job_id', 'unknown'),
+                                platform='youtube',
+                                error_type='quota_exceeded',
+                                error_message=f"All projects quota exceeded: {error}",
+                                queue_id=item.get('original_queue_id'),
+                                retry_count=item.get('retry_count', 0)
+                            )
+                    else:
+                        self.queue_manager.mark_platform_failed(
+                            queue_id, 
+                            platform, 
+                            error,
+                            original_queue_id=item.get('original_queue_id'),
+                            job_id=item.get('job_id')
+                        )
+                        # Log quota error
+                        self.error_logger.log_error(
+                            job_id=item.get('job_id', 'unknown'),
+                            platform='youtube',
+                            error_type='quota_exceeded',
+                            error_message=error,
+                            queue_id=item.get('original_queue_id'),
+                            retry_count=item.get('retry_count', 0)
+                        )
+                    
                 else:
                     error = result.get('error', 'Unknown error') if result else 'Upload failed'
                     self.queue_manager.mark_platform_failed(queue_id, platform, error)
                     print(f"   ❌ YouTube başarısız: {error}")
+                    
+                    # Log error
+                    self.error_logger.log_error(
+                        job_id=item.get('job_id', 'unknown'),
+                        platform='youtube',
+                        error_type='upload_failed',
+                        error_message=error,
+                        queue_id=item.get('original_queue_id'),
+                        retry_count=item.get('retry_count', 0)
+                    )
             
             else:
                 # TikTok, Instagram, Facebook
@@ -355,23 +832,60 @@ class SocialMediaScheduler:
                 )
                 
                 if result.success:
-                    self.queue_manager.mark_platform_success(
-                        queue_id, platform,
-                        result.post_id,
-                        result.post_url
+                    video_url = result.post_url if hasattr(result, 'post_url') else ''
+                    self.queue_manager.mark_platform_published(
+                        queue_id, 
+                        platform, 
+                        video_url,
+                        original_queue_id=item.get('original_queue_id'),
+                        job_id=item.get('job_id')
                     )
                     print(f"   [OK] {platform.title()} başarılı: {result.post_url}")
+                    
+                    # Resolve previous errors
+                    self.error_logger.resolve_error(item.get('job_id', ''), platform)
                 else:
                     self.queue_manager.mark_platform_failed(
-                        queue_id, platform, result.error,
-                        retry='quota' not in str(result.error).lower()
+                        queue_id, 
+                        platform, 
+                        result.error,
+                        retry='quota' not in str(result.error).lower(),
+                        original_queue_id=item.get('original_queue_id'),
+                        job_id=item.get('job_id')
                     )
                     print(f"   ❌ {platform.title()} başarısız: {result.error}")
+                    
+                    # Log error
+                    self.error_logger.log_error(
+                        job_id=item.get('job_id', 'unknown'),
+                        platform=platform,
+                        error_type='upload_failed',
+                        error_message=result.error,
+                        queue_id=item.get('original_queue_id'),
+                        retry_count=item.get('retry_count', 0)
+                    )
         
         except Exception as e:
             error = str(e)
-            self.queue_manager.mark_platform_failed(queue_id, platform, error, retry=True)
+            self.queue_manager.mark_platform_failed(
+                queue_id, 
+                platform, 
+                error, 
+                retry=True,
+                original_queue_id=item.get('original_queue_id'),
+                job_id=item.get('job_id')
+            )
             print(f"   ❌ {platform.title()} exception: {error}")
+            
+            # Log error
+            self.error_logger.log_error(
+                job_id=item.get('job_id', 'unknown'),
+                platform=platform,
+                error_type='exception',
+                error_message=error,
+                queue_id=item.get('original_queue_id'),
+                retry_count=item.get('retry_count', 0)
+            )
         
         # Update job file
         self._update_job(item.get('job_id', ''), queue_id)

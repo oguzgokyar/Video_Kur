@@ -29,21 +29,34 @@ except ImportError:
 
 
 class YouTubeUploader:
-    """YouTube video uploader with retry logic"""
+    """YouTube video uploader with retry logic and multi-project support"""
     
     # Resumable upload
     MAX_RETRIES = 5
     RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
+    QUOTA_EXCEEDED_CODES = [403]  # quotaExceeded
     
-    def __init__(self, credentials_dir: str):
+    def __init__(self, credentials_dir: str, project_id: Optional[str] = None):
         """
         Initialize uploader
         
         Args:
             credentials_dir: Directory containing credentials
+            project_id: Optional project ID for multi-project setups
         """
-        self.auth = YouTubeAuth(credentials_dir)
+        self.credentials_dir = credentials_dir
+        self.project_id = project_id
+        self.auth = YouTubeAuth(credentials_dir, project_id=project_id)
         self.service = None
+        self.project_manager = None
+        
+        # Try to load project manager for quota tracking
+        try:
+            from youtube.project_manager import YouTubeProjectManager
+            data_dir = Path(credentials_dir).parent
+            self.project_manager = YouTubeProjectManager(str(data_dir))
+        except ImportError:
+            pass
     
     def upload_video(
         self,
@@ -56,7 +69,9 @@ class YouTubeUploader:
         notify_subscribers: bool = True,
         channel_id: Optional[str] = None,
         made_for_kids: bool = False,
-        thumbnail_path: Optional[str] = None
+        thumbnail_path: Optional[str] = None,
+        publish_at: Optional[str] = None,
+        playlist_id: Optional[str] = None
     ) -> Optional[Dict]:
         """
         Upload video to YouTube
@@ -72,6 +87,9 @@ class YouTubeUploader:
             channel_id: Specific channel ID
             made_for_kids: COPPA compliance
             thumbnail_path: Path to custom thumbnail image (optional)
+            publish_at: ISO 8601 datetime for scheduled publishing (e.g., '2024-12-31T15:00:00Z')
+                        Requires privacy_status='private'. YouTube will auto-publish at this time.
+            playlist_id: YouTube playlist ID to add video to (optional)
             
         Returns:
             Dict with video_id, video_url, and status or None
@@ -107,9 +125,19 @@ class YouTubeUploader:
             }
         }
         
+        # Add scheduled publishing if publish_at provided
+        if publish_at:
+            # publishAt requires privacy_status to be 'private'
+            if privacy_status != 'private':
+                print(f"⚠️  publishAt için privacyStatus 'private' olmalı, otomatik değiştirildi", file=sys.stderr)
+                body['status']['privacyStatus'] = 'private'
+            body['status']['publishAt'] = publish_at
+        
         print(f"\n📤 Video yükleniyor: {title}", file=sys.stderr)
         print(f"📁 Dosya: {os.path.basename(video_path)}", file=sys.stderr)
-        print(f"🔐 Gizlilik: {privacy_status}", file=sys.stderr)
+        print(f"🔐 Gizlilik: {body['status']['privacyStatus']}", file=sys.stderr)
+        if publish_at:
+            print(f"⏰ Planlanmış: {publish_at}", file=sys.stderr)
         if thumbnail_path and os.path.exists(thumbnail_path):
             print(f"🖼️ Thumbnail: {os.path.basename(thumbnail_path)}", file=sys.stderr)
         
@@ -150,12 +178,31 @@ class YouTubeUploader:
                     else:
                         print(f"⚠️ Thumbnail yüklenemedi (video hala mevcut)", file=sys.stderr)
                 
+                # Add to playlist if provided
+                playlist_added = False
+                if playlist_id:
+                    playlist_added = self._add_to_playlist(video_id, playlist_id)
+                    if playlist_added:
+                        print(f"📋 Playlist'e eklendi!", file=sys.stderr)
+                    else:
+                        print(f"⚠️ Playlist'e eklenemedi", file=sys.stderr)
+                
+                # Record successful upload for quota tracking
+                if self.project_manager and self.project_id:
+                    self.project_manager.record_upload(
+                        self.project_id, 
+                        success=True, 
+                        with_thumbnail=thumbnail_uploaded
+                    )
+                
                 return {
                     'video_id': video_id,
                     'video_url': video_url,
                     'title': title,
                     'status': 'success',
                     'thumbnail_uploaded': thumbnail_uploaded,
+                    'playlist_added': playlist_added,
+                    'project_id': self.project_id,
                     'uploaded_at': datetime.utcnow().isoformat() + 'Z'
                 }
             else:
@@ -164,16 +211,31 @@ class YouTubeUploader:
         except HttpError as e:
             error_msg = self._parse_error(e)
             print(f"\n❌ HTTP Hatası: {error_msg}", file=sys.stderr)
+            
+            # Check if quota exceeded
+            if e.resp.status == 403 and 'quota' in error_msg.lower():
+                if self.project_manager and self.project_id:
+                    self.project_manager.record_quota_error(self.project_id)
+                return {
+                    'status': 'failed',
+                    'error': error_msg,
+                    'error_code': e.resp.status,
+                    'quota_exceeded': True,
+                    'project_id': self.project_id
+                }
+            
             return {
                 'status': 'failed',
                 'error': error_msg,
-                'error_code': e.resp.status
+                'error_code': e.resp.status,
+                'project_id': self.project_id
             }
         except Exception as e:
             print(f"\n❌ Yükleme hatası: {e}", file=sys.stderr)
             return {
                 'status': 'failed',
-                'error': str(e)
+                'error': str(e),
+                'project_id': self.project_id
             }
     
     def _resumable_upload(self, request):
@@ -262,6 +324,47 @@ class YouTubeUploader:
             print(f"Thumbnail yükleme hatası: {e}", file=sys.stderr)
             return False
     
+    def _add_to_playlist(self, video_id: str, playlist_id: str) -> bool:
+        """
+        Add video to a YouTube playlist
+        
+        Args:
+            video_id: YouTube video ID
+            playlist_id: YouTube playlist ID
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.service:
+            return False
+        
+        try:
+            body = {
+                'snippet': {
+                    'playlistId': playlist_id,
+                    'resourceId': {
+                        'kind': 'youtube#video',
+                        'videoId': video_id
+                    }
+                }
+            }
+            
+            request = self.service.playlistItems().insert(
+                part='snippet',
+                body=body
+            )
+            
+            response = request.execute()
+            return 'id' in response
+            
+        except HttpError as e:
+            error_msg = self._parse_error(e)
+            print(f"Playlist ekleme HTTP hatası: {error_msg}", file=sys.stderr)
+            return False
+        except Exception as e:
+            print(f"Playlist ekleme hatası: {e}", file=sys.stderr)
+            return False
+    
     def get_video_info(self, video_id: str, channel_id: Optional[str] = None) -> Optional[Dict]:
         """
         Get video information
@@ -320,8 +423,8 @@ class YouTubeUploader:
                 if 'errors' in err and err['errors']:
                     return err['errors'][0].get('message', str(error))
                 return err.get('message', str(error))
-        except:
-            pass
+        except Exception as e:
+            print(f"[WARN] Error parsing failed: {e}")
         return str(error)
 
 
@@ -330,7 +433,7 @@ def main():
     import sys
     
     if len(sys.argv) < 4:
-        print("Kullanım: python uploader.py <video_path> <title> <description> [privacy] [category] [tags] [thumbnail_path]")
+        print("Kullanım: python uploader.py <video_path> <title> <description> [privacy] [category] [tags] [thumbnail_path] [scheduled_time] [project_id]")
         sys.exit(1)
     
     base_dir = Path(__file__).parent.parent.parent
@@ -352,7 +455,14 @@ def main():
     # Thumbnail path (optional)
     thumbnail_path = sys.argv[7] if len(sys.argv) > 7 else None
     
-    uploader = YouTubeUploader(str(creds_dir))
+    # Scheduled time (publishAt) - optional
+    publish_at = sys.argv[8] if len(sys.argv) > 8 and sys.argv[8] else None
+    
+    # Project ID for multi-API support - optional
+    project_id = sys.argv[9] if len(sys.argv) > 9 and sys.argv[9] else None
+    
+    # Initialize uploader with project_id
+    uploader = YouTubeUploader(str(creds_dir), project_id=project_id)
     
     result = uploader.upload_video(
         video_path=video_path,
@@ -362,7 +472,8 @@ def main():
         category_id=category_id,
         privacy_status=privacy_status,
         notify_subscribers=(privacy_status == 'public'),
-        thumbnail_path=thumbnail_path
+        thumbnail_path=thumbnail_path,
+        publish_at=publish_at
     )
     
     # Output in parseable format for PHP
@@ -371,6 +482,8 @@ def main():
         print(f"URL: {result['video_url']}")
         if result.get('thumbnail_uploaded'):
             print("Thumbnail: uploaded")
+        if result.get('project_id'):
+            print(f"Project: {result['project_id']}")
         sys.exit(0)
     else:
         print(f"ERROR: {result.get('error', 'Unknown error')}")

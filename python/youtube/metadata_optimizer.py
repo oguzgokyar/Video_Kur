@@ -59,8 +59,6 @@ class MetadataOptimizer:
         """Use Gemini AI to generate optimized metadata"""
         try:
             import google.genai as genai
-            genai.configure(api_key=self.gemini_key)
-            model = genai.GenerativeModel(self.model)
             
             prompt = f"""YouTube Shorts için optimize edilmiş metadata oluştur:
 
@@ -79,7 +77,11 @@ JSON formatında döndür:
     "tags": ["tag1", "tag2", ...]
 }}"""
             
-            response = model.generate_content(prompt)
+            client = genai.Client(api_key=self.gemini_key)
+            response = client.models.generate_content(
+                model=self.model,
+                contents=prompt
+            )
             text = response.text.strip()
             
             # Extract JSON

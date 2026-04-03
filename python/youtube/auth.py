@@ -1,6 +1,7 @@
 """
 YouTube OAuth 2.0 Authentication Module
 Handles authentication flow, token management, and refresh
+Supports multiple Google Cloud projects for quota rotation
 """
 import os
 import sys
@@ -27,18 +28,121 @@ SCOPES = [
 ]
 
 class YouTubeAuth:
-    """YouTube OAuth 2.0 authentication manager"""
+    """YouTube OAuth 2.0 authentication manager with multi-project support"""
     
-    def __init__(self, credentials_dir: str):
+    def __init__(self, credentials_dir: str, project_id: Optional[str] = None):
         """
         Initialize auth manager
         
         Args:
             credentials_dir: Directory containing client_secrets.json and tokens
+            project_id: Optional project ID for multi-project setups
         """
         self.credentials_dir = Path(credentials_dir)
         self.credentials_dir.mkdir(parents=True, exist_ok=True)
-        self.client_secrets_file = self.credentials_dir / 'client_secrets.json'
+        self.project_id = project_id
+        
+        # Determine client_secrets file based on project
+        if project_id:
+            # Multi-project mode: load from project config
+            self.client_secrets_file = self._get_project_secrets_file(project_id)
+        else:
+            # Single project mode: use default
+            self.client_secrets_file = self.credentials_dir / 'client_secrets.json'
+    
+    def _get_project_secrets_file(self, project_id: str) -> Path:
+        """
+        Get client_secrets file for a specific project from unified youtube_channels.json
+        Validates that the file exists and returns error if not
+        
+        Args:
+            project_id: Project ID (e.g., 'video-kur3')
+            
+        Returns:
+            Path to client_secrets file
+        """
+        # Try unified youtube_channels.json first (NEW SYSTEM)
+        channels_file = self.credentials_dir.parent / 'youtube_channels.json'
+        
+        if channels_file.exists():
+            try:
+                with open(channels_file, 'r', encoding='utf-8') as f:
+                    channels_data = json.load(f)
+                
+                # Search through all channels and their APIs
+                for channel in channels_data.get('channels', []):
+                    for api in channel.get('apis', []):
+                        if api.get('project_id') == project_id:
+                            secrets_file = api.get('client_secrets_file', '')
+                            
+                            # Handle both absolute and relative paths
+                            if secrets_file.startswith('youtube_credentials/'):
+                                # Relative to data dir
+                                full_path = self.credentials_dir / secrets_file.replace('youtube_credentials/', '')
+                            else:
+                                # Already relative to credentials dir
+                                full_path = self.credentials_dir / secrets_file
+                            
+                            # ✅ VALIDATION: Check if file exists
+                            if not full_path.exists():
+                                error_msg = (
+                                    f"❌ HATA: client_secrets dosyası bulunamadı!\n"
+                                    f"   Proje: {api.get('name', project_id)}\n"
+                                    f"   Kanal: {channel.get('channel_title', 'Bilinmeyen')}\n"
+                                    f"   Aranan dosya: {full_path}\n"
+                                    f"   Çözüm: Google Cloud Console'dan client_secrets.json dosyasını indirin\n"
+                                    f"   ve '{secrets_file}' olarak kaydedin."
+                                )
+                                print(error_msg, file=sys.stderr)
+                                raise FileNotFoundError(f"client_secrets file not found: {full_path}")
+                            
+                            print(f"✅ Client secrets bulundu: {secrets_file} (Unified System)")
+                            return full_path
+                            
+            except FileNotFoundError:
+                # Re-raise validation errors
+                raise
+            except Exception as e:
+                print(f"⚠️  Unified channels config okunamadı: {e}", file=sys.stderr)
+        
+        # Fallback: Try legacy youtube_projects.json (OLD SYSTEM - for backward compatibility)
+        projects_file = self.credentials_dir.parent / 'youtube_projects.json'
+        
+        if projects_file.exists():
+            try:
+                with open(projects_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                
+                for project in config.get('projects', []):
+                    if project['id'] == project_id:
+                        secrets_file = project.get('client_secrets_file', 'client_secrets.json')
+                        full_path = self.credentials_dir / secrets_file
+                        
+                        if full_path.exists():
+                            print(f"✅ Client secrets bulundu: {secrets_file} (Legacy System)")
+                            return full_path
+                        
+            except Exception as e:
+                print(f"⚠️  Legacy project config okunamadı: {e}", file=sys.stderr)
+        
+        # Final fallback to default
+        default_path = self.credentials_dir / 'client_secrets.json'
+        
+        # ✅ VALIDATION: Check default file too
+        if not default_path.exists():
+            error_msg = (
+                f"❌ HATA: client_secrets dosyası bulunamadı!\n"
+                f"   Aranan project_id: {project_id}\n"
+                f"   Aranan dosya: {default_path}\n"
+                f"   Çözüm:\n"
+                f"   1. Hesaplar sayfasından API ekleyin ve client_secrets dosyasını yükleyin\n"
+                f"   2. VEYA Google Cloud Console'dan client_secrets.json dosyasını indirin"
+            )
+            print(error_msg, file=sys.stderr)
+            raise FileNotFoundError(f"client_secrets.json not found for project: {project_id}")
+        
+        print(f"⚠️  Varsayılan client_secrets.json kullanılıyor")
+        return default_path
     
     def get_credentials(self, channel_id: Optional[str] = None) -> Optional[Credentials]:
         """
@@ -50,14 +154,43 @@ class YouTubeAuth:
         Returns:
             Valid Credentials object or None
         """
+        # ✅ VALIDATION: Check if client_secrets file exists before proceeding
+        if not self.client_secrets_file.exists():
+            error_msg = (
+                f"❌ HATA: client_secrets dosyası bulunamadı!\n"
+                f"   Aranan dosya: {self.client_secrets_file}\n"
+                f"   Proje ID: {self.project_id or 'default'}\n"
+                f"   Çözüm: Google Cloud Console'dan client_secrets.json indirin."
+            )
+            print(error_msg, file=sys.stderr)
+            return None
+        
         token_file = self._get_token_file(channel_id)
         creds = None
         
         # Load existing token
         if token_file.exists():
             try:
-                with open(token_file, 'rb') as f:
-                    creds = pickle.load(f)
+                # First try pickle format (even if file is .json - some systems save pickle with .json extension)
+                try:
+                    with open(token_file, 'rb') as f:
+                        creds = pickle.load(f)
+                    print(f"✅ Pickle token yüklendi: {token_file.name}", file=sys.stderr)
+                except (pickle.UnpicklingError, EOFError, KeyError):
+                    # Not pickle, try JSON
+                    with open(token_file, 'r', encoding='utf-8') as f:
+                        token_data = json.load(f)
+                    
+                    # Build Credentials from JSON token data
+                    creds = Credentials(
+                        token=token_data.get('token'),
+                        refresh_token=token_data.get('refresh_token'),
+                        token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
+                        client_id=token_data.get('client_id'),
+                        client_secret=token_data.get('client_secret'),
+                        scopes=token_data.get('scopes', SCOPES)
+                    )
+                    print(f"✅ JSON token yüklendi: {token_file.name}", file=sys.stderr)
             except Exception as e:
                 print(f"Token yükleme hatası: {e}", file=sys.stderr)
         
@@ -78,8 +211,8 @@ class YouTubeAuth:
                     try:
                         token_file.unlink()
                         print(f"🔄 Eski token silindi: {token_file}", file=sys.stderr)
-                    except:
-                        pass
+                    except Exception as e:
+                        print(f"[WARN] Failed to delete old token: {e}")
                 
                 creds = None
         
@@ -219,10 +352,36 @@ class YouTubeAuth:
             return False
     
     def _get_token_file(self, channel_id: Optional[str] = None) -> Path:
-        """Get token file path for channel"""
+        """Get token file path for channel and project
+        
+        Supports both legacy pickle format and new JSON token format from unified system
+        """
+        prefix = f"{self.project_id}_" if self.project_id else ""
+        
+        # First try to find existing JSON tokens from unified system
+        # These have format: {project_id}_{channel_id}_{api_id}_token.json
+        if self.project_id:
+            import glob
+            pattern = str(self.credentials_dir / f'{self.project_id}_*_token.json')
+            json_tokens = glob.glob(pattern)
+            if json_tokens:
+                # Return first matching JSON token
+                return Path(json_tokens[0])
+        
+        # Legacy format: {project}_{channel}_token.pickle
         if channel_id:
-            return self.credentials_dir / f'{channel_id}_token.pickle'
-        return self.credentials_dir / 'default_token.pickle'
+            pickle_path = self.credentials_dir / f'{prefix}{channel_id}_token.pickle'
+            if pickle_path.exists():
+                return pickle_path
+                
+        default_pickle = self.credentials_dir / f'{prefix}default_token.pickle'
+        if default_pickle.exists():
+            return default_pickle
+            
+        # Return default path for new token creation
+        if channel_id:
+            return self.credentials_dir / f'{prefix}{channel_id}_token.pickle'
+        return self.credentials_dir / f'{prefix}default_token.pickle'
     
     def _save_token(self, creds: Credentials, channel_id: Optional[str] = None):
         """Save credentials to file"""
