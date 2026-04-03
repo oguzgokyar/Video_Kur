@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $url = $input['url'] ?? '';
     $template = $input['template'] ?? 'short_haber';
     $scriptId = $input['scriptId'] ?? '';
+    $contentType = trim($input['contentType'] ?? 'haber');
     $videoWidth = intval($input['videoWidth'] ?? 1080);
     $videoHeight = intval($input['videoHeight'] ?? 1920);
     $subtitleStyle = $input['subtitleStyle'] ?? null;
@@ -47,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'url' => $url,
         'template' => $template,
         'scriptId' => $scriptId,
+        'contentType' => $contentType,
         'videoWidth' => $videoWidth,
         'videoHeight' => $videoHeight,
         'subtitleStyle' => $subtitleStyle,
@@ -108,13 +110,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// PATCH: Pause/Resume or Update YouTube Metadata
+// PATCH: Pause/Resume/Retry or Update YouTube Metadata
 if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
     $input = json_decode(file_get_contents('php://input'), true);
     $jobId = $input['jobId'] ?? '';
     $action = $input['action'] ?? '';
 
-    if (empty($jobId) || !in_array($action, ['pause', 'resume', 'update_youtube_metadata'])) {
+    if (empty($jobId) || !in_array($action, ['pause', 'resume', 'retry', 'update_youtube_metadata'])) {
         echo json_encode(['error' => 'Geçersiz jobId veya action']);
         exit;
     }
@@ -133,6 +135,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
     } elseif ($action === 'resume') {
         $jobData['status'] = $jobData['pausedAt'] ?? 'pending';
         unset($jobData['pausedAt']);
+    } elseif ($action === 'retry') {
+        // Retry: Reset to waiting and re-add to production queue
+        $jobData['status'] = 'waiting';
+        $jobData['error'] = '';
+        
+        // Get queue_id from original job data or use default
+        $queue_id = $jobData['queue_id'] ?? 'default';
+        
+        // Add back to production queue
+        $prodQueueData = file_exists("$dataDir/production_queue.json") 
+            ? json_decode(file_get_contents("$dataDir/production_queue.json"), true) 
+            : ['production_queue' => [], 'current_production' => null, 'max_concurrent' => 1, 'metadata' => []];
+        
+        $prodItem = [
+            'prod_queue_id' => 'prod_' . bin2hex(random_bytes(8)),
+            'job_id' => $jobId,
+            'queue_id' => $queue_id,
+            'status' => 'waiting',
+            'priority' => 0,
+            'added_at' => date('c'),
+            'started_at' => null,
+            'completed_at' => null,
+            'error' => null
+        ];
+        
+        $prodQueueData['production_queue'][] = $prodItem;
+        $prodQueueData['metadata']['last_updated'] = date('c');
+        file_put_contents("$dataDir/production_queue.json", json_encode($prodQueueData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     } elseif ($action === 'update_youtube_metadata') {
         $metadata = $input['metadata'] ?? [];
         $jobData['youtube_metadata'] = $metadata;
@@ -149,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $jobs = [];
         foreach (glob("$jobsDir/*.json") as $file) {
             $job = json_decode(file_get_contents($file), true);
-            if ($job) {
+            if ($job && isset($job['id'])) {
                 // news.json'dan gerçek başlığı almaya çalış
                 $newsFile = "$outputDir/{$job['id']}/news.json";
                 if (file_exists($newsFile)) {
@@ -161,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $jobs[] = $job;
             }
         }
-        usort($jobs, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+        usort($jobs, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
         echo json_encode(['jobs' => $jobs]);
         exit;
     }

@@ -6,6 +6,7 @@ $page_titles = [
   'queues' => '📦 Kuyruklar',
   'create' => '➕ Yeni Video',
   'content' => '📥 İçerikler',
+  'scripts' => '📝 Script Yönetimi',
   'settings' => '⚙️ Ayarlar',
   'accounts' => '🔗 Hesaplar'
 ];
@@ -30,6 +31,24 @@ $current_title = $page_titles[$active_page ?? ''] ?? 'Dashboard';
     </div>
   </div>
   <div class="flex items-center gap-3">
+    <?php if ($active_page === 'settings'): ?>
+    <button 
+      type="button"
+      @click="testAllInTab()"
+      class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-semibold text-sm transition shadow-sm"
+    >
+      <span>🔍</span>
+      <span class="hidden sm:inline">Test Et</span>
+    </button>
+    <button 
+      type="button"
+      @click="saveConfig()"
+      class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition shadow-sm"
+    >
+      <span>💾</span>
+      <span class="hidden sm:inline">Kaydet</span>
+    </button>
+    <?php endif; ?>
     <?php if ($active_page === 'queues'): ?>
     <button 
       @click="openCreateModal()"
@@ -53,6 +72,15 @@ $current_title = $page_titles[$active_page ?? ''] ?? 'Dashboard';
     >
       <span>📡</span>
       <span class="hidden sm:inline">RSS Kaynakları</span>
+    </button>
+    <?php endif; ?>
+    <?php if ($active_page === 'scripts'): ?>
+    <button 
+      @click="openNewScriptModal()"
+      class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition shadow-sm"
+    >
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      <span class="hidden sm:inline">Yeni Script</span>
     </button>
     <?php endif; ?>
     <?php if ($show_status): ?>

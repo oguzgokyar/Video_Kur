@@ -17,6 +17,11 @@ $defaults = [
     'pexelsKey' => '',
     'falKey' => '',
     'pollinationsKey' => '',
+    // Multi-key arrays
+    'geminiKeys' => [],
+    'elevenKeys' => [],
+    'falKeys' => [],
+    'pollinationsKeys' => [],
     'ttsProvider' => 'elevenlabs',
     'geminiModel' => 'gemini-2.0-flash',
     'imageService' => 'pollinations',
@@ -51,6 +56,8 @@ $defaults = [
         'Outline' => 3,
         'Shadow' => 1,
         'MarginV' => 100,
+        'MarginL' => 40,
+        'MarginR' => 40,
         'Alignment' => 2,
         'Bold' => 1
     ]
@@ -86,6 +93,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'Outline' => (int)($input['subtitleStyle']['Outline'] ?? 3),
             'Shadow' => (int)($input['subtitleStyle']['Shadow'] ?? 1),
             'MarginV' => (int)($input['subtitleStyle']['MarginV'] ?? 100),
+            'MarginL' => (int)($input['subtitleStyle']['MarginL'] ?? 40),
+            'MarginR' => (int)($input['subtitleStyle']['MarginR'] ?? 40),
             'Alignment' => (int)($input['subtitleStyle']['Alignment'] ?? 2),
             'Bold' => (int)($input['subtitleStyle']['Bold'] ?? 1)
         ];
@@ -98,6 +107,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'pexelsKey' => $input['pexelsKey'] ?? '',
         'falKey' => $input['falKey'] ?? '',
         'pollinationsKey' => $input['pollinationsKey'] ?? '',
+        // Multi-key arrays for API pool
+        'geminiKeys' => array_values(array_filter($input['geminiKeys'] ?? [])),
+        'elevenKeys' => array_values(array_filter($input['elevenKeys'] ?? [])),
+        'falKeys' => array_values(array_filter($input['falKeys'] ?? [])),
+        'pollinationsKeys' => array_values(array_filter($input['pollinationsKeys'] ?? [])),
         'ttsProvider' => $input['ttsProvider'] ?? 'elevenlabs',
         'geminiModel' => $input['geminiModel'] ?? 'gemini-2.0-flash',
         'imageService' => $input['imageService'] ?? 'pollinations',

@@ -268,6 +268,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['success' => true, 'message' => ucfirst($type) . ' scheduler durduruldu']);
             break;
             
+        case 'restart':
+            // Stop existing scheduler if running
+            if ($status[$type]['running'] && $status[$type]['pid']) {
+                $oldPid = $status[$type]['pid'];
+                stopScheduler($oldPid);
+                usleep(500000); // Wait 500ms for clean stop
+            }
+            
+            // Also kill any other schedulers of same type that might be running
+            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                $scriptName = $type === 'social' ? 'social_scheduler.py' : 'production_scheduler.py';
+                exec('wmic process where "commandline like \'%' . $scriptName . '%\'" get processid 2>NUL', $pids);
+                foreach ($pids as $line) {
+                    $pid = trim($line);
+                    if (is_numeric($pid) && $pid > 0) {
+                        exec("taskkill /PID $pid /F 2>NUL");
+                    }
+                }
+                usleep(1000000); // Wait 1s
+            }
+            
+            // Clear old logs for fresh start
+            clearLogs();
+            
+            // Start new scheduler
+            $result = startScheduler($type);
+            
+            if ($result['success']) {
+                $status[$type] = [
+                    'running' => true,
+                    'pid' => $result['pid'],
+                    'started_at' => date('c'),
+                    'restarted' => true
+                ];
+                saveSchedulerStatus($status);
+                
+                // Log restart
+                global $SCHEDULER_LOG_FILE;
+                @file_put_contents(
+                    $SCHEDULER_LOG_FILE, 
+                    "[" . date('Y-m-d H:i:s') . "] 🔄 $type scheduler yeniden başlatıldı (PID: {$result['pid']})\n",
+                    FILE_APPEND | LOCK_EX
+                );
+                
+                echo json_encode([
+                    'success' => true, 
+                    'message' => ucfirst($type) . ' scheduler yeniden başlatıldı', 
+                    'pid' => $result['pid']
+                ]);
+            } else {
+                echo json_encode($result);
+            }
+            break;
+            
         case 'clear_logs':
             clearLogs();
             echo json_encode(['success' => true, 'message' => 'Loglar temizlendi']);
