@@ -74,10 +74,11 @@ start_scheduler.bat
 
 ### Kuyruğu Görüntüle
 
-http://localhost/scheduler.php
+http://localhost/queues.php
 
-- **Zamanlama Kuyruğu:** Bekleyen yüklemeler
-- **Yükleme Geçmişi:** Tamamlanan/başarısız yüklemeler
+- **Kuyruk Yönetimi:** Bekleyen yüklemeler ve paylaşımlar
+- **Platform Durumu:** YouTube, Instagram, TikTok, Facebook
+- **Zamanlama Ayarları:** Tarih ve saat ayarları
 
 ---
 

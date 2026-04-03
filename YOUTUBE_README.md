@@ -123,23 +123,19 @@ Tamamlanmış videolar için yeni butonlar:
 - **📅 Zamanla:** Belirli tarih/saat için zamanlar
 - **🔗 YouTube'da Aç:** Yüklenen videoyu açar
 
-#### 3. Zamanlama Sayfası (`/scheduler.php`)
+#### 3. Kuyruk Yönetimi Sayfası (`/queues.php`)
 
-**Tab 1: Zamanlama Kuyruğu**
-- Bekleyen yüklemeleri görüntüle
-- Zamanlamayı iptal et
-- Durum takibi (Bekliyor/Yükleniyor/Başarılı/Başarısız)
+**Kuyruk Yönetimi:**
+- Bekleyen paylaşımları görüntüle (YouTube, Instagram, TikTok, Facebook)
+- Platform bazlı durumları takip et
+- Zamanlama ayarları yap
+- İçerik önceliği belirle
 
-**Tab 2: Yükleme Geçmişi**
-- Geçmiş yüklemeleri görüntüle
-- YouTube linklerini aç
-- Hata mesajlarını incele
-
-**Tab 3: Otomatik Zamanlama**
-- Otomatik zamanlama aç/kapa
-- Günlük yükleme sayısı ayarla
-- Tercih edilen saatleri seç
-- Zamanlama stratejisi seç (Akıllı/Sabit/Rastgele)
+**Platform Ayarları:**
+- YouTube, Instagram, TikTok, Facebook için ayrı kuyruklar
+- Paylaşım aralığı ayarla
+- Zamanlama stratejisi seç (Hemen/Aralıklı/Belirli Saat)
+- Günlük paylaşım sayısı belirleme
 
 ### API Kullanımı
 
@@ -163,16 +159,16 @@ curl -X POST http://localhost/api/youtube.php \
   }'
 ```
 
-#### Zamanlanmış Upload
+#### Kuyruğa Ekleme
 
 ```bash
-curl -X POST http://localhost/api/scheduler.php \
+curl -X POST http://localhost/api/queues.php \
   -H "Content-Type: application/json" \
   -d '{
-    "action": "schedule",
+    "action": "add_video",
+    "queue_id": "youtube_shorts",
     "job_id": "job_xxx",
     "video_path": "output/job_xxx/final_video.mp4",
-    "channel_id": "UCxxxxxxxxxx",
     "scheduled_time": "2026-03-18T17:30:00Z",
     "metadata": {
       "title": "Video Başlığı",
@@ -182,18 +178,20 @@ curl -X POST http://localhost/api/scheduler.php \
   }'
 ```
 
-#### Otomatik Zamanlama
+#### Otomatik Kuyruğa Ekleme
 
 ```bash
-curl -X POST http://localhost/api/scheduler.php \
+curl -X POST http://localhost/api/queues.php \
   -H "Content-Type: application/json" \
   -d '{
-    "action": "auto_schedule",
+    "action": "add_video",
+    "queue_id": "youtube_shorts",
     "job_id": "job_xxx",
-    "video_path": "output/job_xxx/final_video.mp4",
-    "metadata": {
-      "title": "Video Başlığı",
-      "description": "Açıklama"
+    "platform_settings": {
+      "youtube": {
+        "scheduleType": "interval",
+        "intervalHours": 4
+      }
     }
   }'
 ```
@@ -346,14 +344,13 @@ Video_Kur/
 │   │   ├── client_secrets.json  # OAuth credentials (SİZ EKLEYIN)
 │   │   └── *_token.pickle       # Kayıtlı token'lar
 │   ├── youtube_channels.json    # Bağlı kanallar
-│   ├── upload_queue.json        # Yükleme kuyruğu
-│   └── upload_history.json      # Yükleme geçmişi
+│   └── queues.json              # Birleşik kuyruk sistemi
 ├── api/
 │   ├── youtube.php              # YouTube API endpoint
-│   └── scheduler.php            # Scheduler API endpoint
+│   └── queues.php               # Kuyruk API endpoint
 └── frontend/
     ├── youtube.php              # YouTube yönetim sayfası
-    └── scheduler.php            # Zamanlama sayfası
+    └── queues.php               # Kuyruk yönetimi sayfası
 ```
 
 ## ⚠️ Önemli Notlar

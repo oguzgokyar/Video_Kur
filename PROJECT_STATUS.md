@@ -27,7 +27,7 @@
 
 ```
 Video_Kur/
-├── api/                    # 11 PHP REST API endpoint
+├── api/                    # 10 PHP REST API endpoint
 │   ├── accounts.php        # Sosyal medya hesap yönetimi
 │   ├── check.php           # API sağlık kontrolü
 │   ├── config.php          # Yapılandırma yönetimi
@@ -35,7 +35,6 @@ Video_Kur/
 │   ├── jobs.php            # Video iş yaşam döngüsü
 │   ├── queues.php          # Çoklu platform kuyrukları
 │   ├── regenerate.php      # Seçici yeniden üretim
-│   ├── scheduler.php       # YouTube zamanlama
 │   ├── scripts.php         # Script şablon yönetimi
 │   ├── social.php          # Çoklu platform operasyonları
 │   └── youtube.php         # YouTube entegrasyonu
@@ -54,7 +53,7 @@ Video_Kur/
 │   ├── youtube/            # YouTube API modülleri
 │   └── utils/              # Yardımcı araçlar
 │
-├── frontend/               # 21 PHP/HTML dosyası
+├── frontend/               # 19 PHP/HTML dosyası
 │   ├── dashboard.php       # Ana video listesi
 │   ├── create.php          # Video oluşturma formu
 │   ├── project.php         # Proje detay görünümü
@@ -62,13 +61,12 @@ Video_Kur/
 │   ├── queues.php          # Kuyruk yönetimi
 │   ├── accounts.php        # Hesap yönetimi
 │   ├── scripts.php         # Script yönetimi
-│   ├── scheduler.php       # Zamanlama monitörü
 │   └── components/         # Paylaşılan bileşenler
 │
 ├── data/                   # Yapılandırma ve veriler
 │   ├── config.json         # API anahtarları ve ayarlar
 │   ├── jobs/               # İş kayıtları (14 tamamlanmış)
-│   ├── queues.json         # Yayın kuyrukları
+│   ├── queues.json         # Yayın kuyrukları (birleşik sistem)
 │   ├── scripts.json        # Script şablonları
 │   ├── social_credentials/ # Platform kimlik bilgileri
 │   └── youtube_credentials/# YouTube OAuth

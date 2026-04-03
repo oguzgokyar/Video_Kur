@@ -4,6 +4,26 @@ Bu dosya, projedeki tüm önemli değişiklikleri kronolojik sırayla takip eder
 
 ---
 
+## [2.5.0] - 2026-03-30 - Sistem Temizliği ve Dark Mode İyileştirmesi
+
+### 🗑️ Kaldırılanlar
+- **Eski Scheduler Sistemi:** `frontend/scheduler.php` ve `api/scheduler.php` dosyaları kaldırıldı (artık `queues.php` birleşik sistem kullanılıyor)
+- **Yedek Dosyalar:** `frontend/queues_old.php` ve `frontend/queues_backup.php` temizlendi
+- **Deprecation:** Eski `upload_queue.json` ve `upload_history.json` kullanımı sonlandırıldı (zaten `queues.json` birleşik sistem aktif)
+
+### ✨ Eklenenler
+- **YouTube Multi-API Dosya İsimlendirme:** Yeni API projeleri ekleme sırasında client_secrets dosyaları artık `client_secrets_project_{id}.json` formatında oluşturuluyor (timestamp yerine ID-bazlı)
+- **Dark Mode Badge Desteği:** Dashboard ve tüm sayfalarda badge renklerine `dark:bg-*-900/40` ve `dark:text-*-300` classes eklendi
+- **Tailwind Dynamic Class Düzeltmesi:** Scheduler sayfasında çalışmayan dynamic Tailwind classes (`bg-${color}-100`) conditional classes ile değiştirildi
+
+### 🔧 Değişiklikler
+- `api/youtube_projects.php`: Proje ID'sine göre tahmin edilebilir dosya isimlendirme
+- `frontend/dashboard.php`: 7 yerde dark mode badge classes eklendi
+- `frontend/scheduler.php`: 4 yerde dynamic class → conditional class + dark mode desteği
+- Dokümantasyon güncellendi: `QUICKSTART.md`, `WEB_KULLANIM.md`, `PROJECT_STATUS.md` dosyalarında scheduler.php referansları queues.php ile değiştirildi
+
+---
+
 ## [2.4.0] - 2026-03-23 - Kuyruk Senkronizasyonu ve UI Tutarlılığı
 
 ### ✨ Eklenenler

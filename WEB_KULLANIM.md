@@ -37,29 +37,26 @@ http://localhost/dashboard.php
 
 ---
 
-## 📅 2. Zamanlama Sayfası
+## 📅 2. Kuyruk Yönetimi Sayfası
 
 ### Açış:
 ```
-http://localhost/scheduler.php
+http://localhost/queues.php
 ```
 
 ### Özellikler:
 
-**📋 Zamanlama Kuyruğu Sekmesi**
-- Bekleyen yüklemeleri görün
-- İptal etmek için **"❌ İptal"** butonuna tıklayın
+**📋 Kuyruk Yönetimi**
+- Bekleyen paylaşımları görün (YouTube, Instagram, TikTok, Facebook)
+- Video ve içerik durumunu takip edin
+- Platform bazlı ayarlar yapın
+- Zamanlama bilgilerini görüntüleyin
 
-**📜 Yükleme Geçmişi Sekmesi**
-- Yüklenmiş videoları görün
-- YouTube linklerine tıklayarak izleyin
-- Başarısız yüklemeleri tekrar deneyin
-
-**⚙️ Otomatik Zamanlama Sekmesi**
-- Otomatik zamanlama açın
-- Günlük video sayısı belirleyin
-- Tercih edilen saatleri seçin
-- Strateji seçin (Akıllı/Sabit/Rastgele)
+**⚙️ Kuyruk Ayarları**
+- Platform seçin (YouTube, Instagram, TikTok, Facebook)
+- Paylaşım aralığı belirleyin
+- Zamanlama stratejisi seçin (Hemen/Aralıklı/Belirli Saat)
+- İçerik önceliği ayarlayın
 
 ---
 
@@ -133,9 +130,9 @@ http://localhost/dashboard.php
 3. Scheduler otomatik yükler
 
 ### Otomatik Zamanlama
-1. Scheduler.php → "Otomatik Zamanlama"
-2. Aktif et
-3. Yeni videolar otomatik zamanlanır
+1. Queues.php → Kuyruk ayarlarına git
+2. Platform seç ve ayarları düzenle
+3. Yeni videolar otomatik kuyruğa eklenir
 
 ### Hızlı Test
 1. Dashboard → İlk video
