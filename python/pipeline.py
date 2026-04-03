@@ -23,6 +23,53 @@ from subtitle_gen import generate_srt
 from video_composer import compose_video
 
 
+def _get_video_type(width: int, height: int) -> str:
+    if width == height:
+        return 'square'
+    if width > height:
+        return 'wide'
+    return 'short'
+
+
+def _load_custom_script(base_dir: str, job_data: dict, video_type: str):
+    scripts_file = os.path.join(base_dir, 'data', 'scripts.json')
+    if not os.path.exists(scripts_file):
+        return None
+    try:
+        with open(scripts_file, 'r', encoding='utf-8') as f:
+            scripts = (json.load(f) or {}).get('scripts', [])
+    except Exception:
+        return None
+
+    script_id = (job_data.get('scriptId') or '').strip()
+    content_type = (job_data.get('contentType') or '').strip().lower()
+
+    if script_id:
+        for s in scripts:
+            if s.get('id') == script_id:
+                return s
+
+    for s in scripts:
+        s_type = (s.get('videoType') or 'short').strip().lower()
+        s_content = (s.get('contentType') or '').strip().lower()
+        if s.get('isDefault') and s_type == video_type and s_content == content_type:
+            return s
+    return None
+
+
+def _ensure_outro_cta(script: dict) -> dict:
+    outro = (script.get('outro') or '').strip()
+    if not outro:
+        outro = "Abone ol, Beğen ve Yorum yap! Daha fazlası için bizi takip et."
+    required_terms = ['Abone ol', 'Beğen', 'Yorum yap']
+    missing = [t for t in required_terms if t not in outro]
+    if missing:
+        addon = "Abone ol, Beğen ve Yorum yap!"
+        outro = f"{outro} {addon}".strip()
+    script['outro'] = outro
+    return script
+
+
 def update_job(jobs_dir: str, job_id: str, updates: dict):
     """İş dosyasını günceller."""
     job_file = os.path.join(jobs_dir, f"{job_id}.json")
@@ -112,6 +159,7 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
     # Video ve görsel ebatları - job'dan al, yoksa varsayılan
     video_width = job_data.get('videoWidth', 1080)
     video_height = job_data.get('videoHeight', 1920)
+    video_type = _get_video_type(video_width, video_height)
     
     # Subtitle style - önce config'den al, sonra job'dan, hiçbiri yoksa None
     subtitle_style = config.get('subtitleStyle', None)
@@ -173,6 +221,9 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
 
     print(f"[2/6] Script üretiliyor...")
     update_job(jobs_dir, job_id, {'status': 'scripting'})
+    selected_script = _load_custom_script(base_dir, job_data, video_type)
+    selected_prompt = selected_script.get('prompt') if selected_script else None
+    selected_max_duration = int(selected_script.get('maxDuration', 55)) if selected_script else 55
 
     if not script_enabled:
         print("  Script üretimi devre dışı, atlanıyor.")
@@ -182,7 +233,7 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
             update_job(jobs_dir, job_id, {'status': 'failed', 'error': 'Pollinations Text servisi devre dışı'})
             return
         from script_gen import generate_script_pollinations
-        result = generate_script_pollinations(news['title'], news['text'], poll_text_model)
+        result = generate_script_pollinations(news['title'], news['text'], poll_text_model, selected_max_duration, selected_prompt)
         if not result.get('success'):
             update_job(jobs_dir, job_id, {'status': 'failed', 'error': f"Script hatası: {result.get('error', '')}"})
             return
@@ -191,14 +242,31 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
         if not svc_gemini_script:
             update_job(jobs_dir, job_id, {'status': 'failed', 'error': 'Gemini Script servisi devre dışı'})
             return
-        if not gemini_key:
+        
+        # Multi-key desteği: geminiKeys array'i varsa onu kullan, yoksa geminiKey'i array'e çevir
+        gemini_keys = config.get('geminiKeys', [])
+        if not gemini_keys and gemini_key:
+            gemini_keys = [gemini_key]
+        
+        if not gemini_keys:
             update_job(jobs_dir, job_id, {'status': 'failed', 'error': 'Gemini API key eksik'})
             return
-        result = generate_script(news['title'], news['text'], gemini_key, model_name=gemini_model)
+        
+        from script_gen import generate_script_with_fallback
+        result = generate_script_with_fallback(
+            news['title'],
+            news['text'],
+            gemini_keys,
+            max_duration=selected_max_duration,
+            model_name=gemini_model,
+            prompt_template=selected_prompt
+        )
         if not result.get('success'):
             update_job(jobs_dir, job_id, {'status': 'failed', 'error': f"Script hatası: {result.get('error', '')}"})
             return
         script = result['script']
+
+    script = _ensure_outro_cta(script)
 
     scenes = script.get('scenes', [])
 

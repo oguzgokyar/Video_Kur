@@ -219,7 +219,7 @@ def _update_last_request():
 
 
 # Pollinations mevcut görsel modelleri (fallback sırası)
-POLLINATIONS_IMAGE_MODELS = ['flux', 'turbo']
+POLLINATIONS_IMAGE_MODELS = ['flux', 'grok-imagine', 'gptimage', 'zimage', 'qwen-image']
 
 # Pollinations API endpoint'leri
 POLLINATIONS_API_URL = "https://gen.pollinations.ai/image"  # Yeni endpoint (API key destekli)

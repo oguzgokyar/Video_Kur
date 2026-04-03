@@ -65,8 +65,8 @@ class TikTokAuth:
             try:
                 with open(self.config_file, 'r') as f:
                     return json.load(f)
-            except:
-                pass
+            except Exception as e:
+                print(f"[WARN] Failed to load TikTok config: {e}")
         return {}
     
     def save_config(self, client_key: str, client_secret: str):
@@ -313,8 +313,8 @@ class TikTokAuth:
             try:
                 with open(self.token_file, 'r') as f:
                     return json.load(f)
-            except:
-                pass
+            except Exception as e:
+                print(f"[WARN] Failed to load TikTok token: {e}")
         return None
     
     def is_authenticated(self) -> bool:

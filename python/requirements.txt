@@ -9,6 +9,7 @@ moviepy
 Pillow
 pysrt
 fal-client
+feedparser
 
 # YouTube API Integration
 google-auth-oauthlib

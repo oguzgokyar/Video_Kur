@@ -32,19 +32,27 @@ def apply_zoom_crop_effect(clip, scale_func, duration, target_w, target_h):
     
     def make_frame(t):
         # O anki zoom seviyesi
-        current_scale = scale_func(t)
+        current_scale = max(scale_func(t), 1.0)
         
         # Crop boyutları (zoom ne kadar büyükse, crop o kadar küçük)
         crop_w = int(target_w * scale_buffer / current_scale)
         crop_h = int(target_h * scale_buffer / current_scale)
+        crop_w = max(1, min(crop_w, enlarged_w))
+        crop_h = max(1, min(crop_h, enlarged_h))
         
         # Merkez noktasından kırp
         x1 = (enlarged_w - crop_w) // 2
         y1 = (enlarged_h - crop_h) // 2
+        x1 = max(0, min(x1, enlarged_w - crop_w))
+        y1 = max(0, min(y1, enlarged_h - crop_h))
+        x2 = min(x1 + crop_w, enlarged_w)
+        y2 = min(y1 + crop_h, enlarged_h)
         
         # Frame al ve kırp
         frame = enlarged.get_frame(t)
-        cropped_frame = frame[y1:y1+crop_h, x1:x1+crop_w]
+        cropped_frame = frame[y1:y2, x1:x2]
+        if cropped_frame.size == 0:
+            cropped_frame = frame
         
         # Hedef boyuta resize (PIL kullanarak kaliteli)
         img = PILImage.fromarray(cropped_frame)
@@ -147,18 +155,18 @@ def apply_video_effect(clip, effect_type='ken_burns_zoom_in'):
         )
     
     elif effect_type == 'pulse':
-        # Hafif nabız efekti (1.0 ↔ 1.05)
+        # Hafif nabız efekti (1.0 ↔ 1.1)
         return apply_zoom_crop_effect(
             clip,
-            lambda t: 1.0 + 0.05 * math.sin(2 * math.pi * t / duration * 2),
+            lambda t: 1.05 + 0.05 * math.sin(2 * math.pi * t / duration * 2),
             duration, base_w, base_h
         )
     
     elif effect_type == 'pulse_strong':
-        # Güçlü nabız efekti (1.0 ↔ 1.1)
+        # Güçlü nabız efekti (1.0 ↔ 1.2)
         return apply_zoom_crop_effect(
             clip,
-            lambda t: 1.0 + 0.1 * math.sin(2 * math.pi * t / duration * 3),
+            lambda t: 1.1 + 0.1 * math.sin(2 * math.pi * t / duration * 3),
             duration, base_w, base_h
         )
     
@@ -202,6 +210,57 @@ def apply_video_effect(clip, effect_type='ken_burns_zoom_in'):
         new_clip = VideoClip(make_frame, duration=duration)
         new_clip = new_clip.with_fps(FPS)
         return new_clip
+
+    elif effect_type == 'drift_left_right':
+        scale_buffer = 1.22
+        enlarged_w = int(base_w * scale_buffer)
+        enlarged_h = int(base_h * scale_buffer)
+        enlarged = clip.resized((enlarged_w, enlarged_h))
+
+        def make_frame(t):
+            progress = t / duration
+            x_sway = math.sin(2 * math.pi * progress) * (enlarged_w - base_w) * 0.35
+            x_offset = int((enlarged_w - base_w) / 2 + x_sway)
+            y_offset = (enlarged_h - base_h) // 2
+            x_offset = max(0, min(x_offset, enlarged_w - base_w))
+            frame = enlarged.get_frame(t)
+            return frame[y_offset:y_offset+base_h, x_offset:x_offset+base_w]
+
+        from moviepy import VideoClip
+        return VideoClip(make_frame, duration=duration).with_fps(FPS)
+
+    elif effect_type == 'micro_zoom_jitter':
+        return apply_zoom_crop_effect(
+            clip,
+            lambda t: 1.04 + 0.02 * math.sin(2 * math.pi * t / duration * 5),
+            duration, base_w, base_h
+        )
+
+    elif effect_type == 'tilt_pan':
+        scale_buffer = 1.28
+        enlarged_w = int(base_w * scale_buffer)
+        enlarged_h = int(base_h * scale_buffer)
+        enlarged = clip.resized((enlarged_w, enlarged_h))
+
+        def make_frame(t):
+            progress = t / duration
+            x_offset = int((enlarged_w - base_w) * progress * 0.8)
+            y_wave = int(math.sin(progress * 2 * math.pi) * (enlarged_h - base_h) * 0.15)
+            y_offset = int((enlarged_h - base_h) / 2 + y_wave)
+            x_offset = max(0, min(x_offset, enlarged_w - base_w))
+            y_offset = max(0, min(y_offset, enlarged_h - base_h))
+            frame = enlarged.get_frame(t)
+            return frame[y_offset:y_offset+base_h, x_offset:x_offset+base_w]
+
+        from moviepy import VideoClip
+        return VideoClip(make_frame, duration=duration).with_fps(FPS)
+
+    elif effect_type == 'cinematic_push':
+        return apply_zoom_crop_effect(
+            clip,
+            lambda t: 1.02 + 0.16 * (t / duration),
+            duration, base_w, base_h
+        )
     
     # Fallback: varsayılan ken_burns zoom in (siyah kenarsız)
     return apply_zoom_crop_effect(
@@ -227,37 +286,37 @@ SUBTITLE_PRESETS = {
         'FontName': 'Arial', 'FontSize': 20,
         'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000',
         'BorderStyle': 3, 'Outline': 2, 'Shadow': 0,
-        'MarginV': 80, 'Alignment': 2, 'Bold': 0,
+        'MarginV': 80, 'MarginL': 40, 'MarginR': 40, 'Alignment': 2, 'Bold': 0,
     },
     'bold_bottom': {
         'FontName': 'Arial', 'FontSize': 24,
         'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000',
         'BorderStyle': 3, 'Outline': 3, 'Shadow': 1,
-        'MarginV': 100, 'Alignment': 2, 'Bold': 1,
+        'MarginV': 100, 'MarginL': 40, 'MarginR': 40, 'Alignment': 2, 'Bold': 1,
     },
     'yellow_bold': {
         'FontName': 'Arial', 'FontSize': 22,
         'PrimaryColour': '&H0000FFFF', 'OutlineColour': '&H00000000',
         'BorderStyle': 1, 'Outline': 2, 'Shadow': 1,
-        'MarginV': 80, 'Alignment': 2, 'Bold': 1,
+        'MarginV': 80, 'MarginL': 40, 'MarginR': 40, 'Alignment': 2, 'Bold': 1,
     },
     'box_white': {
         'FontName': 'Arial', 'FontSize': 20,
         'PrimaryColour': '&H00000000', 'OutlineColour': '&H00FFFFFF',
         'BackColour': '&H80000000', 'BorderStyle': 4, 'Outline': 0, 'Shadow': 0,
-        'MarginV': 80, 'Alignment': 2, 'Bold': 0,
+        'MarginV': 80, 'MarginL': 40, 'MarginR': 40, 'Alignment': 2, 'Bold': 0,
     },
     'tiktok': {
         'FontName': 'Arial', 'FontSize': 26,
         'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H000000FF',
         'BorderStyle': 3, 'Outline': 3, 'Shadow': 0,
-        'MarginV': 120, 'Alignment': 2, 'Bold': 1,
+        'MarginV': 120, 'MarginL': 40, 'MarginR': 40, 'Alignment': 2, 'Bold': 1,
     },
     'minimal': {
         'FontName': 'Arial', 'FontSize': 18,
         'PrimaryColour': '&H00FFFFFF', 'OutlineColour': '&H00000000',
         'BorderStyle': 1, 'Outline': 1, 'Shadow': 0,
-        'MarginV': 60, 'Alignment': 2, 'Bold': 0,
+        'MarginV': 60, 'MarginL': 40, 'MarginR': 40, 'Alignment': 2, 'Bold': 0,
     },
 }
 
@@ -282,7 +341,7 @@ def build_subtitle_style(style_params: dict) -> str:
         'PrimaryColour': 'PrimaryColour', 'OutlineColour': 'OutlineColour',
         'BackColour': 'BackColour', 'BorderStyle': 'BorderStyle',
         'Outline': 'Outline', 'Shadow': 'Shadow',
-        'MarginV': 'MarginV', 'Alignment': 'Alignment', 'Bold': 'Bold',
+        'MarginV': 'MarginV', 'MarginL': 'MarginL', 'MarginR': 'MarginR', 'Alignment': 'Alignment', 'Bold': 'Bold',
     }
     for k, v in style_params.items():
         if k in key_map and v is not None:
@@ -304,7 +363,7 @@ def compose_video(scenes: list, images_dir: str, audio_path: str, srt_path: str,
         clips = []
 
         # Efekt çeşitliliği için fallback liste (script'te belirtilmemişse)
-        fallback_effects = ['ken_burns_zoom_in', 'ken_burns_zoom_out', 'pan_right', 'pan_left']
+        fallback_effects = ['ken_burns_zoom_in', 'ken_burns_zoom_out', 'pan_right', 'pan_left', 'drift_left_right', 'cinematic_push']
 
         for i, scene in enumerate(scenes):
             duration = scene.get('duration', 6)

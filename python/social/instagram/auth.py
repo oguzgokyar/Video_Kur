@@ -74,8 +74,8 @@ class MetaAuth:
             try:
                 with open(self.config_file, 'r') as f:
                     return json.load(f)
-            except:
-                pass
+            except Exception as e:
+                print(f"[WARN] Failed to load Meta config: {e}")
         return {}
     
     def save_config(self, app_id: str, app_secret: str):
@@ -243,7 +243,8 @@ class MetaAuth:
                 }
             )
             return response.json()
-        except:
+        except Exception as e:
+            print(f"[WARN] Failed to exchange token, using short-lived: {e}")
             return {'access_token': short_token, 'expires_in': 3600}
     
     def _fetch_accounts(self):
@@ -336,8 +337,8 @@ class MetaAuth:
                 with open(self.accounts_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     return data.get('instagram', [])
-            except:
-                pass
+            except Exception as e:
+                print(f"[WARN] Failed to load Instagram accounts: {e}")
         return []
     
     def get_facebook_pages(self) -> List[Dict]:
@@ -347,8 +348,8 @@ class MetaAuth:
                 with open(self.accounts_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     return data.get('facebook', [])
-            except:
-                pass
+            except Exception as e:
+                print(f"[WARN] Failed to load Facebook pages: {e}")
         return []
     
     def get_page_access_token(self, page_id: str) -> Optional[str]:
@@ -370,8 +371,8 @@ class MetaAuth:
             try:
                 with open(self.token_file, 'r') as f:
                     return json.load(f)
-            except:
-                pass
+            except Exception as e:
+                print(f"[WARN] Failed to load token: {e}")
         return None
     
     def is_authenticated(self) -> bool:

@@ -30,7 +30,8 @@ class VideoValidator:
         try:
             from moviepy.config import FFMPEG_BINARY
             return FFMPEG_BINARY
-        except:
+        except Exception as e:
+            print(f"[DEBUG] MoviePy FFmpeg config unavailable: {e}")
             # Try system PATH
             import shutil
             return shutil.which('ffmpeg')
@@ -198,7 +199,8 @@ class VideoValidator:
                 num, den = frame_rate_str.split('/')
                 return float(num) / float(den)
             return float(frame_rate_str)
-        except:
+        except Exception as e:
+            print(f"[WARN] Invalid frame rate format '{frame_rate_str}': {e}")
             return 0.0
     
     def print_validation_result(self, is_valid: bool, result: Dict):

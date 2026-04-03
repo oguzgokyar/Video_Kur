@@ -143,8 +143,6 @@ class PlatformMetadataOptimizer:
         """Use Gemini AI for platform-specific optimization"""
         try:
             import google.genai as genai
-            genai.configure(api_key=self.gemini_key)
-            model = genai.GenerativeModel(self.model)
             
             prompt = f"""{platform.upper()} için optimize edilmiş metadata oluştur:
 
@@ -175,7 +173,11 @@ JSON formatında döndür:
     "hook": "..."
 }}"""
             
-            response = model.generate_content(prompt)
+            client = genai.Client(api_key=self.gemini_key)
+            response = client.models.generate_content(
+                model=self.model,
+                contents=prompt
+            )
             text = response.text.strip()
             
             # Extract JSON

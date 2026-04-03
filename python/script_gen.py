@@ -3,7 +3,12 @@ import requests
 import google.genai as genai
 
 
-def _build_script_prompt(title: str, text: str, max_duration: int = 55) -> str:
+def _build_script_prompt(title: str, text: str, max_duration: int = 55, prompt_template: str | None = None) -> str:
+    if prompt_template:
+        return (prompt_template
+                .replace('{{TITLE}}', title)
+                .replace('{{TEXT}}', text[:2000])
+                .replace('{{MAX_DURATION}}', str(max_duration)))
     return f"""Sen bir profesyonel YouTube Shorts video scripti yazarısın.
 Aşağıdaki haber içeriğinden maksimum {max_duration} saniyelik, dikkat çekici bir Türkçe video scripti yaz.
 
@@ -33,6 +38,10 @@ Mevcut efektler:
 - "pan_right" - Sağa kaydırma (ilerleme, süreklilik)
 - "static" - Hareketsiz (istatistik, grafik, okunması gereken metin)
 - "glitch_transition" - Glitch geçiş efekti (teknoloji haberleri, modern içerik)
+- "drift_left_right" - Yumuşak sağ-sol drift (dengeli dinamizm, konuşma sahneleri)
+- "micro_zoom_jitter" - Mikro zoom titreşimi (enerjik vurgu, kısa dikkat çekme)
+- "tilt_pan" - Hafif tilt + pan hareketi (hikaye akışı, geçiş sahneleri)
+- "cinematic_push" - Sinematik ileri itiş zoomu (dramatik/odaklı anlatım)
 
 Efekt seçim rehberi:
 - Heyecanlı/acil haberler → zoom_in_fast
@@ -41,6 +50,9 @@ Efekt seçim rehberi:
 - Duygusal/derin içerik → ken_burns_zoom_in (yavaş)
 - Ürün lansmanı → pulse veya zoom_in_fast
 - Genel haberler → ken_burns_zoom_in veya pan_right
+- Hikaye/akış odaklı sahneler → tilt_pan veya drift_left_right
+- Kısa vurgu anları → micro_zoom_jitter
+- Dramatik odak → cinematic_push
 - Hook (açılış) → zoom_in_fast (dikkat çek)
 - Outro (kapanış) → pulse_strong (CTA vurgusu)
 
@@ -97,15 +109,15 @@ Yanıtı şu JSON formatında ver (sadece JSON, başka açıklama yazma):
   "thumbnail_image_prompt": "Professional YouTube thumbnail with dramatic lighting, bold colors, eye-catching composition for news topic, space for text overlay"
 }}"""
 
-def generate_script(title: str, text: str, api_key: str, max_duration: int = 55, model_name: str = 'gemini-2.0-flash') -> dict:
+def generate_script(title: str, text: str, api_key: str, max_duration: int = 55, model_name: str = 'gemini-2.0-flash', prompt_template: str | None = None) -> dict:
     """Gemini API ile haber metninden video scripti üretir."""
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(model_name)
-
-    prompt = _build_script_prompt(title, text, max_duration)
-
     try:
-        response = model.generate_content(prompt)
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=model_name,
+            contents=_build_script_prompt(title, text, max_duration, prompt_template)
+        )
+        
         raw = response.text.strip()
 
         if '```json' in raw:
@@ -119,10 +131,44 @@ def generate_script(title: str, text: str, api_key: str, max_duration: int = 55,
         return {'success': False, 'error': str(e)}
 
 
-def generate_script_pollinations(title: str, text: str, model: str = 'openai', max_duration: int = 55) -> dict:
+def generate_script_with_fallback(title: str, text: str, api_keys: list, max_duration: int = 55, model_name: str = 'gemini-2.0-flash', prompt_template: str | None = None) -> dict:
+    """Multi-key desteği ile Gemini script üretimi. Biri fail olursa sıradakini dener."""
+    if not api_keys:
+        return {'success': False, 'error': 'No API keys provided'}
+    
+    # Tek key ise array'e çevir
+    if isinstance(api_keys, str):
+        api_keys = [api_keys]
+    
+    last_error = None
+    for idx, key in enumerate(api_keys):
+        try:
+            result = generate_script(title, text, key, max_duration, model_name, prompt_template)
+            if result['success']:
+                return result
+            else:
+                last_error = result.get('error', 'Unknown error')
+                # 429 (quota) hatası ise sonraki key'i dene
+                if '429' in str(last_error) or 'quota' in str(last_error).lower():
+                    continue
+                else:
+                    # Başka bir hata ise hemen döndür
+                    return result
+        except Exception as e:
+            last_error = str(e)
+            if '429' in str(e) or 'quota' in str(e).lower():
+                continue
+            else:
+                return {'success': False, 'error': str(e)}
+    
+    return {'success': False, 'error': f'All {len(api_keys)} API keys failed. Last error: {last_error}'}
+
+
+
+def generate_script_pollinations(title: str, text: str, model: str = 'openai', max_duration: int = 55, prompt_template: str | None = None) -> dict:
     """Pollinations.ai Text API ile haber metninden video scripti üretir. API anahtarı gerekmez."""
     try:
-        prompt = _build_script_prompt(title, text, max_duration)
+        prompt = _build_script_prompt(title, text, max_duration, prompt_template)
         url = "https://text.pollinations.ai/"
         payload = {
             "messages": [

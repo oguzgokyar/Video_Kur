@@ -398,7 +398,8 @@ class InstagramUploader(BaseSocialUploader):
             data = response.json()
             return data.get('permalink', f'https://www.instagram.com/reel/{media_id}/')
             
-        except:
+        except Exception as e:
+            print(f"[WARN] Failed to get reel permalink, using fallback: {e}")
             return f'https://www.instagram.com/reel/{media_id}/'
     
     def get_account_info(self, account_id: Optional[str] = None) -> Optional[Dict]:

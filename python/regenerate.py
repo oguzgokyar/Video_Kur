@@ -17,6 +17,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from pipeline import update_job, get_audio_duration, concat_audio_files
 
+def ensure_outro_cta(script: dict) -> dict:
+    outro = (script.get('outro') or '').strip()
+    if not outro:
+        outro = "Abone ol, Beğen ve Yorum yap! Daha fazlası için bizi takip et."
+    required_terms = ['Abone ol', 'Beğen', 'Yorum yap']
+    if not all(term in outro for term in required_terms):
+        outro = f"{outro} Abone ol, Beğen ve Yorum yap!".strip()
+    script['outro'] = outro
+    return script
+
 
 # ── Görsel Versiyonlama ────────────────────────────────────────────────────────
 
@@ -186,7 +196,7 @@ def _run_section(section, job_id, job, prev_status, extra, config, jobs_dir, out
         if not result.get('success'):
             update_job(jobs_dir, job_id, {'status': prev_status, 'error': f"Script hatası: {result.get('error', '')}"})
             return
-        script = result['script']
+        script = ensure_outro_cta(result['script'])
         with open(os.path.join(output_dir, 'script.json'), 'w', encoding='utf-8') as f:
             json.dump(script, f, ensure_ascii=False, indent=2)
         restore_done()
@@ -562,4 +572,3 @@ if __name__ == '__main__':
         except Exception:
             pass
     run_regenerate(sys.argv[1], sys.argv[2], sys.argv[3], extra_arg)
-

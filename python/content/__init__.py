@@ -12,7 +12,7 @@ __version__ = "1.0.0"
 __author__ = "Video_Kur"
 
 from .feed_parser import FeedParser
-from .content_scorer import ContentScorer
+# from .content_scorer import ContentScorer  # DISABLED: File not implemented yet
 from .batch_processor import BatchProcessor
 
-__all__ = ['FeedParser', 'ContentScorer', 'BatchProcessor']
+__all__ = ['FeedParser', 'BatchProcessor']
