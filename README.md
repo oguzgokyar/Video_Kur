@@ -190,13 +190,24 @@ URL Girişi
 
 ## 📚 Dokümantasyon
 
-- [📋 QUICKSTART.md](QUICKSTART.md) - Hızlı başlangıç
-- [📺 YOUTUBE_README.md](YOUTUBE_README.md) - YouTube entegrasyonu
-- [📱 SOCIAL_MEDIA_README.md](SOCIAL_MEDIA_README.md) - Sosyal medya
-- [🎬 CUSTOM_SCRIPT_GUIDE.md](CUSTOM_SCRIPT_GUIDE.md) - Script sistemi
-- [💬 SUBTITLE_STYLE_GUIDE.md](SUBTITLE_STYLE_GUIDE.md) - Altyazı stilleri
-- [📊 PROJECT_STATUS.md](PROJECT_STATUS.md) - Proje durumu
-- [📜 CHANGELOG.md](CHANGELOG.md) - Değişiklik günlüğü
+### 🚀 Başlangıç
+- [📋 Hızlı Başlangıç](QUICKSTART.md) - 5 dakikada kurulum
+- [🌐 Web Kullanım](docs/user-guides/web-kullanim.md) - Dashboard kullanımı
+
+### 👤 Kullanıcı Kılavuzları
+- [📖 Nasıl Kullanılır](docs/user-guides/kullanim.md) - Temel kullanım
+- [🎬 Custom Script](docs/user-guides/custom-scripts.md) - Özel script oluşturma
+- [💬 Altyazı Stilleri](docs/user-guides/subtitle-styling.md) - Altyazı özelleştirme
+
+### ⚙️ Özellikler ve Entegrasyonlar
+- [📺 YouTube Entegrasyonu](docs/features/youtube-integration.md) - OAuth, zamanlama, çoklu proje
+- [📱 Sosyal Medya](docs/features/social-media.md) - TikTok, Instagram, Facebook
+- [🔍 İçerik Keşfi](docs/features/content-discovery.md) - Trending içerik bulma
+
+### 📊 Proje Bilgileri
+- [📈 Proje Durumu](PROJECT_STATUS.md) - Mevcut durum ve yol haritası
+- [📜 Değişiklik Geçmişi](CHANGELOG.md) - Sürüm notları
+- [📁 Dokümantasyon Yönetimi](docs/DOCS_MAINTENANCE.md) - Dokümantasyon kuralları
 
 ---
 

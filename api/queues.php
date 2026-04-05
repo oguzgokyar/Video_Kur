@@ -303,18 +303,31 @@ function loadSocialPlatformStatus() {
     global $dataDir;
     $result = [];
 
-    // Önce history'yi oku, sonra aktif queue ile override et.
+    // Önce history'yi oku, sonra social_queue, sonra queues.json ile override et.
     // Böylece reset sonrası yeniden kuyruğa alınan videolarda eski failed history baskın gelmez.
     $sources = [
         ['file' => $dataDir . '/social_history.json', 'key' => 'history', 'force_override' => false],
-        ['file' => $dataDir . '/social_queue.json', 'key' => 'queue', 'force_override' => true]
+        ['file' => $dataDir . '/social_queue.json', 'key' => 'queue', 'force_override' => true],
+        ['file' => $dataDir . '/queues.json', 'key' => 'queues', 'force_override' => true, 'nested' => true]
     ];
 
     foreach ($sources as $source) {
         $file = $source['file'];
         if (!file_exists($file)) continue;
         $raw = json_decode(file_get_contents($file), true);
-        $items = $raw[$source['key']] ?? [];
+        
+        // queues.json için özel işlem: nested videos array
+        $items = [];
+        if (isset($source['nested']) && $source['nested']) {
+            foreach ($raw[$source['key']] ?? [] as $queue) {
+                foreach ($queue['videos'] ?? [] as $video) {
+                    $items[] = $video;
+                }
+            }
+        } else {
+            $items = $raw[$source['key']] ?? [];
+        }
+        
         foreach ($items as $item) {
             $jobId = $item['job_id'] ?? null;
             if (!$jobId) continue;
@@ -440,21 +453,32 @@ function loadSchedulerErrors() {
     
     $errors = $data['errors'];
     $unresolvedErrors = array_filter($errors, fn($e) => !($e['resolved'] ?? false));
-    $quotaErrors = array_filter($unresolvedErrors, fn($e) => 
+    
+    // Son 24 saatteki hataları filtrele (daha güvenilir tarih kontrolü)
+    $cutoff = new DateTime('-24 hours');
+    $recentErrors = array_filter($unresolvedErrors, function($e) use ($cutoff) {
+        $timestamp = $e['timestamp'] ?? '';
+        if (empty($timestamp)) return false;
+        
+        try {
+            // Parse ISO 8601 timestamp
+            $errorTime = new DateTime($timestamp);
+            return $errorTime > $cutoff;
+        } catch (Exception $ex) {
+            return false; // Invalid timestamp, exclude it
+        }
+    });
+    
+    // Quota hatalarını recent errors içinden filtrele
+    $quotaErrors = array_filter($recentErrors, fn($e) => 
         stripos($e['error_message'] ?? '', 'quota') !== false || 
         stripos($e['error_message'] ?? '', 'exceeded') !== false
     );
     
-    // Son 24 saatteki hataları filtrele
-    $cutoff = date('c', strtotime('-24 hours'));
-    $recentErrors = array_filter($unresolvedErrors, fn($e) => 
-        ($e['timestamp'] ?? '') > $cutoff
-    );
-    
     return [
         'errors' => array_values(array_slice($recentErrors, 0, 10)), // Son 10 hata
-        'quota_blocked' => count($quotaErrors) > 0,
-        'unresolved_count' => count($unresolvedErrors),
+        'quota_blocked' => count($quotaErrors) > 0, // Sadece son 24 saatteki quota hataları
+        'unresolved_count' => count($recentErrors), // Sadece son 24 saatteki unresolved
         'quota_error_count' => count($quotaErrors),
         'last_error' => count($recentErrors) > 0 ? reset($recentErrors) : null
     ];

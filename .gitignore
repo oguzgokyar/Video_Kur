@@ -3,6 +3,7 @@
 data/youtube_credentials/client_secrets.json
 data/youtube_credentials/*.pickle
 data/youtube_credentials/*_token.pickle
+data/youtube_credentials/*_token.json
 
 # Social Media Credentials
 data/social_credentials/
@@ -10,6 +11,15 @@ data/social_credentials/**/*
 
 # API Config with keys
 data/config.json
+
+# ===== BACKUP & MIGRATION FILES =====
+yedek/
+yedek/**/*
+
+# ===== DATA FILES (Runtime) =====
+data/*.json
+data/jobs/*.json
+!data/jobs/.gitkeep
 
 # ===== OUTPUT & GENERATED FILES =====
 # Generated videos and media

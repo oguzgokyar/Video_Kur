@@ -93,11 +93,17 @@ class SchedulerErrorLogger:
             platform: Platform name
         """
         errors_data = self._load_errors()
+        resolved_count = 0
         
         for error in errors_data['errors']:
             if error['job_id'] == job_id and error['platform'] == platform:
-                error['resolved'] = True
-                error['resolved_at'] = datetime.now(timezone.utc).isoformat()
+                if not error.get('resolved', False):  # Only mark if not already resolved
+                    error['resolved'] = True
+                    error['resolved_at'] = datetime.now(timezone.utc).isoformat()
+                    resolved_count += 1
+        
+        if resolved_count > 0:
+            print(f"   [ERROR_LOG] Resolved {resolved_count} errors for {job_id}/{platform}", flush=True)
         
         self._save_errors(errors_data)
     

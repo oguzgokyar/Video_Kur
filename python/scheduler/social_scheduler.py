@@ -77,6 +77,13 @@ class SocialMediaScheduler:
         self.queue_manager = UnifiedQueueManager(str(self.data_dir))
         self.error_logger = SchedulerErrorLogger(str(self.data_dir))
         
+        # Clean up old errors on startup (keep last 7 days)
+        try:
+            self.error_logger.clear_old_errors(days=7)
+            print("[ERROR_LOG] Cleaned up old errors (>7 days)", flush=True)
+        except Exception as e:
+            print(f"[ERROR_LOG] Cleanup failed: {e}", flush=True)
+        
         # Initialize metadata optimizers
         config = self._load_config()
         gemini_key = config.get('geminiKey')
@@ -721,7 +728,8 @@ class SocialMediaScheduler:
                     privacy_status=privacy_status,
                     publish_at=publish_at,
                     thumbnail_path=thumbnail_path,
-                    playlist_id=playlist_id
+                    playlist_id=playlist_id,
+                    channel_id=channel_id  # Multi-channel support!
                 )
                 
                 if result and result.get('status') == 'success':
@@ -734,7 +742,16 @@ class SocialMediaScheduler:
                         job_id=item.get('job_id')
                     )
                     print(f"   [OK] YouTube başarılı: {result['video_url']}")
-                    if selected_project:
+                    
+                    # Record quota usage
+                    if selected_project and self.youtube_project_manager:
+                        # Check if thumbnail was uploaded
+                        with_thumbnail = thumbnail_path is not None and result.get('thumbnail_uploaded', False)
+                        self.youtube_project_manager.record_upload(
+                            project_id=selected_project['id'],
+                            success=True,
+                            with_thumbnail=with_thumbnail
+                        )
                         print(f"   📊 Proje: {selected_project['name']}")
                     
                     # Resolve previous errors

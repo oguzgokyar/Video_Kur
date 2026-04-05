@@ -70,6 +70,34 @@ class UnifiedQueueManager:
         with open(self.history_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
     
+    def _load_job_metadata(self, job_id: str) -> dict:
+        """Load metadata from job.json file"""
+        job_file = self.base_dir / 'data' / 'jobs' / f'{job_id}.json'
+        
+        if not job_file.exists():
+            return {
+                'title': 'Video',
+                'description': '',
+                'tags': []
+            }
+        
+        try:
+            with open(job_file, 'r', encoding='utf-8') as f:
+                job_data = json.load(f)
+            
+            return {
+                'title': job_data.get('title', 'Video'),
+                'description': job_data.get('description', ''),
+                'tags': job_data.get('tags', [])
+            }
+        except Exception as e:
+            print(f"⚠️  Failed to load metadata for {job_id}: {e}")
+            return {
+                'title': 'Video',
+                'description': '',
+                'tags': []
+            }
+    
     def get_pending_items(self, platform: str = None) -> List[Dict]:
         """
         Get all pending items that are ready to upload.
@@ -178,6 +206,9 @@ class UnifiedQueueManager:
                 if not pending_platforms:
                     continue  # All platforms completed or no pending ones
                 
+                # Load metadata from job.json
+                job_metadata = self._load_job_metadata(job_id)
+                
                 # Create queue item structure (compatible with social scheduler)
                 item = {
                     'queue_id': f"{queue_id}_{job_id}",  # Unique identifier
@@ -192,11 +223,7 @@ class UnifiedQueueManager:
                     'scheduled_time': video.get('scheduled_time', now.isoformat()),
                     'status': video.get('status', 'queued'),
                     'priority': -(video.get('position', 999)),  # Lower position = higher priority
-                    'metadata': {
-                        'title': '',  # Will be loaded from job.json
-                        'description': '',
-                        'tags': []
-                    },
+                    'metadata': job_metadata,
                     'platform_metadata': {},
                     'created_at': video.get('added_at'),
                     'retry_count': video.get('retry_count', 0),

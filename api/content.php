@@ -397,38 +397,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Düz dosya formatında kaydet (klasör değil)
         file_put_contents($JOBS_DIR . '/' . $job_id . '.json', json_encode($job_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         
+        // Output klasörü oluştur
+        $outputDir = __DIR__ . '/../output/' . $job_id;
+        if (!is_dir($outputDir)) {
+            mkdir($outputDir, 0777, true);
+        }
+        
+        // Manuel sistem: Pipeline'ı direkt başlat
+        $pythonCmd = 'python';
+        $pythonScript = __DIR__ . '/../python/pipeline.py';
+        $configFile = __DIR__ . '/../data/config.json';
+        $url = $content['url'];
+        $template = 'short_haber';
+        
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $cmd = "start /B $pythonCmd \"$pythonScript\" \"$job_id\" \"$url\" \"$template\" \"$configFile\" > \"$outputDir/log.txt\" 2>&1";
+        } else {
+            $cmd = "$pythonCmd \"$pythonScript\" \"$job_id\" \"$url\" \"$template\" \"$configFile\" > \"$outputDir/log.txt\" 2>&1 &";
+        }
+        
+        pclose(popen($cmd, 'r'));
+        
         // İçerik durumunu güncelle
         $content['status'] = 'processing';
         $content['processed_job_id'] = $job_id;
         saveContentPool($pool);
         
-        // Production queue'ya ekle
-        $dataDir = __DIR__ . '/../data';
-        $prodQueueFile = $dataDir . '/production_queue.json';
-        $prodQueueData = file_exists($prodQueueFile) 
-            ? json_decode(file_get_contents($prodQueueFile), true) 
-            : ['production_queue' => [], 'current_production' => null, 'max_concurrent' => 1, 'metadata' => []];
-        
-        $prodItem = [
-            'prod_queue_id' => 'prod_' . bin2hex(random_bytes(8)),
-            'job_id' => $job_id,
-            'queue_id' => $queue_id,
-            'status' => 'waiting',
-            'priority' => 0,
-            'added_at' => date('c'),
-            'started_at' => null,
-            'completed_at' => null,
-            'error' => null
-        ];
-        
-        $prodQueueData['production_queue'][] = $prodItem;
-        $prodQueueData['metadata']['last_updated'] = date('c');
-        file_put_contents($prodQueueFile, json_encode($prodQueueData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        
         echo json_encode([
             'success' => true,
             'job_id' => $job_id,
-            'message' => 'Job oluşturuldu ve üretim kuyruğuna eklendi'
+            'message' => 'Video üretimi başlatıldı'
         ]);
         exit;
     }

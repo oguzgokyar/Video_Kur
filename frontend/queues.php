@@ -310,7 +310,15 @@
             this.filterVideos();
             this.selectedVideo = null;
             this.editingMetadata = false;
-            this.$nextTick(() => this.initSortable());
+            
+            // Auto-select first video for preview
+            this.$nextTick(() => {
+              this.initSortable();
+              if (this.filteredVideos.length > 0 && !this.selectedVideo) {
+                this.selectedVideo = this.filteredVideos[0];
+              }
+            });
+            
             // Load queue stats with auto-refresh
             this.loadQueueStats();
             // Clear old interval and set new 15-second refresh
@@ -554,6 +562,11 @@
           videos = videos.filter(v => this.allPublished(v));
         }
         this.filteredVideos = videos;
+        
+        // Auto-select first video after filtering
+        if (videos.length > 0 && !this.selectedVideo) {
+          this.selectedVideo = videos[0];
+        }
       },
       
       selectVideo(video) {

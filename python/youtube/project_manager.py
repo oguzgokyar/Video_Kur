@@ -34,45 +34,34 @@ class YouTubeProjectManager:
         Initialize project manager
         
         Args:
-            data_dir: Path to data directory containing youtube_projects.json
+            data_dir: Path to data directory containing youtube_channels.json
         """
         self.data_dir = Path(data_dir)
-        self.projects_file = self.data_dir / 'youtube_projects.json'
         self.channels_file = self.data_dir / 'youtube_channels.json'
         self.credentials_dir = self.data_dir / 'youtube_credentials'
         
         # Ensure directories exist
         self.credentials_dir.mkdir(parents=True, exist_ok=True)
         
-        # Load or create projects config
+        # Load projects from unified system
         self._load_projects()
     
     def _load_projects(self):
-        """Load projects configuration from both legacy and unified systems"""
-        # First try legacy youtube_projects.json
-        if self.projects_file.exists():
-            try:
-                with open(self.projects_file, 'r', encoding='utf-8') as f:
-                    self.config = json.load(f)
-            except Exception as e:
-                print(f"⚠️  Projects config yüklenemedi: {e}", file=sys.stderr)
-                self.config = self._default_config()
-        else:
-            self.config = self._default_config()
+        """Load projects configuration from unified youtube_channels.json"""
+        # Initialize with default config
+        self.config = self._default_config()
         
-        # Also load from unified youtube_channels.json and merge projects
+        # Load from unified youtube_channels.json
         if self.channels_file.exists():
             try:
                 with open(self.channels_file, 'r', encoding='utf-8') as f:
                     channels_data = json.load(f)
                 
-                # Extract all APIs from all channels and add to projects
-                existing_ids = {p['id'] for p in self.config.get('projects', [])}
-                
+                # Extract all APIs from all channels as projects
                 for channel in channels_data.get('channels', []):
                     for api in channel.get('apis', []):
                         project_id = api.get('project_id')
-                        if project_id and project_id not in existing_ids:
+                        if project_id:
                             # Add this API as a project
                             self.config['projects'].append({
                                 'id': project_id,
@@ -82,15 +71,24 @@ class YouTubeProjectManager:
                                 'quota_used_today': api.get('quota_used_today', 0),
                                 'is_active': api.get('is_active', True),
                                 'channel_id': channel.get('id'),  # Track which channel this belongs to
-                                'api_id': api.get('api_id')
+                                'api_id': api.get('api_id'),
+                                'upload_count_today': api.get('upload_count_today', 0),
+                                'last_upload': api.get('last_upload'),
+                                'last_reset': api.get('last_reset')
                             })
-                            existing_ids.add(project_id)
+                
+                # Copy global settings from channels config
+                self.config['rotation_strategy'] = channels_data.get('rotation_strategy', 'round_robin')
+                self.config['auto_switch_on_quota_error'] = channels_data.get('auto_switch_on_quota_error', True)
+                self.config['quota_per_upload'] = channels_data.get('quota_per_upload', 1600)
+                self.config['quota_per_thumbnail'] = channels_data.get('quota_per_thumbnail', 50)
+                self.config['quota_safety_margin'] = channels_data.get('quota_safety_margin', 500)
                 
                 if self.config['projects']:
-                    print(f"   [INFO] {len(self.config['projects'])} proje yüklendi (Unified + Legacy)", file=sys.stderr)
+                    print(f"   [INFO] {len(self.config['projects'])} proje yüklendi (Unified System)", file=sys.stderr)
                     
             except Exception as e:
-                print(f"⚠️  Unified channels config okunamadı: {e}", file=sys.stderr)
+                print(f"⚠️  Channels config okunamadı: {e}", file=sys.stderr)
     
     def _default_config(self) -> dict:
         """Create default configuration"""
@@ -105,12 +103,44 @@ class YouTubeProjectManager:
         }
     
     def _save_projects(self):
-        """Save projects configuration"""
+        """Save projects configuration back to youtube_channels.json"""
         try:
-            with open(self.projects_file, 'w', encoding='utf-8') as f:
-                json.dump(self.config, f, ensure_ascii=False, indent=2)
+            # Load current channels data
+            if not self.channels_file.exists():
+                print(f"⚠️  Channels dosyası bulunamadı, quota güncellenemiyor", file=sys.stderr)
+                return
+            
+            with open(self.channels_file, 'r', encoding='utf-8') as f:
+                channels_data = json.load(f)
+            
+            # Update quota info for each project back to its API
+            for project in self.config['projects']:
+                project_id = project['id']
+                channel_id = project.get('channel_id')
+                api_id = project.get('api_id')
+                
+                if not channel_id or not api_id:
+                    continue
+                
+                # Find the channel and API
+                for channel in channels_data.get('channels', []):
+                    if channel['id'] == channel_id:
+                        for api in channel.get('apis', []):
+                            if api['api_id'] == api_id:
+                                # Update quota info
+                                api['quota_used_today'] = project.get('quota_used_today', 0)
+                                api['upload_count_today'] = project.get('upload_count_today', 0)
+                                api['last_upload'] = project.get('last_upload')
+                                api['last_reset'] = project.get('last_reset')
+                                api['is_active'] = project.get('is_active', True)
+                                break
+            
+            # Save back to channels file
+            with open(self.channels_file, 'w', encoding='utf-8') as f:
+                json.dump(channels_data, f, ensure_ascii=False, indent=2)
+                
         except Exception as e:
-            print(f"⚠️  Projects config kaydedilemedi: {e}", file=sys.stderr)
+            print(f"⚠️  Quota bilgileri kaydedilemedi: {e}", file=sys.stderr)
     
     def add_project(
         self,
