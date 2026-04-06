@@ -124,13 +124,14 @@ class VideoCompositorLock:
             pass
         return {}
     
-    def acquire(self, job_id: str, blocking: bool = True) -> bool:
+    def acquire(self, job_id: str, blocking: bool = True, timeout: float = None) -> bool:
         """
         Acquire the video compositor lock.
         
         Args:
             job_id: Job ID requesting the lock
             blocking: If True, wait for lock. If False, return immediately
+            timeout: Max seconds to wait (overrides instance timeout if provided)
             
         Returns:
             True if lock acquired, False otherwise
@@ -140,6 +141,9 @@ class VideoCompositorLock:
         """
         if self.acquired:
             return True
+        
+        # Use provided timeout or fall back to instance timeout
+        max_wait = timeout if timeout is not None else self.timeout
         
         start_time = time.time()
         wait_logged = False
@@ -164,7 +168,7 @@ class VideoCompositorLock:
                     
                     # Check timeout
                     elapsed = time.time() - start_time
-                    if elapsed > self.timeout:
+                    if elapsed > max_wait:
                         meta = self._read_metadata()
                         holder = meta.get('job_id', 'unknown')
                         raise TimeoutError(
@@ -367,27 +371,36 @@ def setup_job_temp_dir(job_id: str) -> str:
     return job_temp
 
 
-def cleanup_job_temp_dir(temp_dir: str, max_age_hours: int = 24):
+def cleanup_job_temp_dir(job_id_or_path: str, max_age_hours: int = 24):
     """
     Clean up job-specific temp directory.
     
     Args:
-        temp_dir: Path to temp directory
-        max_age_hours: Only clean if older than this many hours
+        job_id_or_path: Job ID or full path to temp directory
+        max_age_hours: Only clean if older than this many hours (0 = force clean)
     """
     try:
+        # Determine if input is job_id or full path
+        if os.path.isabs(job_id_or_path):
+            temp_dir = job_id_or_path
+        else:
+            # It's a job_id, construct path
+            base_temp = tempfile.gettempdir()
+            temp_dir = os.path.join(base_temp, 'video_kur', f'job_{job_id_or_path}')
+        
         if not os.path.exists(temp_dir):
             return
         
-        # Check age
-        dir_age = time.time() - os.path.getmtime(temp_dir)
-        if dir_age < max_age_hours * 3600:
-            # Too recent, skip
-            return
+        # Check age (0 = force clean)
+        if max_age_hours > 0:
+            dir_age = time.time() - os.path.getmtime(temp_dir)
+            if dir_age < max_age_hours * 3600:
+                # Too recent, skip
+                return
         
         # Remove directory
         shutil.rmtree(temp_dir, ignore_errors=True)
-        print(f"  [TempClean] Removed old temp dir: {temp_dir}")
+        print(f"  [TempClean] Removed temp dir: {temp_dir}")
     except Exception as e:
         print(f"  [TempClean] Error cleaning temp dir: {e}")
 
