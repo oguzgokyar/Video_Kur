@@ -414,14 +414,6 @@
                           class="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg text-sm font-semibold transition shadow-sm"
                           :title="(job.youtube_upload?.video_url || job.social_upload?.video_url) ? 'Tekrar Kuyruğa Al' : 'Kuyruğa Ekle'"
                         >
-                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <template x-if="job.youtube_upload?.video_url || job.social_upload?.video_url">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                            </template>
-                            <template x-if="!(job.youtube_upload?.video_url || job.social_upload?.video_url)">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                            </template>
-                          </svg>
                           <span x-text="(job.youtube_upload?.video_url || job.social_upload?.video_url) ? 'Tekrar Kuyruğa Al' : 'Kuyruğa Ekle'"></span>
                         </button>
                       </template>
