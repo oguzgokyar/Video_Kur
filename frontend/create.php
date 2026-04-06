@@ -317,12 +317,54 @@
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold text-gray-800">İş Durumu</h2>
-                <span class="px-3 py-1 rounded-full text-xs font-semibold" :class="status==='done' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'" x-text="status"></span>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold" :class="status==='done' ? 'bg-green-100 text-green-700' : status==='failed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'" x-text="status"></span>
               </div>
               <p class="text-sm text-gray-500 mb-3">Job ID: <span class="font-mono" x-text="jobId"></span></p>
-              <button class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition" @click="fetch('/api/jobs.php?jobId='+jobId).then(r=>r.json()).then(d=>{status=d.status; previewUrl=d.previewUrl||'';}).catch(()=>{})">
-                🔄 Durumu Güncelle
-              </button>
+              
+              <div class="flex gap-2 mb-4">
+                <button class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition" 
+                        @click="fetch('/api/jobs.php?jobId='+jobId).then(r=>r.json()).then(d=>{status=d.status; error=d.error||''; previewUrl=d.previewUrl||'';}).catch(()=>{})">
+                  🔄 Durumu Güncelle
+                </button>
+                
+                <!-- Resume Button -->
+                <template x-if="status === 'failed'">
+                  <button class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2" 
+                          @click="async function(){
+                            if (!confirm('Bu işi kaldığı yerden devam ettirmek istiyor musunuz?')) return;
+                            try {
+                              const res = await fetch('/api/jobs.php', {
+                                method: 'PATCH',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({action: 'resume', jobId: jobId})
+                              });
+                              const data = await res.json();
+                              if (data.success) {
+                                alert('İş kuyruğa eklendi! ' + data.resume_info.message);
+                                status = 'waiting';
+                                error = '';
+                              } else {
+                                alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+                              }
+                            } catch(e) {
+                              alert('Bağlantı hatası: ' + e.message);
+                            }
+                          }()">
+                    <span>🔄</span>
+                    <span>Kaldığı Yerden Devam Et</span>
+                  </button>
+                </template>
+              </div>
+              
+              <!-- Error display -->
+              <template x-if="error">
+                <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p class="text-sm text-red-700">
+                    <strong>Hata:</strong> <span x-text="error"></span>
+                  </p>
+                </div>
+              </template>
+              
               <template x-if="previewUrl">
                 <div class="mt-4">
                   <video controls class="w-full rounded-lg shadow">

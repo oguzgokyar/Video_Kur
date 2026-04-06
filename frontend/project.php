@@ -714,7 +714,7 @@ $show_status = true;
   <template x-if="!loading && pageError">
     <div class="max-w-xl mx-auto mt-16 p-6 bg-red-50 border border-red-200 rounded-xl text-center">
       <p class="text-red-600 font-medium" x-text="pageError"></p>
-      <a href="dashboard.html" class="mt-3 inline-block text-sm text-blue-600 hover:underline">← Dashboard'a dön</a>
+      <a href="dashboard.php" class="mt-3 inline-block text-sm text-blue-600 hover:underline">← Dashboard'a dön</a>
     </div>
   </template>
 

@@ -444,7 +444,8 @@ def _run_section(section, job_id, job, prev_status, extra, config, jobs_dir, out
         update_job(jobs_dir, job_id, {'status': 'done', 'subtitles': srt_content})
 
     # ── Video yeniden birleştir ────────────────────────────────────────────────
-    elif section == 'video':
+    elif section == 'video' or section == 'composing':
+        # 'composing' is an alias for 'video' (used by resume feature)
         from video_composer import compose_video, SUBTITLE_PRESETS
         script_file = os.path.join(output_dir, 'script.json')
         if not os.path.exists(script_file):
