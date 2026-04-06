@@ -135,6 +135,27 @@
           this.loadJobs();
         } catch(e) { alert('Retry hatası: ' + e.message); }
       },
+      
+      async resumeJob(jobId) {
+        if (!confirm('Bu işi kaldığı yerden devam ettirmek istiyor musunuz?')) return;
+        try {
+          const resp = await fetch('/api/jobs.php', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'resume', jobId })
+          });
+          const data = await resp.json();
+          if (data.success) {
+            alert('✅ İş kuyruğa eklendi!\n' + data.resume_info.message);
+            this.loadJobs();
+          } else {
+            alert('❌ Hata: ' + (data.error || 'Bilinmeyen hata'));
+          }
+        } catch(e) {
+          alert('❌ Bağlantı hatası: ' + e.message);
+        }
+      },
+      
       async deleteJob(jobId) {
         if (!confirm('Bu işi silmek istediğinizden emin misiniz? Tüm içerik kalıcı olarak silinecek.')) return;
         try {
@@ -428,9 +449,16 @@
                       
                       <!-- Retry Butonu (failed durumunda) -->
                       <template x-if="job.status === 'failed'">
-                        <button @click="retryJob(job.id)" class="inline-flex items-center gap-1 px-3 py-2 bg-indigo-100 dark:bg-indigo-900/40 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-semibold transition" title="Yeniden Başlat">
-                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                        </button>
+                        <div class="flex gap-2">
+                          <button @click.stop="resumeJob(job.id)" class="inline-flex items-center gap-1 px-3 py-2 bg-orange-100 dark:bg-orange-900/40 hover:bg-orange-200 dark:hover:bg-orange-900/60 text-orange-700 dark:text-orange-300 rounded-lg text-sm font-semibold transition" title="Kaldığı yerden devam et">
+                            <span>🔄</span>
+                            <span>Devam Et</span>
+                          </button>
+                          <button @click="retryJob(job.id)" class="inline-flex items-center gap-1 px-3 py-2 bg-indigo-100 dark:bg-indigo-900/40 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-semibold transition" title="Baştan başlat">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            <span>Baştan</span>
+                          </button>
+                        </div>
                       </template>
                       
                       <button @click="deleteJob(job.id)" class="inline-flex items-center gap-1.5 px-3 py-2 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 rounded-lg text-sm font-semibold transition" title="Sil">
