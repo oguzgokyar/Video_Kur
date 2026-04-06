@@ -21,6 +21,7 @@ from tts_engine import generate_tts
 from image_gen import generate_image, generate_image_fal, generate_image_pollinations, generate_image_huggingface, generate_image_pexels
 from subtitle_gen import generate_srt
 from video_composer import compose_video
+from utils.video_lock import VideoCompositorLock, setup_job_temp_dir, cleanup_job_temp_dir
 
 
 def _get_video_type(width: int, height: int) -> str:
@@ -545,7 +546,48 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
     if 'enableVideoEffects' in job_data:
         enable_effects = job_data['enableVideoEffects']
     
-    video_ok = compose_video(video_scenes, images_dir, audio_path, srt_path, video_path, subtitle_style, enable_effects)
+    # ===== VIDEO COMPOSITION WITH LOCK & TEMP ISOLATION =====
+    # Setup job-specific temp directory for MoviePy
+    job_temp_dir = setup_job_temp_dir(job_id)
+    original_temp = os.environ.get('TEMP', '')
+    original_tmp = os.environ.get('TMP', '')
+    
+    # Acquire compositor lock (prevents parallel MoviePy conflicts)
+    lock = VideoCompositorLock()
+    video_ok = False
+    
+    try:
+        # Set job-specific temp directory
+        os.environ['TEMP'] = job_temp_dir
+        os.environ['TMP'] = job_temp_dir
+        
+        # Acquire lock (will wait for other jobs to finish)
+        lock.acquire(job_id, blocking=True)
+        
+        # Compose video with isolation
+        video_ok = compose_video(video_scenes, images_dir, audio_path, srt_path, video_path, subtitle_style, enable_effects)
+        
+    except TimeoutError as e:
+        print(f"  [Lock] Timeout waiting for video compositor: {e}")
+        update_job(jobs_dir, job_id, {'status': 'failed', 'error': f'Video kompozisyon kilidi timeout: {e}'})
+        return
+    except Exception as e:
+        print(f"  [Error] Video composition error: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        # Release lock
+        lock.release()
+        
+        # Restore original temp directories
+        if original_temp:
+            os.environ['TEMP'] = original_temp
+        if original_tmp:
+            os.environ['TMP'] = original_tmp
+        
+        # Cleanup job temp (only old dirs)
+        cleanup_job_temp_dir(job_temp_dir, max_age_hours=1)
+    # ===== END VIDEO COMPOSITION =====
 
     if video_ok and os.path.exists(video_path):
         preview_url = f"/output/{job_id}/final_video.mp4"

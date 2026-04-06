@@ -16,6 +16,7 @@ if sys.platform == 'win32':
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from pipeline import update_job, get_audio_duration, concat_audio_files
+from utils.video_lock import VideoCompositorLock, setup_job_temp_dir, cleanup_job_temp_dir
 
 def ensure_outro_cta(script: dict) -> dict:
     outro = (script.get('outro') or '').strip()
@@ -499,8 +500,38 @@ def _run_section(section, job_id, job, prev_status, extra, config, jobs_dir, out
         if extra.get('subtitle_style'):
             update_job(jobs_dir, job_id, {'subtitleStyle': extra['subtitle_style']})
 
-        video_ok = compose_video(video_scenes, images_dir, audio_path, srt_path, video_path,
-                                 subtitle_style=subtitle_style)
+        # ===== VIDEO COMPOSITION WITH LOCK & TEMP ISOLATION =====
+        job_temp_dir = setup_job_temp_dir(job_id)
+        original_temp = os.environ.get('TEMP', '')
+        original_tmp = os.environ.get('TMP', '')
+        
+        lock = VideoCompositorLock()
+        video_ok = False
+        
+        try:
+            os.environ['TEMP'] = job_temp_dir
+            os.environ['TMP'] = job_temp_dir
+            
+            lock.acquire(job_id, blocking=True)
+            
+            video_ok = compose_video(video_scenes, images_dir, audio_path, srt_path, video_path,
+                                     subtitle_style=subtitle_style)
+        except TimeoutError as e:
+            print(f"  [Lock] Timeout: {e}")
+            update_job(jobs_dir, job_id, {'status': prev_status, 'error': f'Lock timeout: {e}'})
+            return
+        except Exception as e:
+            print(f"  [Error] Composition error: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            lock.release()
+            if original_temp:
+                os.environ['TEMP'] = original_temp
+            if original_tmp:
+                os.environ['TMP'] = original_tmp
+            cleanup_job_temp_dir(job_temp_dir, max_age_hours=1)
+        # ===== END VIDEO COMPOSITION =====
 
         if video_ok and os.path.exists(video_path):
             preview_url = f"/output/{job_id}/final_video.mp4"
