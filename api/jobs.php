@@ -223,8 +223,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
             exit;
         }
         
-        // Update job status
-        $jobData['status'] = 'waiting';
+        // Update job status to processing
+        $jobData['status'] = $resumeInfo['resume_from'];  // Set to the stage we're resuming from
         $jobData['resume_from'] = $resumeInfo['resume_from'];
         $jobData['resume_info'] = $resumeInfo;
         $jobData['error'] = '';
@@ -233,33 +233,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
         // Save updated job
         file_put_contents($jobFile, json_encode($jobData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         
-        // Add to production queue with resume flag
-        $prodQueueFile = "$dataDir/production_queue.json";
-        $prodQueueData = file_exists($prodQueueFile) 
-            ? json_decode(file_get_contents($prodQueueFile), true) 
-            : ['production_queue' => [], 'current_production' => null, 'max_concurrent' => 1, 'metadata' => []];
+        // Start regenerate.py directly in background (Windows compatible)
+        $pythonPath = 'python';
+        $regenerateScript = $baseDir . DIRECTORY_SEPARATOR . 'python' . DIRECTORY_SEPARATOR . 'regenerate.py';
+        $section = $resumeInfo['resume_from'];
         
-        $prodItem = [
-            'prod_queue_id' => 'prod_' . bin2hex(random_bytes(8)),
-            'job_id' => $jobId,
-            'queue_id' => $jobData['queue_id'] ?? 'default',
-            'status' => 'waiting',
-            'priority' => 10,  // Higher priority for resumes
-            'is_resume' => true,
-            'resume_from' => $resumeInfo['resume_from'],
-            'added_at' => date('c'),
-            'started_at' => null,
-            'completed_at' => null,
-            'error' => null
-        ];
+        // Build command
+        $cmd = sprintf(
+            'start /B %s "%s" "%s" --section %s',
+            $pythonPath,
+            $regenerateScript,
+            $jobId,
+            escapeshellarg($section)
+        );
         
-        $prodQueueData['production_queue'][] = $prodItem;
-        $prodQueueData['metadata']['last_updated'] = date('c');
-        file_put_contents($prodQueueFile, json_encode($prodQueueData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        // Execute in background
+        pclose(popen($cmd, 'r'));
         
         echo json_encode([
             'success' => true,
-            'message' => 'Job queued for resume',
+            'message' => "Job resume started from {$resumeInfo['resume_from']}",
             'resume_info' => $resumeInfo,
             'job' => $jobData
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);

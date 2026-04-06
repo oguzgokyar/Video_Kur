@@ -1,42 +1,9 @@
 {
-    "production_queue": [
-        {
-            "prod_queue_id": "prod_a52c71d137b79f7b",
-            "job_id": "job_69cd9a30bc96e8.94555902",
-            "queue_id": "y1-b82b67",
-            "status": "waiting",
-            "priority": 0,
-            "added_at": "2026-04-02T00:20:32+02:00",
-            "started_at": null,
-            "completed_at": null,
-            "error": null
-        },
-        {
-            "prod_queue_id": "prod_c27c1dcd78f64400",
-            "job_id": "job_69cd9d40b2d727.52454732",
-            "queue_id": "y1-b82b67",
-            "status": "waiting",
-            "priority": 0,
-            "added_at": "2026-04-02T00:33:36+02:00",
-            "started_at": null,
-            "completed_at": null,
-            "error": null
-        },
-        {
-            "prod_queue_id": "prod_e309bb6f1780ef56",
-            "job_id": "job_69cd9d735863c1.54789330",
-            "queue_id": "y1-b82b67",
-            "status": "waiting",
-            "priority": 0,
-            "added_at": "2026-04-02T00:34:27+02:00",
-            "started_at": null,
-            "completed_at": null,
-            "error": null
-        }
-    ],
+    "production_queue": [],
     "current_production": null,
     "max_concurrent": 1,
     "metadata": {
-        "last_updated": "2026-04-02T00:34:27+02:00"
+        "last_updated": "2026-04-06T15:06:00+02:00",
+        "note": "Queue cleared - resume now uses direct regenerate.py execution"
     }
 }
