@@ -432,8 +432,18 @@ def compose_video(scenes: list, images_dir: str, audio_path: str, srt_path: str,
             threads=4
         )
 
+        # Close all clips and wait for file handles to release (Windows fix)
         final.close()
         audio.close()
+        for clip in clips:
+            try:
+                clip.close()
+            except:
+                pass
+        
+        # Give Windows time to release file locks
+        import time
+        time.sleep(1)
 
         # ffmpeg ile SRT altyazıları yak
         if os.path.exists(srt_path) and os.path.getsize(srt_path) > 0:
@@ -454,19 +464,48 @@ def compose_video(scenes: list, images_dir: str, audio_path: str, srt_path: str,
                 output_path
             ]
             print(f"  Altyazılar ekleniyor (ffmpeg)...")
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode == 0 and os.path.exists(output_path):
-                os.remove(temp_path)
-                print(f"  Altyazılar başarıyla eklendi.")
-            else:
-                print(f"  Altyazı ekleme hatası: {result.stderr[-300:] if result.stderr else 'Bilinmeyen hata'}")
-                os.replace(temp_path, output_path)
+            
+            # Retry mechanism for Windows file locking issues
+            import time
+            max_retries = 3
+            for attempt in range(max_retries):
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                if result.returncode == 0 and os.path.exists(output_path):
+                    # Success - clean up temp file
+                    try:
+                        time.sleep(0.5)  # Brief wait before cleanup
+                        os.remove(temp_path)
+                    except Exception as e:
+                        print(f"  Warning: Could not remove temp file: {e}")
+                    print(f"  Altyazılar başarıyla eklendi.")
+                    break
+                elif attempt < max_retries - 1:
+                    # Retry after waiting
+                    print(f"  Altyazı ekleme denemesi {attempt + 1} başarısız, yeniden deneniyor...")
+                    time.sleep(2)
+                else:
+                    # Final attempt failed - use video without subtitles
+                    print(f"  Altyazı ekleme hatası: {result.stderr[-300:] if result.stderr else 'Bilinmeyen hata'}")
+                    print(f"  Video altyazısız kullanılıyor...")
+                    try:
+                        os.replace(temp_path, output_path)
+                    except Exception as e:
+                        # If even replace fails, try copy
+                        import shutil
+                        shutil.copy2(temp_path, output_path)
         else:
-            os.replace(temp_path, output_path)
+            # No subtitles - just rename temp to final
+            try:
+                os.replace(temp_path, output_path)
+            except Exception as e:
+                import shutil
+                shutil.copy2(temp_path, output_path)
 
         return True
     except Exception as e:
         print(f"Video birleştirme hatası: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
