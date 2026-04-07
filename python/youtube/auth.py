@@ -171,28 +171,33 @@ class YouTubeAuth:
         # Load existing token
         if token_file.exists():
             try:
-                # First try pickle format (even if file is .json - some systems save pickle with .json extension)
+                # First try JSON format (from web OAuth flow)
                 try:
-                    with open(token_file, 'rb') as f:
-                        creds = pickle.load(f)
-                    print(f"✅ Pickle token yüklendi: {token_file.name}", file=sys.stderr)
-                except (pickle.UnpicklingError, EOFError, KeyError):
-                    # Not pickle, try JSON
                     with open(token_file, 'r', encoding='utf-8') as f:
                         token_data = json.load(f)
                     
+                    # Web OAuth stores as 'access_token', Python expects 'token'
+                    access_token = token_data.get('access_token') or token_data.get('token')
+                    
                     # Build Credentials from JSON token data
                     creds = Credentials(
-                        token=token_data.get('token'),
+                        token=access_token,
                         refresh_token=token_data.get('refresh_token'),
                         token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
                         client_id=token_data.get('client_id'),
                         client_secret=token_data.get('client_secret'),
-                        scopes=token_data.get('scopes', SCOPES)
+                        scopes=token_data.get('scopes') or token_data.get('scope') or SCOPES
                     )
                     print(f"✅ JSON token yüklendi: {token_file.name}", file=sys.stderr)
+                except (json.JSONDecodeError, UnicodeDecodeError, KeyError) as json_err:
+                    # Not JSON or malformed, try pickle (legacy format)
+                    with open(token_file, 'rb') as f:
+                        creds = pickle.load(f)
+                    print(f"✅ Pickle token yüklendi (legacy): {token_file.name}", file=sys.stderr)
+                    print(f"⚠️  Eski pickle formatı kullanılıyor. Web'den yeniden login yapın.", file=sys.stderr)
             except Exception as e:
                 print(f"Token yükleme hatası: {e}", file=sys.stderr)
+                return None
         
         # Refresh if expired
         if creds and creds.expired and creds.refresh_token:
@@ -223,41 +228,29 @@ class YouTubeAuth:
     
     def authenticate(self, channel_id: Optional[str] = None) -> Optional[Credentials]:
         """
-        Perform OAuth flow to get new credentials
+        **DEPRECATED:** This method is disabled.
+        
+        OAuth authentication must be done via web interface only.
+        Use the Accounts page in the web app to authenticate APIs.
         
         Args:
-            channel_id: Channel ID to associate with token
+            channel_id: Channel ID (ignored)
             
         Returns:
-            Valid Credentials object or None
+            None (always)
         """
-        if not self.client_secrets_file.exists():
-            print(f"HATA: {self.client_secrets_file} bulunamadı!", file=sys.stderr)
-            print("Google Cloud Console'dan client_secrets.json dosyasını indirin.", file=sys.stderr)
-            return None
-        
-        try:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                str(self.client_secrets_file),
-                scopes=SCOPES
-            )
-            
-            # Run local server for OAuth callback
-            creds = flow.run_local_server(
-                port=8080,
-                prompt='consent',
-                authorization_prompt_message='Tarayıcı açılıyor...'
-            )
-            
-            # Save token
-            self._save_token(creds, channel_id)
-            print("✅ Kimlik doğrulama başarılı!", file=sys.stderr)
-            
-            return creds
-            
-        except Exception as e:
-            print(f"Kimlik doğrulama hatası: {e}", file=sys.stderr)
-            return None
+        error_msg = (
+            f"\n❌ HATA: Otomatik OAuth akışı devre dışı bırakıldı!\n\n"
+            f"🔑 OAuth girişi için:\n"
+            f"   1. Web tarayıcıda uygulamayı açın\n"
+            f"   2. 'Hesaplar' sayfasına gidin\n"
+            f"   3. İlgili API'nin yanındaki '🔑 Login' butonuna tıklayın\n"
+            f"   4. Google OAuth penceresinde yetkilendirin\n\n"
+            f"⚠️  Python backend artık otomatik tarayıcı açmaz.\n"
+            f"         Tüm OAuth işlemleri web arayüzünden yapılmalıdır.\n"
+        )
+        print(error_msg, file=sys.stderr)
+        return None
     
     def get_or_authenticate(self, channel_id: Optional[str] = None) -> Optional[Credentials]:
         """
@@ -271,9 +264,21 @@ class YouTubeAuth:
         """
         creds = self.get_credentials(channel_id)
         if not creds:
-            print("Yeni kimlik doğrulama gerekli...", file=sys.stderr)
-            creds = self.authenticate(channel_id)
-        return creds
+            # ⚠️ IMPORTANT: Do NOT auto-authenticate!
+            # Users must authenticate via web interface (Accounts page)
+            error_msg = (
+                f"\n❌ YouTube OAuth token bulunamadı!\n"
+                f"   Channel ID: {channel_id or 'default'}\n"
+                f"   Project ID: {self.project_id or 'default'}\n\n"
+                f"🔑 Çözüm:\n"
+                f"   1. Web arayüzünde 'Hesaplar' sayfasına gidin\n"
+                f"   2. İlgili API'nin yanındaki '🔑 Login' butonuna tıklayın\n"
+                f"   3. Google OAuth'u tamamlayın\n\n"
+                f"⚠️  Not: Uygulama otomatik olarak tarayıcı açmaz.\n"
+                f"         OAuth işlemi sadece web arayüzünden yapılmalıdır.\n"
+            )
+            print(error_msg, file=sys.stderr)
+            return None
     
     def build_service(self, channel_id: Optional[str] = None):
         """
