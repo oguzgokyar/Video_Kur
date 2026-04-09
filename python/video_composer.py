@@ -484,7 +484,28 @@ def compose_video(scenes: list, images_dir: str, audio_path: str, srt_path: str,
                     print(f"  Altyazı ekleme denemesi {attempt + 1} başarısız, yeniden deneniyor...")
                     time.sleep(2)
                 else:
-                    # Final attempt failed - use video without subtitles
+                    # Final attempt failed - log error and use video without subtitles
+                    error_log_path = os.path.join(os.path.dirname(output_path), 'ffmpeg_subtitle_error.log')
+                    try:
+                        with open(error_log_path, 'w', encoding='utf-8') as f:
+                            f.write("=== FFmpeg Subtitle Error Log ===\n")
+                            f.write(f"Attempt: {attempt + 1}/{max_retries}\n")
+                            f.write(f"Return code: {result.returncode}\n\n")
+                            f.write("=== Command ===\n")
+                            f.write(' '.join(cmd) + '\n\n')
+                            f.write("=== SRT Path ===\n")
+                            f.write(f"Original: {srt_path}\n")
+                            f.write(f"Escaped: {srt_escaped}\n")
+                            f.write(f"Exists: {os.path.exists(srt_path)}\n")
+                            f.write(f"Size: {os.path.getsize(srt_path) if os.path.exists(srt_path) else 'N/A'}\n\n")
+                            f.write("=== STDOUT ===\n")
+                            f.write(result.stdout if result.stdout else '(empty)\n\n')
+                            f.write("=== STDERR ===\n")
+                            f.write(result.stderr if result.stderr else '(empty)\n')
+                        print(f"  ❌ FFmpeg altyazı hatası! Detaylar: {error_log_path}")
+                    except Exception as log_err:
+                        print(f"  ❌ FFmpeg hatası (log yazılamadı: {log_err})")
+                    
                     print(f"  Altyazı ekleme hatası: {result.stderr[-300:] if result.stderr else 'Bilinmeyen hata'}")
                     print(f"  Video altyazısız kullanılıyor...")
                     try:

@@ -1,6 +1,7 @@
 """
 YouTube Shorts Otomasyon — Ana Pipeline
 Tüm modülleri sırayla çalıştırarak haber URL'sinden video üretir.
+SEQUENTIAL PROCESSING: Uses global production lock to prevent parallel video production
 """
 import sys
 import os
@@ -20,8 +21,64 @@ from script_gen import generate_script
 from tts_engine import generate_tts
 from image_gen import generate_image, generate_image_fal, generate_image_pollinations, generate_image_huggingface, generate_image_pexels
 from subtitle_gen import generate_srt
-from video_composer import compose_video
+from video_composer import compose_video, SUBTITLE_PRESETS
 from utils.video_lock import VideoCompositorLock, setup_job_temp_dir, cleanup_job_temp_dir
+from utils.production_lock import GlobalProductionLock
+
+
+def setup_job_logging(job_id: str, base_dir: str) -> str:
+    """
+    Setup job-specific log file.
+    
+    Args:
+        job_id: Job ID
+        base_dir: Base directory
+    
+    Returns:
+        Path to log file
+    """
+    log_dir = os.path.join(base_dir, 'output', job_id)
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, 'job.log')
+    
+    # Initialize log file with header
+    import time
+    try:
+        with open(log_file, 'w', encoding='utf-8') as f:
+            f.write(f"{'='*80}\n")
+            f.write(f"JOB LOG: {job_id}\n")
+            f.write(f"Started: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"{'='*80}\n\n")
+    except Exception as e:
+        print(f"⚠️ Could not create log file: {e}")
+    
+    return log_file
+
+
+def log_to_job(log_file: str, message: str, level: str = 'INFO'):
+    """
+    Write to job log with timestamp.
+    
+    Args:
+        log_file: Path to log file
+        message: Log message
+        level: Log level (INFO, WARNING, ERROR, SUCCESS)
+    """
+    import time
+    try:
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        emoji = {
+            'INFO': 'ℹ️',
+            'WARNING': '⚠️',
+            'ERROR': '❌',
+            'SUCCESS': '✅',
+            'DEBUG': '🔍'
+        }.get(level, 'ℹ️')
+        
+        with open(log_file, 'a', encoding='utf-8') as f:
+            f.write(f"[{timestamp}] [{level}] {emoji} {message}\n")
+    except Exception as e:
+        print(f"⚠️ Could not write to log: {e}")
 
 
 def _get_video_type(width: int, height: int) -> str:
@@ -71,17 +128,88 @@ def _ensure_outro_cta(script: dict) -> dict:
     return script
 
 
-def update_job(jobs_dir: str, job_id: str, updates: dict):
-    """İş dosyasını günceller."""
+def update_job(jobs_dir: str, job_id: str, updates: dict, max_retries: int = 3, log_file: str = None):
+    """
+    İş dosyasını günceller - guaranteed update with retry.
+    
+    Args:
+        jobs_dir: Jobs dizini
+        job_id: Job ID
+        updates: Güncellenecek alanlar
+        max_retries: Maximum retry sayısı (varsayılan 3)
+        log_file: Optional job-specific log file
+    
+    Returns:
+        True if successful, False if all retries failed
+    """
+    import time
+    
     job_file = os.path.join(jobs_dir, f"{job_id}.json")
-    if os.path.exists(job_file):
-        with open(job_file, 'r', encoding='utf-8') as f:
-            job = json.load(f)
-    else:
-        job = {}
-    job.update(updates)
-    with open(job_file, 'w', encoding='utf-8') as f:
-        json.dump(job, f, ensure_ascii=False, indent=2)
+    temp_file = os.path.join(jobs_dir, f"{job_id}.json.tmp")
+    
+    for attempt in range(max_retries):
+        try:
+            # Read existing job
+            if os.path.exists(job_file):
+                with open(job_file, 'r', encoding='utf-8') as f:
+                    job = json.load(f)
+            else:
+                job = {}
+            
+            # Update fields
+            job.update(updates)
+            
+            # Add last update timestamp for stuck detection
+            job['last_update_time'] = time.time()
+            job['updated_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Write to temp file first (atomic write)
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(job, f, ensure_ascii=False, indent=2)
+            
+            # Atomic rename
+            os.replace(temp_file, job_file)
+            
+            # Log to job file if provided
+            if log_file:
+                try:
+                    log_to_job(log_file, f"Job updated: {', '.join(updates.keys())}", "INFO")
+                except:
+                    pass
+            
+            return True
+            
+        except Exception as e:
+            if attempt == max_retries - 1:
+                # Last attempt failed - CRITICAL ERROR
+                print(f"\n{'='*70}")
+                print(f"❌ CRITICAL: Job update failed after {max_retries} attempts")
+                print(f"   Job ID: {job_id}")
+                print(f"   Updates: {updates}")
+                print(f"   Error: {e}")
+                print(f"{'='*70}\n")
+                
+                # Try to log to file
+                try:
+                    log_file_path = os.path.join(jobs_dir, 'update_failures.log')
+                    with open(log_file_path, 'a', encoding='utf-8') as f:
+                        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Job {job_id} - {e}\n")
+                except:
+                    pass
+                
+                # Log to job file if provided
+                if log_file:
+                    try:
+                        log_to_job(log_file, f"CRITICAL: Job update failed after {max_retries} attempts: {e}", "ERROR")
+                    except:
+                        pass
+                
+                return False
+            
+            # Wait before retry
+            time.sleep(0.5 * (attempt + 1))  # 0.5s, 1s, 1.5s
+    
+    return False
 
 
 def check_pause(jobs_dir: str, job_id: str, timeout: int = 3600):
@@ -144,6 +272,11 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
     os.makedirs(images_dir, exist_ok=True)
     os.makedirs(audio_dir, exist_ok=True)
 
+    # Setup job-specific logging
+    log_file = setup_job_logging(job_id, base_dir)
+    log_to_job(log_file, f"Pipeline started for job {job_id}", "INFO")
+    log_to_job(log_file, f"URL: {url}", "INFO")
+
     # Config yükle
     config = {}
     if os.path.exists(config_file):
@@ -166,8 +299,41 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
     subtitle_style = config.get('subtitleStyle', None)
     if job_data.get('subtitleStyle'):
         subtitle_style = job_data['subtitleStyle']
+    
+    # Handle string preset names (e.g., 'classic', 'bold_bottom')
+    if isinstance(subtitle_style, str):
+        subtitle_style = SUBTITLE_PRESETS.get(subtitle_style, SUBTITLE_PRESETS['classic'])
+        print(f"  [Altyazı] Preset kullanılıyor: {subtitle_style}")
+    
+    # Handle dict with 'preset' field (remove it, it's just metadata)
+    elif isinstance(subtitle_style, dict) and 'preset' in subtitle_style:
+        preset_name = subtitle_style.pop('preset', None)
+        # If subtitle_style is now empty or minimal (was only preset name), load full preset
+        if not subtitle_style or len(subtitle_style) <= 1:
+            subtitle_style = SUBTITLE_PRESETS.get(preset_name, SUBTITLE_PRESETS['classic'])
+            print(f"  [Altyazı] Preset yüklendi: {preset_name}")
+    
+    # Fallback to classic if None
+    if subtitle_style is None:
+        print("  [Altyazı] Config ve job'da stil yok, 'classic' preset kullanılıyor")
+        subtitle_style = SUBTITLE_PRESETS['classic']
 
-    gemini_key         = config.get('geminiKey', '')
+    # Multi-key support - use geminiKeys array if available
+    gemini_key = config.get('geminiKey', '')
+    gemini_keys = config.get('geminiKeys', [])
+    
+    # If geminiKeys array exists and not empty, use it (multi-key support)
+    # Otherwise fallback to single geminiKey
+    if gemini_keys and len(gemini_keys) > 0:
+        api_keys_to_use = gemini_keys
+        print(f"  [Multi-key] {len(gemini_keys)} Gemini API key kullanılabilir")
+    elif gemini_key:
+        api_keys_to_use = [gemini_key]
+        print(f"  [Single-key] 1 Gemini API key kullanılabilir")
+    else:
+        api_keys_to_use = []
+        print(f"  [UYARI] Hiç Gemini API key yok!")
+    
     eleven_key         = config.get('elevenKey', '')
     hf_key             = config.get('hfKey', '')
     pexels_key         = config.get('pexelsKey', '')
@@ -207,41 +373,57 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
         _os.environ['FAL_KEY'] = fal_key
 
     print(f"[1/6] Haber çekiliyor: {url}")
-    update_job(jobs_dir, job_id, {'status': 'scraping'})
+    update_job(jobs_dir, job_id, {'status': 'scraping'}, log_file=log_file)
+    log_to_job(log_file, "Starting scraping phase", "INFO")
 
     news = scrape_news(url)
     if not news.get('text'):
-        update_job(jobs_dir, job_id, {'status': 'failed', 'error': 'Haber metni çekilemedi'})
+        error_msg = 'Haber metni çekilemedi'
+        update_job(jobs_dir, job_id, {'status': 'failed', 'error': error_msg}, log_file=log_file)
+        log_to_job(log_file, f"Scraping failed: {error_msg}", "ERROR")
         return
 
     with open(os.path.join(output_dir, 'news.json'), 'w', encoding='utf-8') as f:
         json.dump(news, f, ensure_ascii=False, indent=2)
+    
+    log_to_job(log_file, f"News scraped successfully: {len(news.get('text', ''))} characters", "SUCCESS")
 
     # Pause check
     check_pause(jobs_dir, job_id)
 
     print(f"[2/6] Script üretiliyor...")
-    update_job(jobs_dir, job_id, {'status': 'scripting'})
+    update_job(jobs_dir, job_id, {'status': 'scripting'}, log_file=log_file)
+    log_to_job(log_file, "Starting script generation phase", "INFO")
+    
     selected_script = _load_custom_script(base_dir, job_data, video_type)
     selected_prompt = selected_script.get('prompt') if selected_script else None
     selected_max_duration = int(selected_script.get('maxDuration', 55)) if selected_script else 55
 
     if not script_enabled:
         print("  Script üretimi devre dışı, atlanıyor.")
+        log_to_job(log_file, "Script generation disabled, using fallback", "WARNING")
         script = {'hook': news.get('title', ''), 'scenes': [{'scene': 1, 'text': news['text'][:200], 'image_prompt': 'news background', 'duration': 10}], 'outro': ''}
     elif script_provider == 'pollinations':
         if not svc_pollinations_text:
-            update_job(jobs_dir, job_id, {'status': 'failed', 'error': 'Pollinations Text servisi devre dışı'})
+            error_msg = 'Pollinations Text servisi devre dışı'
+            update_job(jobs_dir, job_id, {'status': 'failed', 'error': error_msg}, log_file=log_file)
+            log_to_job(log_file, error_msg, "ERROR")
             return
         from script_gen import generate_script_pollinations
+        log_to_job(log_file, f"Using Pollinations for script generation (model: {poll_text_model})", "INFO")
         result = generate_script_pollinations(news['title'], news['text'], poll_text_model, selected_max_duration, selected_prompt)
         if not result.get('success'):
-            update_job(jobs_dir, job_id, {'status': 'failed', 'error': f"Script hatası: {result.get('error', '')}"})
+            error_msg = f"Script hatası: {result.get('error', '')}"
+            update_job(jobs_dir, job_id, {'status': 'failed', 'error': error_msg}, log_file=log_file)
+            log_to_job(log_file, f"Pollinations script failed: {result.get('error')}", "ERROR")
             return
         script = result['script']
+        log_to_job(log_file, "Pollinations script generated successfully", "SUCCESS")
     else:
         if not svc_gemini_script:
-            update_job(jobs_dir, job_id, {'status': 'failed', 'error': 'Gemini Script servisi devre dışı'})
+            error_msg = 'Gemini Script servisi devre dışı'
+            update_job(jobs_dir, job_id, {'status': 'failed', 'error': error_msg}, log_file=log_file)
+            log_to_job(log_file, error_msg, "ERROR")
             return
         
         # Multi-key desteği: geminiKeys array'i varsa onu kullan, yoksa geminiKey'i array'e çevir
@@ -250,8 +432,13 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
             gemini_keys = [gemini_key]
         
         if not gemini_keys:
-            update_job(jobs_dir, job_id, {'status': 'failed', 'error': 'Gemini API key eksik'})
+            error_msg = 'Gemini API key eksik'
+            update_job(jobs_dir, job_id, {'status': 'failed', 'error': error_msg}, log_file=log_file)
+            log_to_job(log_file, error_msg, "ERROR")
             return
+        
+        log_to_job(log_file, f"Using Gemini for script generation with {len(gemini_keys)} API key(s)", "INFO")
+        log_to_job(log_file, f"Model: {gemini_model}, Max duration: {selected_max_duration}s", "INFO")
         
         from script_gen import generate_script_with_fallback
         result = generate_script_with_fallback(
@@ -263,9 +450,12 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
             prompt_template=selected_prompt
         )
         if not result.get('success'):
-            update_job(jobs_dir, job_id, {'status': 'failed', 'error': f"Script hatası: {result.get('error', '')}"})
+            error_msg = f"Script hatası: {result.get('error', '')}"
+            update_job(jobs_dir, job_id, {'status': 'failed', 'error': error_msg}, log_file=log_file)
+            log_to_job(log_file, f"Gemini script generation failed: {result.get('error')}", "ERROR")
             return
         script = result['script']
+        log_to_job(log_file, "Gemini script generated successfully", "SUCCESS")
 
     script = _ensure_outro_cta(script)
 
@@ -607,5 +797,95 @@ if __name__ == '__main__':
     if len(sys.argv) < 5:
         print("Kullanım: python pipeline.py <job_id> <url> <template> <config_file>")
         sys.exit(1)
+    
+    job_id = sys.argv[1]
+    url = sys.argv[2]
+    template = sys.argv[3]
+    config_file = sys.argv[4]
+    
+    # ===== GLOBAL PRODUCTION LOCK =====
+    # Acquire global production lock to ensure sequential processing
+    # Only ONE video production at a time across the entire system
+    production_lock = GlobalProductionLock()
+    
+    try:
+        print(f"\n[LOCK] Acquiring global production lock for job: {job_id}")
+        production_lock.acquire(job_id, blocking=True)
+        print(f"[LOCK] ✅ Production lock acquired - starting video production\n")
+        
+        # Mark job as started in production queue
+        try:
+            from scheduler.production_queue_manager import ProductionQueueManager
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            queue_manager = ProductionQueueManager(os.path.join(base_dir, 'data'))
+            queue_manager.start_job(job_id)
+        except Exception as e:
+            print(f"[QUEUE] Warning: Could not update queue status: {e}")
+        
+        # Run the pipeline
+        run_pipeline(job_id, url, template, config_file)
+        
+        # Check if job completed successfully
+        jobs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'jobs')
+        job_file = os.path.join(jobs_dir, f"{job_id}.json")
+        success = False
+        error_msg = None
+        
+        if os.path.exists(job_file):
+            with open(job_file, 'r', encoding='utf-8') as f:
+                job_data = json.load(f)
+            status = job_data.get('status')
+            success = (status == 'done')
+            error_msg = job_data.get('error') if not success else None
+        
+        # Mark job as completed in production queue
+        try:
+            queue_manager.complete_job(job_id, success=success, error=error_msg)
+            print(f"\n[QUEUE] Job marked as {'completed' if success else 'failed'}")
+            
+            # Get next job info
+            if success:
+                status = queue_manager.get_status()
+                if status['queue_length'] > 0:
+                    next_job = queue_manager.get_next_job()
+                    if next_job:
+                        print(f"[QUEUE] Next job in queue: {next_job['job_id']}")
+        except Exception as e:
+            print(f"[QUEUE] Warning: Could not complete job in queue: {e}")
+        
+    except TimeoutError as e:
+        print(f"\n[LOCK] ❌ Timeout acquiring production lock: {e}")
+        print("[LOCK] Another video is currently being produced")
+        print("[LOCK] Job will remain in queue for retry")
+        sys.exit(1)
+    
+    except KeyboardInterrupt:
+        print(f"\n[LOCK] ❌ Production interrupted by user")
+        try:
+            from scheduler.production_queue_manager import ProductionQueueManager
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            queue_manager = ProductionQueueManager(os.path.join(base_dir, 'data'))
+            queue_manager.complete_job(job_id, success=False, error='Interrupted by user')
+        except:
+            pass
+        sys.exit(1)
+    
+    except Exception as e:
+        print(f"\n[PIPELINE] ❌ Error during production: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        try:
+            from scheduler.production_queue_manager import ProductionQueueManager
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            queue_manager = ProductionQueueManager(os.path.join(base_dir, 'data'))
+            queue_manager.complete_job(job_id, success=False, error=str(e))
+        except:
+            pass
+        sys.exit(1)
+    
+    finally:
+        # Release production lock
+        production_lock.release()
+        print(f"\n[LOCK] ✅ Production lock released")
 
-    run_pipeline(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])

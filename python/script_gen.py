@@ -1,6 +1,27 @@
 import json
 import requests
 import google.genai as genai
+import sys
+import os
+import threading
+import time
+
+# Import error messages
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'utils'))
+try:
+    from error_messages import get_user_friendly_error, format_error_for_job, extract_error_code
+except ImportError:
+    # Fallback if error_messages.py not found
+    def format_error_for_job(error_type, details=''):
+        return f"{error_type}: {details}"
+    def extract_error_code(exception):
+        error_str = str(exception)
+        if '503' in error_str:
+            return '503'
+        elif '429' in error_str:
+            return '429'
+        else:
+            return 'unknown'
 
 
 def _build_script_prompt(title: str, text: str, max_duration: int = 55, prompt_template: str | None = None) -> str:
@@ -109,30 +130,94 @@ Yanıtı şu JSON formatında ver (sadece JSON, başka açıklama yazma):
   "thumbnail_image_prompt": "Professional YouTube thumbnail with dramatic lighting, bold colors, eye-catching composition for news topic, space for text overlay"
 }}"""
 
-def generate_script(title: str, text: str, api_key: str, max_duration: int = 55, model_name: str = 'gemini-2.0-flash', prompt_template: str | None = None) -> dict:
-    """Gemini API ile haber metninden video scripti üretir."""
-    try:
-        client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model=model_name,
-            contents=_build_script_prompt(title, text, max_duration, prompt_template)
-        )
-        
-        raw = response.text.strip()
+def generate_script(title: str, text: str, api_key: str, max_duration: int = 55, model_name: str = 'gemini-2.0-flash', prompt_template: str | None = None, timeout: int = 120) -> dict:
+    """
+    Gemini API ile haber metninden video scripti üretir.
+    
+    Args:
+        title: Video başlığı
+        text: Haber metni
+        api_key: Gemini API key
+        max_duration: Maksimum video süresi (saniye)
+        model_name: Kullanılacak model
+        prompt_template: Özel prompt template
+        timeout: API timeout süresi (saniye, varsayılan 120)
+    
+    Returns:
+        dict with success, script/error fields
+    """
+    result = {'success': False, 'timeout': False, 'error': ''}
+    
+    def _api_call():
+        """API call in separate thread for timeout control"""
+        try:
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model=model_name,
+                contents=_build_script_prompt(title, text, max_duration, prompt_template)
+            )
+            
+            raw = response.text.strip()
 
-        if '```json' in raw:
-            raw = raw.split('```json')[1].split('```')[0].strip()
-        elif '```' in raw:
-            raw = raw.split('```')[1].split('```')[0].strip()
+            if '```json' in raw:
+                raw = raw.split('```json')[1].split('```')[0].strip()
+            elif '```' in raw:
+                raw = raw.split('```')[1].split('```')[0].strip()
 
-        script = json.loads(raw)
-        return {'success': True, 'script': script}
-    except Exception as e:
-        return {'success': False, 'error': str(e)}
+            script = json.loads(raw)
+            result['success'] = True
+            result['script'] = script
+            
+        except Exception as e:
+            result['success'] = False
+            result['error'] = str(e)
+    
+    # Start API call in thread
+    thread = threading.Thread(target=_api_call, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout)
+    
+    # Check if timeout occurred
+    if thread.is_alive():
+        # Thread still running = TIMEOUT
+        result['timeout'] = True
+        result['success'] = False
+        result['error'] = format_error_for_job('timeout', f'API did not respond in {timeout} seconds')
+        return result
+    
+    # Thread finished - check result
+    if not result['success'] and result['error']:
+        # Format error with user-friendly message
+        error_code = extract_error_code(result['error'])
+        result['error'] = format_error_for_job(error_code, result['error'])
+    
+    return result
 
 
-def generate_script_with_fallback(title: str, text: str, api_keys: list, max_duration: int = 55, model_name: str = 'gemini-2.0-flash', prompt_template: str | None = None) -> dict:
-    """Multi-key desteği ile Gemini script üretimi. Biri fail olursa sıradakini dener."""
+def generate_script_with_fallback(title: str, text: str, api_keys: list, max_duration: int = 55, model_name: str = 'gemini-2.0-flash', prompt_template: str | None = None, timeout: int = 120) -> dict:
+    """
+    Multi-key desteği ile Gemini script üretimi.
+    
+    Retry/Fallback stratejisi:
+    - 429 (quota): Sonraki key'i dene
+    - 503 (server yoğun): Sonraki key'i dene
+    - 500, 502 (server error): Sonraki key'i dene
+    - timeout: Sonraki key'i dene
+    - 403 (permission denied): Bu key'i atla, sonraki key'i dene
+    - 404, diğer: Non-retriable, durdur
+    
+    Kullanıcı kontrolü:
+    - Tüm key'ler denendi ve başarısız → Kullanıcıya bildir
+    - Non-retriable error → Hemen durdur, kullanıcıya bildir
+    - Kullanıcı "Devam Et" ile manuel retry yapabilir
+    
+    Args:
+        api_keys: API key listesi
+        timeout: Her API call için timeout (saniye, varsayılan 120)
+    
+    Returns:
+        dict with success, script/error, timeout fields
+    """
     if not api_keys:
         return {'success': False, 'error': 'No API keys provided'}
     
@@ -140,28 +225,56 @@ def generate_script_with_fallback(title: str, text: str, api_keys: list, max_dur
     if isinstance(api_keys, str):
         api_keys = [api_keys]
     
+    # Bu hatalarda sonraki key'e fallback yapılır
+    KEY_FALLBACK_ERRORS = ['403', '429', '503', '500', '502', 'timeout']
+    
     last_error = None
     for idx, key in enumerate(api_keys):
-        try:
-            result = generate_script(title, text, key, max_duration, model_name, prompt_template)
-            if result['success']:
-                return result
-            else:
-                last_error = result.get('error', 'Unknown error')
-                # 429 (quota) hatası ise sonraki key'i dene
-                if '429' in str(last_error) or 'quota' in str(last_error).lower():
-                    continue
-                else:
-                    # Başka bir hata ise hemen döndür
-                    return result
-        except Exception as e:
-            last_error = str(e)
-            if '429' in str(e) or 'quota' in str(e).lower():
-                continue
-            else:
-                return {'success': False, 'error': str(e)}
+        print(f"Trying API key {idx + 1}/{len(api_keys)}...")
+        
+        result = generate_script(title, text, key, max_duration, model_name, prompt_template, timeout)
+        
+        if result['success']:
+            print(f"✅ Success with API key {idx + 1}")
+            return result
+        
+        last_error = result.get('error', 'Unknown error')
+        error_code = extract_error_code(last_error)
+        
+        print(f"❌ Key {idx + 1} failed: {error_code}")
+        
+        # Check if we should try next key
+        should_try_next_key = any(code in str(last_error) for code in KEY_FALLBACK_ERRORS)
+        
+        # Special logging for common errors
+        if '403' in str(last_error):
+            print(f"   ⚠️  403 PERMISSION_DENIED: API key banned or project access denied")
+        elif '429' in str(last_error):
+            print(f"   ⚠️  429 RESOURCE_EXHAUSTED: Quota exceeded, trying next key...")
+        elif '503' in str(last_error):
+            print(f"   ⚠️  503 SERVICE_UNAVAILABLE: Server busy, trying next key...")
+        
+        # Last key?
+        if idx == len(api_keys) - 1:
+            # Last key - return error
+            print(f"⚠️ All {len(api_keys)} API keys failed")
+            print(f"   Last error: {error_code}")
+            return result
+        
+        # Not last key - check if should fallback
+        if should_try_next_key:
+            print(f"♻️ Fallback error ({error_code}), trying next key...")
+            continue
+        else:
+            # Non-retriable error - stop trying
+            print(f"🛑 Non-retriable error ({error_code}), stopping")
+            return result
     
-    return {'success': False, 'error': f'All {len(api_keys)} API keys failed. Last error: {last_error}'}
+    # All keys exhausted
+    return {
+        'success': False, 
+        'error': format_error_for_job('quota_exceeded', f'All {len(api_keys)} API keys failed. Last error: {last_error}')
+    }
 
 
 

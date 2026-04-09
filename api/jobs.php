@@ -6,9 +6,11 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit; }
 
-$dataDir = __DIR__ . '/../data';
+$baseDir = dirname(__DIR__);
+$dataDir = $baseDir . '/data';
 $jobsDir = $dataDir . '/jobs';
-$outputDir = __DIR__ . '/../output';
+$outputDir = $baseDir . '/output';
+$configFile = $dataDir . '/config.json';
 $pythonCmd = 'python';
 
 if (!is_dir($jobsDir)) { mkdir($jobsDir, 0777, true); }
@@ -121,6 +123,20 @@ function buildResumeResult($resumeFrom, $completed, $missing, $canResume, $messa
     ];
 }
 
+function mapResumeSectionForRegenerate($resumeFrom) {
+    $map = [
+        'scraping' => 'news',
+        'scripting' => 'script',
+        'imaging' => 'images',
+        'tts' => 'tts',
+        'subtitling' => 'subtitles',
+        'composing' => 'composing',
+        'video' => 'video',
+        'done' => 'done'
+    ];
+    return $map[$resumeFrom] ?? $resumeFrom;
+}
+
 
 // POST: Yeni iş oluştur
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -173,19 +189,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $jobOutputDir = "$outputDir/$jobId";
     if (!is_dir($jobOutputDir)) { mkdir($jobOutputDir, 0777, true); }
 
-    // Manuel sistem: Her zaman direkt pipeline başlat
-    $pythonScript = __DIR__ . '/../python/pipeline.py';
-    $configFile = "$dataDir/config.json";
-
-    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-        $cmd = "start /B $pythonCmd \"$pythonScript\" \"$jobId\" \"$url\" \"$template\" \"$configFile\" > \"$jobOutputDir/log.txt\" 2>&1";
-    } else {
-        $cmd = "$pythonCmd \"$pythonScript\" \"$jobId\" \"$url\" \"$template\" \"$configFile\" > \"$jobOutputDir/log.txt\" 2>&1 &";
+    // Add to production queue (sequential processing only)
+    $queueApiUrl = 'http://localhost:8000/api/production_queue.php?action=add';
+    $queueData = json_encode([
+        'job_id' => $jobId,
+        'priority' => 0,
+        'metadata' => [
+            'url' => $url,
+            'template' => $template,
+            'created_via' => 'web_ui'
+        ]
+    ]);
+    
+    // Add to production queue via internal API call
+    $ch = curl_init($queueApiUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $queueData);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    $queueResult = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($httpCode === 200 && $queueResult) {
+        $queueResponse = json_decode($queueResult, true);
+        if ($queueResponse && $queueResponse['success']) {
+            echo json_encode([
+                'jobId' => $jobId,
+                'status' => 'queued',
+                'message' => 'Video üretimi kuyruğa eklendi',
+                'queue_position' => $queueResponse['position'] ?? null,
+                'queue_length' => $queueResponse['queue_length'] ?? null
+            ]);
+            exit;
+        }
     }
 
-    pclose(popen($cmd, 'r'));
-    
-    echo json_encode(['jobId' => $jobId, 'status' => 'pending', 'message' => 'Video üretimi başlatıldı']);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Production queue API hatası: iş kuyruğa eklenemedi. Üretim fallback kapalı.',
+        'jobId' => $jobId
+    ]);
     exit;
 }
 
@@ -217,15 +261,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
         
         if (!$resumeInfo['can_resume']) {
             echo json_encode([
+                'success' => false,
                 'error' => $resumeInfo['message'],
-                'resume_info' => $resumeInfo
-            ]);
+                'resume_info' => $resumeInfo,
+                'details' => [
+                    'completed_stages' => $resumeInfo['completed_stages'],
+                    'missing_files' => $resumeInfo['missing_files'],
+                    'job_id' => $jobId,
+                    'output_dir' => "$outputDir/$jobId"
+                ]
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             exit;
         }
         
-        // Update job status to processing
-        $jobData['status'] = $resumeInfo['resume_from'];  // Set to the stage we're resuming from
+        $resumeFrom = $resumeInfo['resume_from'];
+        $section = mapResumeSectionForRegenerate($resumeFrom);
+
+        // Keep dashboard status in pipeline naming, run regenerate with mapped section name
+        $jobData['status'] = $resumeFrom;
         $jobData['resume_from'] = $resumeInfo['resume_from'];
+        $jobData['resume_section'] = $section;
         $jobData['resume_info'] = $resumeInfo;
         $jobData['error'] = '';
         unset($jobData['pausedAt']);
@@ -236,55 +291,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
         // Start regenerate.py directly in background (Windows compatible)
         $pythonPath = 'python';
         $regenerateScript = $baseDir . DIRECTORY_SEPARATOR . 'python' . DIRECTORY_SEPARATOR . 'regenerate.py';
-        $section = $resumeInfo['resume_from'];
-        
-        // Build command
+        $configPath = $configFile;
+        // Build command - regenerate.py expects positional args: job_id, section, config_file
         $cmd = sprintf(
-            'start /B %s "%s" "%s" --section %s',
+            'start /B %s "%s" "%s" "%s" "%s" 2>&1',
             $pythonPath,
             $regenerateScript,
             $jobId,
-            escapeshellarg($section)
+            $section,
+            $configPath
         );
         
-        // Execute in background
-        pclose(popen($cmd, 'r'));
+        // Execute in background and capture output
+        $output = [];
+        $return_var = 0;
+        exec($cmd, $output, $return_var);
+        
+        // Log process info
+        $jobData['resumed_at'] = date('c');
+        $jobData['resume_command'] = $cmd;
+        $jobData['resume_output'] = implode("\n", $output);
+        
+        // Save job with process info
+        file_put_contents($jobFile, json_encode($jobData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         
         echo json_encode([
             'success' => true,
-            'message' => "Job resume started from {$resumeInfo['resume_from']}",
+            'message' => "Job resume started from {$resumeInfo['resume_from']} ({$section})",
             'resume_info' => $resumeInfo,
             'job' => $jobData
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         exit;
     } elseif ($action === 'retry') {
-        // Retry: Reset to waiting and re-add to production queue
+        // Retry: reset state and re-add to production queue via API
         $jobData['status'] = 'waiting';
         $jobData['error'] = '';
-        
-        // Get queue_id from original job data or use default
-        $queue_id = $jobData['queue_id'] ?? 'default';
-        
-        // Add back to production queue
-        $prodQueueData = file_exists("$dataDir/production_queue.json") 
-            ? json_decode(file_get_contents("$dataDir/production_queue.json"), true) 
-            : ['production_queue' => [], 'current_production' => null, 'max_concurrent' => 1, 'metadata' => []];
-        
-        $prodItem = [
-            'prod_queue_id' => 'prod_' . bin2hex(random_bytes(8)),
+
+        $queueApiUrl = 'http://localhost:8000/api/production_queue.php?action=add';
+        $queuePayload = json_encode([
             'job_id' => $jobId,
-            'queue_id' => $queue_id,
-            'status' => 'waiting',
             'priority' => 0,
-            'added_at' => date('c'),
-            'started_at' => null,
-            'completed_at' => null,
-            'error' => null
-        ];
-        
-        $prodQueueData['production_queue'][] = $prodItem;
-        $prodQueueData['metadata']['last_updated'] = date('c');
-        file_put_contents("$dataDir/production_queue.json", json_encode($prodQueueData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            'metadata' => [
+                'retry' => true,
+                'retried_at' => date('c')
+            ]
+        ]);
+        $ch = curl_init($queueApiUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $queuePayload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        $queueResult = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if (!($httpCode === 200 && $queueResult && (json_decode($queueResult, true)['success'] ?? false))) {
+            $jobData['status'] = 'failed';
+            $jobData['error'] = 'Retry için production kuyruğuna eklenemedi';
+        }
     } elseif ($action === 'update_youtube_metadata') {
         $metadata = $input['metadata'] ?? [];
         $jobData['youtube_metadata'] = $metadata;

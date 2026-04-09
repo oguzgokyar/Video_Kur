@@ -113,6 +113,7 @@ class UnifiedQueueManager:
         now = datetime.now(timezone.utc)
 
         pending = []
+        queues_changed = False
         
         for queue in queues_data.get('queues', []):
             # Skip inactive queues
@@ -172,6 +173,22 @@ class UnifiedQueueManager:
                 # Check if video file exists
                 if not os.path.exists(video_path):
                     print(f"⚠️  Video file not found: {video_path}")
+                    # Mark missing-video platforms as failed once to avoid infinite retry loop
+                    if 'platform_status' not in video or not isinstance(video.get('platform_status'), dict):
+                        video['platform_status'] = {}
+                    for plat in platforms:
+                        status_obj = video['platform_status'].get(plat, {})
+                        current_status = status_obj.get('status') if isinstance(status_obj, dict) else status_obj
+                        if current_status not in ('published', 'failed'):
+                            video['platform_status'][plat] = {
+                                'status': 'failed',
+                                'error': f'Video file not found: {video_path}',
+                                'retry': False,
+                                'failed_at': datetime.now(timezone.utc).isoformat()
+                            }
+                            queues_changed = True
+                    video['status'] = 'failed'
+                    video['last_error'] = f'Video file not found: {video_path}'
                     continue
                 
                 # Check platform status
@@ -235,6 +252,10 @@ class UnifiedQueueManager:
                 
                 pending.append(item)
         
+        # Persist failure state updates from missing video checks
+        if queues_changed:
+            self._save_queues(queues_data)
+
         # Sort by priority (high to low) and scheduled time
         # Immediate mode items go first
         pending.sort(key=lambda x: (

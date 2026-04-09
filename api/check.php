@@ -93,18 +93,92 @@ function checkApiPost($url, $payload, $headers = [], $timeout = 30) {
     return ['code' => 0, 'body' => '', 'error' => 'cURL gerekli'];
 }
 
+function parseApiError($body) {
+    $data = json_decode($body, true);
+    if (!is_array($data)) {
+        return ['code' => null, 'status' => null, 'message' => null];
+    }
+    $err = $data['error'] ?? [];
+    return [
+        'code' => isset($err['code']) ? (string)$err['code'] : null,
+        'status' => isset($err['status']) ? (string)$err['status'] : null,
+        'message' => isset($err['message']) ? (string)$err['message'] : null
+    ];
+}
+
 switch ($provider) {
     case 'gemini':
-        $url = "https://generativelanguage.googleapis.com/v1beta/models?key=" . urlencode($key);
-        $result = checkApi($url);
+        // Pipeline ile aynı kriter: generate_content çağrısıyla test et
+        $model = trim((string)($input['model'] ?? 'gemini-2.0-flash'));
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/" . rawurlencode($model) . ":generateContent?key=" . urlencode($key);
+        $payload = [
+            'contents' => [
+                ['parts' => [['text' => 'ping']]]
+            ]
+        ];
+        $result = checkApiPost($url, $payload, [], 30);
+        $err = parseApiError($result['body']);
+        $httpCode = (int)$result['code'];
+
         if ($result['error']) {
-            echo json_encode(['valid' => false, 'message' => 'Bağlantı hatası: ' . $result['error']]);
-        } elseif ($result['code'] === 200) {
-            echo json_encode(['valid' => true, 'message' => 'Gemini API anahtarı geçerli ✓']);
-        } elseif ($result['code'] === 400 || $result['code'] === 403) {
-            echo json_encode(['valid' => false, 'message' => 'Geçersiz API anahtarı']);
+            echo json_encode([
+                'valid' => false,
+                'message' => 'Bağlantı hatası: ' . $result['error'],
+                'http_code' => 0,
+                'error_code' => 'network',
+                'error_status' => 'NETWORK_ERROR'
+            ]);
+        } elseif ($httpCode === 200) {
+            echo json_encode([
+                'valid' => true,
+                'message' => "Gemini API anahtarı geçerli ✓ (Model: {$model})",
+                'http_code' => 200,
+                'error_code' => null,
+                'error_status' => 'OK'
+            ]);
+        } elseif ($httpCode === 403 || $err['code'] === '403' || $err['status'] === 'PERMISSION_DENIED') {
+            echo json_encode([
+                'valid' => false,
+                'message' => '403 PERMISSION_DENIED: Bu key/model kombinasyonu erişim reddedildi.',
+                'http_code' => $httpCode,
+                'error_code' => '403',
+                'error_status' => 'PERMISSION_DENIED'
+            ]);
+        } elseif ($httpCode === 429 || $err['code'] === '429') {
+            echo json_encode([
+                'valid' => false,
+                'message' => '429 RESOURCE_EXHAUSTED: Key geçerli ama quota dolu.',
+                'http_code' => $httpCode,
+                'error_code' => '429',
+                'error_status' => $err['status'] ?: 'RESOURCE_EXHAUSTED'
+            ]);
+        } elseif ($httpCode === 503 || $err['code'] === '503') {
+            echo json_encode([
+                'valid' => false,
+                'message' => '503 UNAVAILABLE: Gemini sunucusu yoğun.',
+                'http_code' => $httpCode,
+                'error_code' => '503',
+                'error_status' => $err['status'] ?: 'UNAVAILABLE'
+            ]);
+        } elseif ($httpCode === 404 || $err['code'] === '404') {
+            echo json_encode([
+                'valid' => false,
+                'message' => "404 NOT_FOUND: Model bulunamadı ({$model}).",
+                'http_code' => $httpCode,
+                'error_code' => '404',
+                'error_status' => $err['status'] ?: 'NOT_FOUND'
+            ]);
         } else {
-            echo json_encode(['valid' => false, 'message' => 'API hatası (HTTP ' . $result['code'] . ')']);
+            $code = $err['code'] ?: ($httpCode > 0 ? (string)$httpCode : 'unknown');
+            $status = $err['status'] ?: 'ERROR';
+            $msg = $err['message'] ?: 'API hatası';
+            echo json_encode([
+                'valid' => false,
+                'message' => "Gemini hatası ({$code} {$status}): {$msg}",
+                'http_code' => $httpCode,
+                'error_code' => $code,
+                'error_status' => $status
+            ]);
         }
         break;
 

@@ -1,11 +1,15 @@
 @echo off
 REM Production Scheduler Başlatıcı
-REM Video üretim kuyruğunu sırayla işler (serial production)
+REM SEQUENTIAL PRODUCTION: Tek seferde 1 video üretimi
 
 echo.
-echo ========================================
-echo   Production Scheduler Baslatiliyor
-echo ========================================
+echo ========================================================
+echo   Production Scheduler - SEQUENTIAL MODE
+echo ========================================================
+echo   - One video at a time
+echo   - Queue-based processing  
+echo   - NO PARALLEL PRODUCTION!
+echo ========================================================
 echo.
 
 cd /d "%~dp0"
@@ -25,6 +29,6 @@ echo.
 echo Durdurmak icin: Ctrl+C
 echo.
 
-python python\scheduler\production_scheduler.py --interval 30
+python python\scheduler\production_scheduler.py
 
 pause

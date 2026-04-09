@@ -30,6 +30,8 @@
       // Kuyruk verileri
       queues: [],
       activeQueueTab: null,
+      scripts: [],
+      selectedScriptId: '',
       
       // Seçim
       selectedItems: [],
@@ -52,7 +54,8 @@
             this.loadContent(),
             this.loadSources(),
             this.loadStats(),
-            this.loadQueues()
+            this.loadQueues(),
+            this.loadScripts()
           ]);
           // İlk kuyruğu seç
           if (this.queues.length > 0) {
@@ -124,6 +127,21 @@
           console.error('Queues load error:', err);
         }
       },
+
+      async loadScripts() {
+        try {
+          const resp = await fetch('/api/scripts.php');
+          const data = await resp.json();
+          if (data && Array.isArray(data.scripts)) {
+            this.scripts = data.scripts;
+          } else {
+            this.scripts = [];
+          }
+        } catch (err) {
+          console.error('Scripts load error:', err);
+          this.scripts = [];
+        }
+      },
       
       get filteredContent() {
         return [...this.content];
@@ -166,6 +184,18 @@
 
       get activeQueueVideos() {
         return this.getVisibleQueueVideos(this.activeQueue);
+      },
+
+      get selectedScriptName() {
+        if (!this.selectedScriptId) return 'Otomatik Varsayılan';
+        const script = this.scripts.find(s => s.id === this.selectedScriptId);
+        return script ? script.name : 'Otomatik Varsayılan';
+      },
+
+      getContentTypeForItem(item) {
+        const rawCategory = item?.metadata?.category || item?.category || item?.source_type || 'haber';
+        const normalized = String(rawCategory).trim().toLowerCase();
+        return normalized || 'haber';
       },
       
       toggleSelect(contentId) {
@@ -217,7 +247,9 @@
               body: JSON.stringify({
                 action: 'create_job',
                 content_id: item.id,
-                queue_id: this.activeQueueTab
+                queue_id: this.activeQueueTab,
+                scriptId: this.selectedScriptId,
+                contentType: this.getContentTypeForItem(item)
               })
             });
             
@@ -306,6 +338,34 @@
           alert('❌ Network hatası');
         } finally {
           this.processing = false;
+        }
+      },
+      
+      async resumeJob(jobId) {
+        if (!confirm('Bu işi kaldığı yerden devam ettirmek istiyor musunuz?')) {
+          return;
+        }
+        
+        try {
+          const resp = await fetch('/api/jobs.php', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'resume',
+              jobId: jobId
+            })
+          });
+          
+          const data = await resp.json();
+          
+          if (data.success) {
+            alert('✅ İş kuyruğa eklendi!\n' + data.resume_info.message + '\nİlerleme: ' + data.resume_info.progress);
+            await this.loadContent();
+          } else {
+            alert('❌ Hata: ' + (data.error || 'Bilinmeyen hata'));
+          }
+        } catch (err) {
+          alert('❌ Bağlantı hatası: ' + err.message);
         }
       },
       
@@ -626,6 +686,15 @@
                       <!-- Status (sadece processing, completed, failed göster) -->
                       <div class="flex flex-col items-end gap-1">
                         <span x-show="item.status && item.status !== 'pending'" :class="getStatusBadge(item.status)" class="px-2 py-0.5 rounded text-xs" x-text="getStatusText(item.status)"></span>
+                        
+                        <!-- Resume Button for failed jobs -->
+                        <button x-show="item.status === 'failed'" 
+                                @click.stop="resumeJob(item.id || item.job_id)"
+                                class="mt-1 px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-medium transition flex items-center gap-1"
+                                title="Kaldığı yerden devam et">
+                          <span>🔄</span>
+                          <span>Devam Et</span>
+                        </button>
                       </div>
                     </div>
                     
@@ -651,11 +720,22 @@
               <!-- Bottom Action -->
               <div x-show="selectedItems.length > 0" class="p-3 border-t border-gray-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20">
                 <div class="flex items-center justify-between">
-                  <span class="text-sm text-blue-800 dark:text-blue-300 font-medium">
-                    <span x-text="selectedItems.length"></span> içerik seçili
-                  </span>
-                  <button 
-                    @click="addToQueue()" 
+                  <div class="flex-1 pr-3">
+                    <span class="text-sm text-blue-800 dark:text-blue-300 font-medium">
+                      <span x-text="selectedItems.length"></span> içerik seçili
+                    </span>
+                    <div class="mt-2 flex items-center gap-2">
+                      <label class="text-xs text-blue-700 dark:text-blue-300 whitespace-nowrap">Script:</label>
+                      <select x-model="selectedScriptId" class="flex-1 min-w-0 text-xs border border-blue-200 dark:border-slate-600 rounded-md px-2 py-1.5 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                        <option value="">Otomatik Varsayılan</option>
+                        <template x-for="script in scripts" :key="script.id">
+                          <option :value="script.id" x-text="script.name + ' (' + (script.contentType || 'genel') + ')'"></option>
+                        </template>
+                      </select>
+                    </div>
+                  </div>
+                  <button
+                    @click="addToQueue()"
                     :disabled="processing || !activeQueueTab"
                     class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition flex items-center gap-2">
                     <span x-show="!processing">Kuyruğa Ekle →</span>

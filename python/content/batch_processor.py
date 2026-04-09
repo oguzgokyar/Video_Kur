@@ -81,23 +81,35 @@ class BatchProcessor:
     
     def start_pipeline(self, job_id, config_path='data/config.json'):
         """
-        Pipeline'ı başlat (async)
+        Add job to production queue instead of starting pipeline directly
         
         Args:
             job_id: Job ID
-            config_path: Config dosya yolu
+            config_path: Config dosya yolu (compatibility)
             
         Returns:
             bool: Başarılı mı?
         """
         try:
-            # Windows için async start
-            cmd = f'start /B cmd /c python python/pipeline.py {job_id} {config_path}'
-            subprocess.Popen(cmd, shell=True)
-            print(f"🚀 Pipeline başlatıldı: {job_id}")
-            return True
+            # Add to production queue
+            import sys
+            sys.path.insert(0, str(Path(__file__).parent.parent))
+            from scheduler.production_queue_manager import add_job_to_queue
+            
+            result = add_job_to_queue(job_id, priority=0, metadata={
+                'added_via': 'batch_processor',
+                'config_path': config_path
+            })
+            
+            if result['success']:
+                print(f"✅ Added to production queue: {job_id} (position {result['position']})")
+                return True
+            else:
+                print(f"❌ Failed to add to queue: {result.get('error', 'Unknown error')}")
+                return False
+                
         except Exception as e:
-            print(f"❌ Pipeline başlatma hatası: {str(e)}")
+            print(f"❌ Queue error: {str(e)}")
             return False
     
     def process_content_batch(self, content_ids, auto_start=True):

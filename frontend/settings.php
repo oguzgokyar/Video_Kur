@@ -114,6 +114,9 @@ $active_page = 'settings';
       apiModalNewKey: '',
       apiModalTestResult: null,
       apiModalTestLoading: false,
+      apiKeyTestStatuses: {
+        gemini: {}, eleven: {}, fal: {}, pollinations: {}, huggingface: {}, pexels: {}
+      },
       
       // Service metadata
       serviceInfo: {
@@ -157,10 +160,13 @@ $active_page = 'settings';
         else if (service === 'pexels') this.pexelsKey = key;
         
         this.apiModalNewKey = '';
+        this.clearKeyTestStatus(service, key);
         this.saveConfig();
       },
       removeKeyFromService(service, idx) {
         if (!confirm('Bu anahtarı silmek istediğinizden emin misiniz?')) return;
+        const keys = this.getServiceKeys(service);
+        const removedKey = keys[idx] || '';
         
         if (service === 'gemini') this.geminiKeys.splice(idx, 1);
         else if (service === 'eleven') this.elevenKeys.splice(idx, 1);
@@ -169,6 +175,62 @@ $active_page = 'settings';
         else if (service === 'huggingface') this.hfKey = '';
         else if (service === 'pexels') this.pexelsKey = '';
         
+        this.clearKeyTestStatus(service, removedKey);
+        this.saveConfig();
+      },
+      keyStatusId(key) {
+        if (!key) return '';
+        return `${key.slice(0, 6)}...${key.slice(-4)}`;
+      },
+      getKeyTestStatus(service, key) {
+        const bucket = this.apiKeyTestStatuses[service] || {};
+        return bucket[this.keyStatusId(key)] || null;
+      },
+      setKeyTestStatus(service, key, result) {
+        if (!this.apiKeyTestStatuses[service]) this.apiKeyTestStatuses[service] = {};
+        const id = this.keyStatusId(key);
+        const errorCode = result?.error_code || (result?.valid ? '200' : (result?.http_code ? String(result.http_code) : 'ERR'));
+        this.apiKeyTestStatuses[service][id] = {
+          valid: !!result?.valid,
+          errorCode,
+          errorStatus: result?.error_status || (result?.valid ? 'OK' : 'ERROR'),
+          message: result?.message || '',
+          checkedAt: new Date().toLocaleString('tr-TR')
+        };
+      },
+      clearKeyTestStatus(service, key) {
+        const bucket = this.apiKeyTestStatuses[service];
+        if (!bucket) return;
+        const id = this.keyStatusId(key);
+        if (id && bucket[id]) delete bucket[id];
+      },
+      getKeyStatusBadgeClass(service, key) {
+        const s = this.getKeyTestStatus(service, key);
+        if (!s) return 'bg-gray-100 text-gray-500';
+        if (s.valid) return 'bg-green-100 text-green-700';
+        if (s.errorCode === '403') return 'bg-red-100 text-red-700';
+        if (s.errorCode === '429') return 'bg-amber-100 text-amber-700';
+        if (s.errorCode === '503') return 'bg-orange-100 text-orange-700';
+        return 'bg-red-100 text-red-700';
+      },
+      removeKeysByErrorCode(service, errorCode) {
+        if (service !== 'gemini') return;
+        const keys = this.getServiceKeys(service);
+        const indexes = [];
+        keys.forEach((k, i) => {
+          const s = this.getKeyTestStatus(service, k);
+          if (s && s.errorCode === String(errorCode)) indexes.push(i);
+        });
+        if (indexes.length === 0) {
+          alert(`${errorCode} hatalı test edilmiş key bulunamadı.`);
+          return;
+        }
+        if (!confirm(`${indexes.length} adet ${errorCode} hatalı key silinsin mi?`)) return;
+        indexes.sort((a, b) => b - a).forEach(i => {
+          const k = this.geminiKeys[i];
+          this.geminiKeys.splice(i, 1);
+          this.clearKeyTestStatus('gemini', k);
+        });
         this.saveConfig();
       },
       async testServiceKey(service, key) {
@@ -184,11 +246,17 @@ $active_page = 'settings';
           const r = await fetch('/api/check.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ provider: providerMap[service], key: key })
+            body: JSON.stringify({
+              provider: providerMap[service],
+              key: key,
+              model: service === 'gemini' ? this.geminiModel : undefined
+            })
           });
           this.apiModalTestResult = await r.json();
+          this.setKeyTestStatus(service, key, this.apiModalTestResult);
         } catch(e) {
           this.apiModalTestResult = { valid: false, message: 'Bağlantı hatası' };
+          this.setKeyTestStatus(service, key, this.apiModalTestResult);
         }
         this.apiModalTestLoading = false;
       },
@@ -266,6 +334,32 @@ $active_page = 'settings';
           }
         } catch(e) {
           alert('Hata: ' + e.message);
+        }
+        this.schedulerLoading = false;
+      },
+      
+      async restartScheduler(type) {
+        if (!confirm(`${type === 'production' ? 'Üretim' : 'Paylaşım'} zamanlayıcısını yeniden başlatmak istediğinize emin misiniz?\n\nYeni kod değişiklikleri uygulanacak.`)) {
+          return;
+        }
+        
+        this.schedulerLoading = true;
+        try {
+          const r = await fetch('/api/scheduler_control.php', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({action: 'restart', type})
+          });
+          const d = await r.json();
+          if (d.success) {
+            await this.loadSchedulerStatus();
+            await this.loadSchedulerLogs();
+            alert(`✅ ${type === 'production' ? 'Üretim' : 'Paylaşım'} zamanlayıcısı yeniden başlatıldı!`);
+          } else {
+            alert(`Hata: ${d.error || 'Bilinmeyen hata'}`);
+          }
+        } catch (e) {
+          alert(`İstek hatası: ${e.message}`);
         }
         this.schedulerLoading = false;
       },
@@ -410,7 +504,7 @@ $active_page = 'settings';
   </script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js" defer></script>
 </head>
-<body class="bg-gray-100 min-h-screen" x-data="settingsApp()" x-init="loadConfig()">
+<body class="bg-gray-100 min-h-screen" x-data="settingsApp()" x-init="loadConfig(); if (activeTab === 'scheduler') { loadSchedulerStatus(); loadSchedulerLogs(); loadFailedJobs(); }">
   <div class="flex flex-col h-screen">
     <?php include __DIR__ . '/components/_header.php'; ?>
     <div class="flex flex-1 overflow-hidden">
@@ -614,7 +708,7 @@ $active_page = 'settings';
               </div>
               
               <!-- Logs -->
-              <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+              <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 mb-6">
                 <div class="flex items-center justify-between mb-4">
                   <h2 class="text-lg font-semibold text-gray-800 dark:text-white">📋 Scheduler Logları</h2>
                   <div class="flex gap-2">
@@ -636,6 +730,73 @@ $active_page = 'settings';
                   <template x-for="(log, idx) in schedulerLogs" :key="idx">
                     <div class="whitespace-pre-wrap mb-1" x-text="log"></div>
                   </template>
+                </div>
+              </div>
+              
+              <!-- Job Logs Viewer -->
+              <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h2 class="text-lg font-semibold text-gray-800 dark:text-white">🔍 İş Logları</h2>
+                  <button 
+                    @click="loadFailedJobs()"
+                    class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition"
+                  >🔄 Yenile</button>
+                </div>
+                
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Hatalı veya Duraklatılmış İşleri Görüntüle:
+                  </label>
+                  <select 
+                    @change="loadJobLogs($event.target.value)" 
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- İş Seçin --</option>
+                    <template x-for="job in failedJobs" :key="job.id">
+                      <option :value="job.id" x-text="`${job.id} - ${job.title || 'Video'} (${job.status})`"></option>
+                    </template>
+                  </select>
+                  
+                  <template x-if="failedJobs.length === 0">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      ✅ Hiç hatalı veya duraklatılmış iş yok
+                    </p>
+                  </template>
+                </div>
+                
+                <div x-show="selectedJobId" class="bg-gray-900 rounded-lg p-4 h-64 overflow-y-auto font-mono text-xs">
+                  <template x-if="jobLogs.length === 0">
+                    <p class="text-gray-500 text-center py-8">Log yükleniyor...</p>
+                  </template>
+                  <template x-for="(log, idx) in jobLogs" :key="idx">
+                    <div 
+                      class="mb-1" 
+                      :class="{
+                        'text-green-400': log.includes('✅') || log.includes('[SUCCESS]'),
+                        'text-red-400': log.includes('❌') || log.includes('[ERROR]'),
+                        'text-yellow-400': log.includes('⚠️') || log.includes('[WARNING]'),
+                        'text-blue-400': log.includes('ℹ️') || log.includes('[INFO]'),
+                        'text-purple-400': log.includes('🔍') || log.includes('[DEBUG]'),
+                        'text-gray-300': !log.includes('✅') && !log.includes('❌') && !log.includes('⚠️') && !log.includes('ℹ️') && !log.includes('🔍') && !log.includes('[SUCCESS]') && !log.includes('[ERROR]') && !log.includes('[WARNING]') && !log.includes('[INFO]') && !log.includes('[DEBUG]')
+                      }"
+                      x-text="log">
+                    </div>
+                  </template>
+                </div>
+                
+                <div x-show="selectedJobId" class="mt-3 flex items-center justify-between">
+                  <div class="flex items-center gap-4 text-xs text-gray-500">
+                    <span class="text-green-400">✅ Success</span>
+                    <span class="text-red-400">❌ Error</span>
+                    <span class="text-yellow-400">⚠️ Warning</span>
+                    <span class="text-blue-400">ℹ️ Info</span>
+                  </div>
+                  <a 
+                    x-show="selectedJobId" 
+                    :href="'view_log.php?id=' + selectedJobId" 
+                    target="_blank"
+                    class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  >📄 Tam Sayfa Görünümü →</a>
                 </div>
               </div>
               
@@ -1197,14 +1358,32 @@ $active_page = 'settings';
         <div class="p-6">
           <!-- Existing Keys -->
           <div class="mb-4">
-            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">Mevcut Anahtarlar</label>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 block">Mevcut Anahtarlar</label>
+              <button
+                type="button"
+                x-show="apiModal === 'gemini'"
+                @click="removeKeysByErrorCode('gemini', '403')"
+                class="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-700 hover:bg-red-200 transition"
+              >
+                403 Keyleri Sil
+              </button>
+            </div>
             <div class="space-y-2 max-h-40 overflow-y-auto">
               <template x-if="getServiceKeys(apiModal).length === 0">
                 <p class="text-sm text-gray-500 italic p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">Henüz anahtar eklenmedi</p>
               </template>
               <template x-for="(key, idx) in getServiceKeys(apiModal)" :key="idx">
                 <div class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                  <span class="flex-1 font-mono text-xs text-gray-700 dark:text-gray-300 truncate" x-text="maskKey(key)"></span>
+                  <div class="flex-1 min-w-0">
+                    <span class="font-mono text-xs text-gray-700 dark:text-gray-300 truncate block" x-text="maskKey(key)"></span>
+                    <template x-if="getKeyTestStatus(apiModal, key)">
+                      <div class="mt-1 flex items-center gap-2">
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold" :class="getKeyStatusBadgeClass(apiModal, key)" x-text="'Kod: ' + getKeyTestStatus(apiModal, key).errorCode"></span>
+                        <span class="text-[10px] text-gray-500 truncate" x-text="getKeyTestStatus(apiModal, key).checkedAt"></span>
+                      </div>
+                    </template>
+                  </div>
                   <button type="button" @click="testServiceKey(apiModal, key)" class="px-2 py-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded text-xs font-semibold">
                     🔍 Test
                   </button>
@@ -1221,6 +1400,12 @@ $active_page = 'settings';
             <div class="mb-4 p-3 rounded-lg text-sm" :class="apiModalTestResult.valid ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'">
               <span x-text="apiModalTestResult.valid ? '✓ ' : '✗ '"></span>
               <span x-text="apiModalTestResult.message"></span>
+              <template x-if="apiModalTestResult.error_code || apiModalTestResult.http_code">
+                <div class="mt-1 text-xs font-semibold">
+                  <span x-text="'Hata Kodu: ' + (apiModalTestResult.error_code || apiModalTestResult.http_code)"></span>
+                  <span x-show="apiModalTestResult.error_status" x-text="' (' + apiModalTestResult.error_status + ')'"></span>
+                </div>
+              </template>
             </div>
           </template>
 

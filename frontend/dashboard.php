@@ -123,12 +123,6 @@
           this.loadJobs();
         } catch(e) {}
       },
-      async resumeJob(jobId) {
-        try {
-          await fetch('/api/jobs.php', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({jobId, action:'resume'}) });
-          this.loadJobs();
-        } catch(e) {}
-      },
       async retryJob(jobId) {
         try {
           await fetch('/api/jobs.php', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({jobId, action:'retry'}) });
@@ -395,6 +389,16 @@
                           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                           Devam Et
                         </button>
+                      </template>
+                      <template x-if="job.status === 'failed' || job.status === 'paused'">
+                        <a :href="'view_log.php?id=' + job.id" target="_blank"
+                           class="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold transition" 
+                           title="Log Dosyasını Gör">
+                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                          </svg>
+                          Log Gör
+                        </a>
                       </template>
                       <a :href="'project.php?id=' + job.id" class="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold transition">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>

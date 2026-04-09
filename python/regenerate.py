@@ -484,18 +484,35 @@ def _run_section(section, job_id, job, prev_status, extra, config, jobs_dir, out
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-        # Altyazı stili: extra'dan al, job'dan al, yoksa preset adı
+        # Altyazı stili: extra'dan al, job'dan al, config'den al, yoksa classic preset
         subtitle_style = extra.get('subtitle_style')  # dict or preset name
         if isinstance(subtitle_style, str):
             subtitle_style = SUBTITLE_PRESETS.get(subtitle_style, SUBTITLE_PRESETS['classic'])
         elif subtitle_style is None:
-            saved_style = job.get('subtitleStyle')
+            # 1. Try to load from job
+            saved_style = job_data.get('subtitleStyle')
             if isinstance(saved_style, str):
                 subtitle_style = SUBTITLE_PRESETS.get(saved_style, SUBTITLE_PRESETS['classic'])
             elif isinstance(saved_style, dict):
                 subtitle_style = saved_style
             else:
-                subtitle_style = SUBTITLE_PRESETS['classic']
+                # 2. Try to load from config.json
+                config_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'config.json')
+                if os.path.exists(config_file_path):
+                    try:
+                        with open(config_file_path, 'r', encoding='utf-8') as cf:
+                            config_data = json.load(cf)
+                            config_subtitle = config_data.get('subtitleStyle')
+                            if config_subtitle:
+                                print("  [Altyazı] Config'den yüklendi")
+                                subtitle_style = config_subtitle
+                    except Exception as e:
+                        print(f"  [Altyazı] Config okuma hatası: {e}")
+                
+                # 3. Fallback to classic
+                if subtitle_style is None:
+                    print("  [Altyazı] Fallback: classic preset")
+                    subtitle_style = SUBTITLE_PRESETS['classic']
 
         # Stili job'a kaydet
         if extra.get('subtitle_style'):

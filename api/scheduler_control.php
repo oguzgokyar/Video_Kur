@@ -168,6 +168,27 @@ function stopScheduler($pid) {
     return true;
 }
 
+// Helper: Kill orphan scheduler processes of same type
+function stopOtherSchedulers($type, $exceptPid = null) {
+    if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
+        return;
+    }
+    $scriptName = $type === 'social' ? 'social_scheduler.py' : 'production_scheduler.py';
+    $output = [];
+    exec('wmic process where "name=\'python.exe\' and commandline like \'%' . $scriptName . '%\'" get processid 2>NUL', $output);
+    foreach ($output as $line) {
+        $pid = trim($line);
+        if (!is_numeric($pid) || (int)$pid <= 0) {
+            continue;
+        }
+        $pid = (int)$pid;
+        if ($exceptPid && $pid === (int)$exceptPid) {
+            continue;
+        }
+        exec("taskkill /PID $pid /F 2>NUL");
+    }
+}
+
 // GET: Status and logs
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? 'status';
@@ -220,6 +241,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo json_encode(['success' => false, 'error' => ucfirst($type) . ' scheduler zaten çalışıyor']);
                 break;
             }
+
+            // Safety: stop orphan schedulers before start (single instance guarantee)
+            stopOtherSchedulers($type);
+            usleep(300000);
             
             $result = startScheduler($type);
             
@@ -275,19 +300,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 stopScheduler($oldPid);
                 usleep(500000); // Wait 500ms for clean stop
             }
-            
+
             // Also kill any other schedulers of same type that might be running
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                $scriptName = $type === 'social' ? 'social_scheduler.py' : 'production_scheduler.py';
-                exec('wmic process where "commandline like \'%' . $scriptName . '%\'" get processid 2>NUL', $pids);
-                foreach ($pids as $line) {
-                    $pid = trim($line);
-                    if (is_numeric($pid) && $pid > 0) {
-                        exec("taskkill /PID $pid /F 2>NUL");
-                    }
-                }
-                usleep(1000000); // Wait 1s
-            }
+            stopOtherSchedulers($type);
+            usleep(1000000); // Wait 1s
             
             // Clear old logs for fresh start
             clearLogs();
