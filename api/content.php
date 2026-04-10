@@ -17,7 +17,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $CONTENT_POOL_FILE = __DIR__ . '/../data/content_pool.json';
 $JOBS_DIR = __DIR__ . '/../data/jobs';
 $QUEUES_FILE = __DIR__ . '/../data/queues.json';
+$SOCIAL_QUEUE_FILE = __DIR__ . '/../data/social_queue.json';
+$PRODUCTION_QUEUE_FILE = __DIR__ . '/../data/production_queue.json';
 $CONFIG_FILE = __DIR__ . '/../data/config.json';
+$SCRIPTS_FILE = __DIR__ . '/../data/scripts.json';
 
 // Helper functions
 function loadContentPool() {
@@ -132,6 +135,155 @@ function resolveVideoSettingsFromQueue($queue) {
         'videoHeight' => $videoHeight,
         'subtitleStyle' => $subtitleStyle
     ];
+}
+
+function findScriptById($scriptId) {
+    global $SCRIPTS_FILE;
+    if (!file_exists($SCRIPTS_FILE)) {
+        return null;
+    }
+
+    $data = json_decode(file_get_contents($SCRIPTS_FILE), true);
+    $scripts = $data['scripts'] ?? [];
+    foreach ($scripts as $script) {
+        if (($script['id'] ?? '') === $scriptId) {
+            return $script;
+        }
+    }
+    return null;
+}
+
+function loadQueuesData() {
+    global $QUEUES_FILE;
+    if (!file_exists($QUEUES_FILE)) {
+        return ['queues' => []];
+    }
+    $data = json_decode(file_get_contents($QUEUES_FILE), true);
+    return is_array($data) ? $data : ['queues' => []];
+}
+
+function saveQueuesData($data) {
+    global $QUEUES_FILE;
+    file_put_contents($QUEUES_FILE, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+function saveJobData($jobId, $jobData) {
+    global $JOBS_DIR;
+    $jobFile = $JOBS_DIR . '/' . $jobId . '.json';
+    if (file_exists($jobFile)) {
+        file_put_contents($jobFile, json_encode($jobData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+}
+
+function removeJobFromSocialQueue($jobId) {
+    global $SOCIAL_QUEUE_FILE;
+    if (!file_exists($SOCIAL_QUEUE_FILE)) {
+        return 0;
+    }
+
+    $data = json_decode(file_get_contents($SOCIAL_QUEUE_FILE), true);
+    if (!is_array($data)) {
+        $data = ['queue' => []];
+    }
+
+    $queue = $data['queue'] ?? [];
+    $before = count($queue);
+    $data['queue'] = array_values(array_filter($queue, function($item) use ($jobId) {
+        return ($item['job_id'] ?? '') !== $jobId;
+    }));
+    $removed = $before - count($data['queue']);
+
+    if ($removed > 0) {
+        file_put_contents($SOCIAL_QUEUE_FILE, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+    return $removed;
+}
+
+function removeJobFromProductionQueue($jobId) {
+    global $PRODUCTION_QUEUE_FILE;
+    if (!file_exists($PRODUCTION_QUEUE_FILE)) {
+        return 0;
+    }
+
+    $data = json_decode(file_get_contents($PRODUCTION_QUEUE_FILE), true);
+    if (!is_array($data)) {
+        $data = ['queue' => []];
+    }
+
+    $removed = 0;
+    foreach (['queue', 'production_queue'] as $key) {
+        $items = $data[$key] ?? [];
+        $before = count($items);
+        $data[$key] = array_values(array_filter($items, function($item) use ($jobId) {
+            return ($item['job_id'] ?? '') !== $jobId;
+        }));
+        $removed += ($before - count($data[$key]));
+        if (!empty($data[$key])) {
+            foreach ($data[$key] as $i => &$item) {
+                $item['position'] = $i + 1;
+            }
+            unset($item);
+        }
+    }
+
+    if (($data['current_job'] ?? null) === $jobId) {
+        $data['current_job'] = null;
+        $removed++;
+    }
+
+    if ($removed > 0) {
+        if (!isset($data['metadata']) || !is_array($data['metadata'])) {
+            $data['metadata'] = [];
+        }
+        $data['metadata']['last_updated'] = date('c');
+        file_put_contents($PRODUCTION_QUEUE_FILE, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    return $removed;
+}
+
+function removeJobFromQueuesAndClearJobStatus($jobId) {
+    global $JOBS_DIR;
+    $data = loadQueuesData();
+    $removed = 0;
+    $updated = false;
+
+    foreach ($data['queues'] as &$queue) {
+        $videos = $queue['videos'] ?? [];
+        $before = count($videos);
+        $queue['videos'] = array_values(array_filter($videos, function($video) use ($jobId) {
+            return ($video['job_id'] ?? '') !== $jobId;
+        }));
+        $removed += ($before - count($queue['videos']));
+        if ($before !== count($queue['videos'])) {
+            $updated = true;
+            foreach ($queue['videos'] as $i => &$video) {
+                $video['position'] = $i + 1;
+            }
+            unset($video);
+        }
+    }
+    unset($queue);
+
+    if ($updated) {
+        saveQueuesData($data);
+    }
+
+    $jobFile = $JOBS_DIR . '/' . $jobId . '.json';
+    if (file_exists($jobFile)) {
+        $job = json_decode(file_get_contents($jobFile), true);
+        if (is_array($job) && isset($job['queue_status'])) {
+            unset($job['queue_status']);
+            saveJobData($jobId, $job);
+        }
+    }
+
+    $runtime = [
+        'social_removed' => removeJobFromSocialQueue($jobId),
+        'production_removed' => removeJobFromProductionQueue($jobId)
+    ];
+
+    return ['queues_removed' => $removed, 'runtime' => $runtime];
 }
 
 // GET: İçerik listesi
@@ -316,12 +468,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'create_job') {
         $content_id = $input['content_id'] ?? '';
         $queue_id = $input['queue_id'] ?? '';
+        $scriptId = trim((string)($input['scriptId'] ?? ''));
+        $contentType = trim((string)($input['contentType'] ?? ''));
         
         if (empty($content_id)) {
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => 'Content ID gerekli']);
             exit;
         }
+
+        if ($scriptId === '') {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Script seçimi zorunlu']);
+            exit;
+        }
+
+        $selectedScript = findScriptById($scriptId);
+        if (!$selectedScript) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Seçilen script bulunamadı']);
+            exit;
+        }
+
+        if ($contentType === '') {
+            $contentType = trim((string)($selectedScript['contentType'] ?? 'genel'));
+        }
+        $contentType = strtolower($contentType);
         
         // İçeriği bul
         $pool = loadContentPool();
@@ -374,7 +546,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'id' => $job_id,
             'url' => $content['url'],
             'template' => 'short_haber',
-            'scriptId' => '',
+            'scriptId' => $scriptId,
+            'scriptName' => $selectedScript['name'] ?? '',
+            'contentType' => $contentType,
             'videoWidth' => $videoSettings['videoWidth'],
             'videoHeight' => $videoSettings['videoHeight'],
             'subtitleStyle' => $videoSettings['subtitleStyle'],
@@ -463,9 +637,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     }
     
     if ($found) {
+        $deletedItem = null;
+        foreach ($content_list as $c) {
+            if ($c['id'] === $id) {
+                $deletedItem = $c;
+                break;
+            }
+        }
+
         $pool['content'] = $new_list;
         saveContentPool($pool);
-        echo json_encode(['success' => true, 'message' => 'İçerik silindi']);
+
+        $sync = null;
+        $linkedJobId = $deletedItem['processed_job_id'] ?? '';
+        if (!empty($linkedJobId)) {
+            $sync = removeJobFromQueuesAndClearJobStatus($linkedJobId);
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'İçerik silindi',
+            'sync' => $sync
+        ]);
     } else {
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'İçerik bulunamadı']);

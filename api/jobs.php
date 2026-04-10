@@ -11,10 +11,267 @@ $dataDir = $baseDir . '/data';
 $jobsDir = $dataDir . '/jobs';
 $outputDir = $baseDir . '/output';
 $configFile = $dataDir . '/config.json';
+$scriptsFile = $dataDir . '/scripts.json';
+$queuesFile = $dataDir . '/queues.json';
+$socialQueueFile = $dataDir . '/social_queue.json';
+$contentPoolFile = $dataDir . '/content_pool.json';
 $pythonCmd = 'python';
 
 if (!is_dir($jobsDir)) { mkdir($jobsDir, 0777, true); }
 if (!is_dir($outputDir)) { mkdir($outputDir, 0777, true); }
+
+function findScriptById($scriptId) {
+    global $scriptsFile;
+    if (!file_exists($scriptsFile)) {
+        return null;
+    }
+
+    $data = json_decode(file_get_contents($scriptsFile), true);
+    $scripts = $data['scripts'] ?? [];
+    foreach ($scripts as $script) {
+        if (($script['id'] ?? '') === $scriptId) {
+            return $script;
+        }
+    }
+    return null;
+}
+
+function loadProductionQueueData() {
+    global $dataDir;
+    $queueFile = $dataDir . '/production_queue.json';
+    if (!file_exists($queueFile)) {
+        return [
+            'queue' => [],
+            'current_job' => null,
+            'settings' => [
+                'auto_start_next' => true,
+                'max_retries' => 3,
+                'retry_delay_seconds' => 60
+            ],
+            'stats' => [
+                'total_queued' => 0,
+                'total_processed' => 0,
+                'total_completed' => 0,
+                'total_failed' => 0,
+                'last_started' => null,
+                'last_completed' => null
+            ],
+            'metadata' => [
+                'created_at' => date('c'),
+                'last_updated' => date('c'),
+                'version' => '1.0'
+            ]
+        ];
+    }
+    $data = json_decode(file_get_contents($queueFile), true);
+    return is_array($data) ? $data : ['queue' => []];
+}
+
+function saveProductionQueueData($queueData) {
+    global $dataDir;
+    $queueFile = $dataDir . '/production_queue.json';
+    if (!isset($queueData['metadata']) || !is_array($queueData['metadata'])) {
+        $queueData['metadata'] = [];
+    }
+    $queueData['metadata']['last_updated'] = date('c');
+    file_put_contents($queueFile, json_encode($queueData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+function enqueueProductionJob($jobId, $priority = 0, $metadata = []) {
+    $queue = loadProductionQueueData();
+    if (!isset($queue['queue']) || !is_array($queue['queue'])) {
+        $queue['queue'] = [];
+    }
+
+    if (($queue['current_job'] ?? null) === $jobId) {
+        return [
+            'success' => true,
+            'already_processing' => true,
+            'message' => 'Job is currently being processed'
+        ];
+    }
+
+    foreach ($queue['queue'] as $existing) {
+        if (($existing['job_id'] ?? '') === $jobId) {
+            return [
+                'success' => true,
+                'already_queued' => true,
+                'position' => $existing['position'] ?? null,
+                'queue_length' => count($queue['queue']),
+                'message' => 'Job already in queue'
+            ];
+        }
+    }
+
+    $queue['queue'][] = [
+        'job_id' => $jobId,
+        'status' => 'waiting',
+        'priority' => intval($priority),
+        'added_at' => date('c'),
+        'started_at' => null,
+        'completed_at' => null,
+        'retry_count' => 0,
+        'last_error' => null,
+        'metadata' => is_array($metadata) ? $metadata : []
+    ];
+
+    if (!isset($queue['stats']) || !is_array($queue['stats'])) {
+        $queue['stats'] = [];
+    }
+    $queue['stats']['total_queued'] = intval($queue['stats']['total_queued'] ?? 0) + 1;
+
+    usort($queue['queue'], function($a, $b) {
+        if (($a['priority'] ?? 0) !== ($b['priority'] ?? 0)) {
+            return ($b['priority'] ?? 0) - ($a['priority'] ?? 0);
+        }
+        return strcmp((string)($a['added_at'] ?? ''), (string)($b['added_at'] ?? ''));
+    });
+
+    $position = null;
+    foreach ($queue['queue'] as $i => &$item) {
+        $item['position'] = $i + 1;
+        if (($item['job_id'] ?? '') === $jobId) {
+            $position = $item['position'];
+        }
+    }
+    unset($item);
+
+    saveProductionQueueData($queue);
+
+    return [
+        'success' => true,
+        'position' => $position,
+        'queue_length' => count($queue['queue'])
+    ];
+}
+
+function loadQueuesData() {
+    global $queuesFile;
+    if (!file_exists($queuesFile)) {
+        return ['queues' => []];
+    }
+    $data = json_decode(file_get_contents($queuesFile), true);
+    return is_array($data) ? $data : ['queues' => []];
+}
+
+function saveQueuesData($data) {
+    global $queuesFile;
+    file_put_contents($queuesFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+function removeJobFromQueuesJson($jobId) {
+    $data = loadQueuesData();
+    $removed = 0;
+    $updated = false;
+
+    foreach ($data['queues'] as &$queue) {
+        $videos = $queue['videos'] ?? [];
+        $before = count($videos);
+        $queue['videos'] = array_values(array_filter($videos, function($video) use ($jobId) {
+            return ($video['job_id'] ?? '') !== $jobId;
+        }));
+        $removed += ($before - count($queue['videos']));
+        if ($before !== count($queue['videos'])) {
+            $updated = true;
+            foreach ($queue['videos'] as $i => &$video) {
+                $video['position'] = $i + 1;
+            }
+            unset($video);
+        }
+    }
+    unset($queue);
+
+    if ($updated) {
+        saveQueuesData($data);
+    }
+
+    return $removed;
+}
+
+function removeJobFromSocialQueue($jobId) {
+    global $socialQueueFile;
+    if (!file_exists($socialQueueFile)) {
+        return 0;
+    }
+    $data = json_decode(file_get_contents($socialQueueFile), true);
+    if (!is_array($data)) {
+        $data = ['queue' => []];
+    }
+    $queue = $data['queue'] ?? [];
+    $before = count($queue);
+    $data['queue'] = array_values(array_filter($queue, function($item) use ($jobId) {
+        return ($item['job_id'] ?? '') !== $jobId;
+    }));
+    $removed = $before - count($data['queue']);
+    if ($removed > 0) {
+        file_put_contents($socialQueueFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+    return $removed;
+}
+
+function removeJobFromProductionQueue($jobId) {
+    $queue = loadProductionQueueData();
+    $removed = 0;
+
+    foreach (['queue', 'production_queue'] as $key) {
+        $items = $queue[$key] ?? [];
+        $before = count($items);
+        $queue[$key] = array_values(array_filter($items, function($item) use ($jobId) {
+            return ($item['job_id'] ?? '') !== $jobId;
+        }));
+        $removed += ($before - count($queue[$key]));
+        if (!empty($queue[$key])) {
+            foreach ($queue[$key] as $i => &$item) {
+                $item['position'] = $i + 1;
+            }
+            unset($item);
+        }
+    }
+
+    if (($queue['current_job'] ?? null) === $jobId) {
+        $queue['current_job'] = null;
+        $removed++;
+    }
+
+    if ($removed > 0) {
+        saveProductionQueueData($queue);
+    }
+    return $removed;
+}
+
+function clearContentPoolJobReferences($jobId) {
+    global $contentPoolFile;
+    if (!file_exists($contentPoolFile)) {
+        return 0;
+    }
+
+    $pool = json_decode(file_get_contents($contentPoolFile), true);
+    if (!is_array($pool)) {
+        return 0;
+    }
+
+    $updated = 0;
+    foreach ($pool['content'] ?? [] as &$item) {
+        if (($item['processed_job_id'] ?? null) === $jobId) {
+            $item['processed_job_id'] = null;
+            if (($item['status'] ?? '') !== 'completed') {
+                $item['status'] = 'pending';
+            }
+            $updated++;
+        }
+    }
+    unset($item);
+
+    if ($updated > 0) {
+        if (!isset($pool['metadata']) || !is_array($pool['metadata'])) {
+            $pool['metadata'] = [];
+        }
+        $pool['metadata']['last_updated'] = gmdate('Y-m-d\TH:i:s\Z');
+        $pool['metadata']['total_items'] = count($pool['content'] ?? []);
+        file_put_contents($contentPoolFile, json_encode($pool, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+    return $updated;
+}
 
 // Helper: Detect resume point for a job
 function detectResumePoint($jobId) {
@@ -143,8 +400,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     $url = $input['url'] ?? '';
     $template = $input['template'] ?? 'short_haber';
-    $scriptId = $input['scriptId'] ?? '';
-    $contentType = trim($input['contentType'] ?? 'haber');
+    $scriptId = trim((string)($input['scriptId'] ?? ''));
+    $contentType = trim((string)($input['contentType'] ?? ''));
     $videoWidth = intval($input['videoWidth'] ?? 1080);
     $videoHeight = intval($input['videoHeight'] ?? 1920);
     $subtitleStyle = $input['subtitleStyle'] ?? null;
@@ -157,6 +414,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['error' => 'URL gerekli']);
         exit;
     }
+
+    if ($scriptId === '') {
+        http_response_code(400);
+        echo json_encode(['error' => 'Script seçimi zorunlu']);
+        exit;
+    }
+
+    $selectedScript = findScriptById($scriptId);
+    if (!$selectedScript) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Seçilen script bulunamadı']);
+        exit;
+    }
+
+    if ($contentType === '') {
+        $contentType = trim((string)($selectedScript['contentType'] ?? 'genel'));
+    }
+    $contentType = strtolower($contentType);
 
     $jobId = uniqid('job_', true);
     
@@ -172,6 +447,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'url' => $url,
         'template' => $template,
         'scriptId' => $scriptId,
+        'scriptName' => $selectedScript['name'] ?? '',
         'contentType' => $contentType,
         'videoWidth' => $videoWidth,
         'videoHeight' => $videoHeight,
@@ -190,39 +466,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_dir($jobOutputDir)) { mkdir($jobOutputDir, 0777, true); }
 
     // Add to production queue (sequential processing only)
-    $queueApiUrl = 'http://localhost:8000/api/production_queue.php?action=add';
-    $queueData = json_encode([
+    $queueResponse = enqueueProductionJob($jobId, 0, [
         'job_id' => $jobId,
-        'priority' => 0,
-        'metadata' => [
-            'url' => $url,
-            'template' => $template,
-            'created_via' => 'web_ui'
-        ]
+        'url' => $url,
+        'template' => $template,
+        'created_via' => 'web_ui'
     ]);
-    
-    // Add to production queue via internal API call
-    $ch = curl_init($queueApiUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $queueData);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    $queueResult = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    
-    if ($httpCode === 200 && $queueResult) {
-        $queueResponse = json_decode($queueResult, true);
-        if ($queueResponse && $queueResponse['success']) {
-            echo json_encode([
-                'jobId' => $jobId,
-                'status' => 'queued',
-                'message' => 'Video üretimi kuyruğa eklendi',
-                'queue_position' => $queueResponse['position'] ?? null,
-                'queue_length' => $queueResponse['queue_length'] ?? null
-            ]);
-            exit;
-        }
+    if ($queueResponse['success'] ?? false) {
+        echo json_encode([
+            'jobId' => $jobId,
+            'status' => 'queued',
+            'message' => 'Video üretimi kuyruğa eklendi',
+            'queue_position' => $queueResponse['position'] ?? null,
+            'queue_length' => $queueResponse['queue_length'] ?? null
+        ]);
+        exit;
     }
 
     echo json_encode([
@@ -277,49 +535,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
         $resumeFrom = $resumeInfo['resume_from'];
         $section = mapResumeSectionForRegenerate($resumeFrom);
 
-        // Keep dashboard status in pipeline naming, run regenerate with mapped section name
-        $jobData['status'] = $resumeFrom;
+        // Resume requests should flow through production queue to preserve sequential execution
+        $jobData['status'] = 'waiting';
         $jobData['resume_from'] = $resumeInfo['resume_from'];
         $jobData['resume_section'] = $section;
         $jobData['resume_info'] = $resumeInfo;
+        $jobData['resume_requested'] = true;
+        $jobData['resumed_at'] = date('c');
         $jobData['error'] = '';
         unset($jobData['pausedAt']);
-        
-        // Save updated job
         file_put_contents($jobFile, json_encode($jobData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        
-        // Start regenerate.py directly in background (Windows compatible)
-        $pythonPath = 'python';
-        $regenerateScript = $baseDir . DIRECTORY_SEPARATOR . 'python' . DIRECTORY_SEPARATOR . 'regenerate.py';
-        $configPath = $configFile;
-        // Build command - regenerate.py expects positional args: job_id, section, config_file
-        $cmd = sprintf(
-            'start /B %s "%s" "%s" "%s" "%s" 2>&1',
-            $pythonPath,
-            $regenerateScript,
-            $jobId,
-            $section,
-            $configPath
-        );
-        
-        // Execute in background and capture output
-        $output = [];
-        $return_var = 0;
-        exec($cmd, $output, $return_var);
-        
-        // Log process info
-        $jobData['resumed_at'] = date('c');
-        $jobData['resume_command'] = $cmd;
-        $jobData['resume_output'] = implode("\n", $output);
-        
-        // Save job with process info
+
+        // Queue resume through production queue file (single sequential entry point)
+        $queueResponse = enqueueProductionJob($jobId, 1, [
+            'resume' => true,
+            'resume_from' => $resumeInfo['resume_from'],
+            'resume_section' => $section,
+            'resumed_at' => date('c')
+        ]);
+        if ($queueResponse['success'] ?? false) {
+            echo json_encode([
+                'success' => true,
+                'message' => "Job resumed and queued from {$resumeInfo['resume_from']}",
+                'resume_info' => $resumeInfo,
+                'queue_position' => $queueResponse['position'] ?? null,
+                'queue_length' => $queueResponse['queue_length'] ?? null
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $jobData['status'] = 'failed';
+        $jobData['error'] = 'Resume için production kuyruğuna eklenemedi';
         file_put_contents($jobFile, json_encode($jobData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        
+        http_response_code(500);
         echo json_encode([
-            'success' => true,
-            'message' => "Job resume started from {$resumeInfo['resume_from']} ({$section})",
-            'resume_info' => $resumeInfo,
-            'job' => $jobData
+            'success' => false,
+            'error' => 'Resume queue add failed',
+            'resume_info' => $resumeInfo
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         exit;
     } elseif ($action === 'retry') {
@@ -327,25 +579,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
         $jobData['status'] = 'waiting';
         $jobData['error'] = '';
 
-        $queueApiUrl = 'http://localhost:8000/api/production_queue.php?action=add';
-        $queuePayload = json_encode([
-            'job_id' => $jobId,
-            'priority' => 0,
-            'metadata' => [
-                'retry' => true,
-                'retried_at' => date('c')
-            ]
+        $queueResponse = enqueueProductionJob($jobId, 0, [
+            'retry' => true,
+            'retried_at' => date('c')
         ]);
-        $ch = curl_init($queueApiUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $queuePayload);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        $queueResult = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if (!($httpCode === 200 && $queueResult && (json_decode($queueResult, true)['success'] ?? false))) {
+        if (!($queueResponse['success'] ?? false)) {
             $jobData['status'] = 'failed';
             $jobData['error'] = 'Retry için production kuyruğuna eklenemedi';
         }
@@ -440,9 +678,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         deleteDirectory($jobOutputDir);
     }
 
+    $sync = [
+        'queues_removed' => removeJobFromQueuesJson($jobId),
+        'social_removed' => removeJobFromSocialQueue($jobId),
+        'production_removed' => removeJobFromProductionQueue($jobId),
+        'content_pool_updated' => clearContentPoolJobReferences($jobId)
+    ];
+
     // Job meta dosyasını sil
     unlink($jobFile);
 
-    echo json_encode(['success' => true, 'message' => 'İş silindi']);
+    echo json_encode(['success' => true, 'message' => 'İş silindi', 'sync' => $sync]);
     exit;
 }
