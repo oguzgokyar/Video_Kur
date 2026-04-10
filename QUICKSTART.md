@@ -1,117 +1,55 @@
-# 🎬 Hızlı Başlangıç Kılavuzu
+# ⚡ QUICKSTART (Güncel)
 
-## ✅ Şu Anda Yapılacaklar
+Bu kılavuz mevcut repository yapısına göre güncellenmiştir.
 
-### 1️⃣ İlk Test Yüklemesi (ŞİMDİ)
+## 1. Gereksinimler
 
-```bash
-# Çift tıklayın:
-test_upload.bat
-```
+- Python 3.9+
+- PHP 8+
+- FFmpeg
 
-**Ne olacak:**
-- Metadata optimize edilecek
-- Video YouTube'a yüklenecek (UNLISTED)
-- Video linki verilecek
-- YouTube'da kontrol edebileceksiniz
-
-**Beklenen süre:** 2-5 dakika
-
----
-
-### 2️⃣ Scheduler'ı Başlatın (Test yüklemesi başarılıysa)
-
-**Yeni bir Command Prompt açın:**
+## 2. Kurulum
 
 ```bash
-# Çift tıklayın:
-start_scheduler.bat
+cd python
+pip install -r requirements.txt
+cd ..
 ```
 
-**Ne olacak:**
-- Arka planda sürekli çalışacak
-- Her dakika kuyruğu kontrol edecek
-- Zamanı gelen videoları otomatik yükleyecek
+`data/config.json` dosyanızın mevcut olduğundan ve gerekli anahtarların tanımlı olduğundan emin olun.
 
-**Bu pencereyi açık bırakın!** Kapatırsanız scheduler durur.
+## 3. Uygulamayı Başlatma
 
----
-
-### 3️⃣ İlk Zamanlamayı Yapın
-
-1. **Tarayıcıda aç:** http://localhost/dashboard.php
-
-2. **Tamamlanmış bir video** bulun (yeşil "✅ Tamamlandı" yazısı olan)
-
-3. İki seçenek:
-
-   **A) Hemen Yükle ⚡**
-   - "⚡ Hemen Yükle" butonuna tıklayın
-   - Metadata gözden geçirin
-   - "Yükle" butonuna tıklayın
-   - 2-5 dakika bekleyin
-   - "🔗 YouTube'da Aç" linki belirecek
-
-   **B) Zamanla 📅**
-   - "📅 Zamanla" butonuna tıklayın
-   - **5 dakika sonrası** için zamanlayın
-   - Metadata gözden geçirin
-   - "Zamanla" butonuna tıklayın
-   - Scheduler otomatik yükleyecek
-
----
-
-## 🔍 Durum Kontrolü
-
-### Scheduler Çalışıyor mu?
+### Seçenek A (önerilen): tek komutla
 
 ```bash
-# Task Manager açın (Ctrl+Shift+Esc)
-# "Details" sekmesine gidin
-# "python.exe" process'ini arayın
-# Varsa çalışıyor demektir ✓
+start_all.bat
 ```
 
-### Kuyruğu Görüntüle
+### Seçenek B: manuel
 
-http://localhost/queues.php
+```bash
+php -S localhost:8000 router.php
+```
 
-- **Kuyruk Yönetimi:** Bekleyen yüklemeler ve paylaşımlar
-- **Platform Durumu:** YouTube, Instagram, TikTok, Facebook
-- **Zamanlama Ayarları:** Tarih ve saat ayarları
+## 4. Scheduler Başlatma (ihtiyaca göre)
 
----
+```bash
+start_production_scheduler.bat
+start_social_scheduler.bat
+start_content_scheduler.bat
+```
 
-## 📊 Mevcut Videolar
+## 5. Web Arayüzü
 
-Yüklenmeye hazır **5 video** var:
+- Dashboard: `http://localhost:8000/`
+- Yeni Video: `http://localhost:8000/create.php`
+- İçerikler: `http://localhost:8000/content.php`
+- Kuyruklar: `http://localhost:8000/queues.php`
+- Script Yönetimi: `http://localhost:8000/scripts.php`
+- Hesaplar: `http://localhost:8000/accounts.php`
+- Ayarlar: `http://localhost:8000/settings.php`
 
-1. ✅ job_69b9e56b244608.61484112 - Yapay Zeka (39 saniye)
-2. ✅ job_69b9dd508f4cc8.47654028
-3. ✅ job_69b9d807f1d232.08915877
-4. ✅ job_69b9a187819ff3.24253636
-5. ✅ job_69ba99a1a0b239.72027867
+## Not
 
----
-
-## ⚠️ Önemli Notlar
-
-### İlk Test
-- **UNLISTED** modda yükleyin
-- YouTube'da kontrol edin
-- Sorunsuzsa devam edin
-
-### Günlük Limit
-- YouTube API: **Günde ~6 upload**
-- Quota aşarsanız 24 saat bekleyin
-
-### Scheduler
-- **Sürekli çalışır durumda** olmalı
-- Bilgisayar kapatılırsa durur
-- Task Scheduler ile otomatik başlatabilirsiniz
-
----
-
-## 🚀 Başarılar!
-
-**Şimdi `test_upload.bat` dosyasına çift tıklayın!** 🎉
+Eski dokümanlarda geçen `test_upload.bat` ve `start_scheduler.bat` bu repoda aktif başlangıç yolu değildir.

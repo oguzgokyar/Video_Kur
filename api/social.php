@@ -292,12 +292,32 @@ function getJobStatus($input, $dataDir) {
  */
 function getPlatforms($dataDir) {
     $credsDir = $dataDir . '/social_credentials';
+    $youtubeConfigured = false;
+    $youtubeChannelsFile = $dataDir . '/youtube_channels.json';
+    
+    if (file_exists($youtubeChannelsFile)) {
+        $channelsData = json_decode(file_get_contents($youtubeChannelsFile), true);
+        foreach (($channelsData['channels'] ?? []) as $channel) {
+            foreach (($channel['apis'] ?? []) as $api) {
+                $tokenFile = trim($api['token_file'] ?? '');
+                if (
+                    !empty($tokenFile) &&
+                    !empty($api['is_authenticated']) &&
+                    !empty($api['is_active']) &&
+                    file_exists($dataDir . '/youtube_credentials/' . $tokenFile)
+                ) {
+                    $youtubeConfigured = true;
+                    break 2;
+                }
+            }
+        }
+    }
     
     $platforms = [
         'youtube' => [
             'name' => 'YouTube',
             'icon' => '📺',
-            'configured' => file_exists($dataDir . '/youtube_credentials/default_token.pickle'),
+            'configured' => $youtubeConfigured,
             'description' => 'YouTube Shorts'
         ],
         'tiktok' => [

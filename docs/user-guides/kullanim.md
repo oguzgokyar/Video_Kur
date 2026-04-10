@@ -4,7 +4,7 @@
 
 ### ADIM 1: Kuyruk Sayfasını Açın
 ```
-http://localhost/frontend/queues.php
+http://localhost:8000/queues.php
 ```
 
 ### ADIM 2: Mevcut Kuyruğu Düzenleyin veya Yeni Oluşturun
@@ -110,11 +110,11 @@ Ayarları yaptıktan sonra:
 ## ⚡ Hemen Test Edin
 
 ```bash
-# Test scripti çalıştır
-python test_new_scheduling.py
+# Scheduler'ı başlat
+start_social_scheduler.bat
 ```
 
-Eğer testler başarılı ise (✅), sistem %100 hazır!
+Scheduler loglarında hata yoksa sistem hazırdır.
 
 ---
 

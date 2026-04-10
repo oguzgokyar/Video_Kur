@@ -257,7 +257,7 @@ API üzerinden iş oluştururken özel stil belirtebilirsiniz:
 
 **1. Ayarlar sayfasını açın:**
 ```
-http://localhost:8000/frontend/settings.php
+http://localhost:8000/settings.php
 ```
 
 **2. Altyazı sekmesine gidin**

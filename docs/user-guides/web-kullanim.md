@@ -10,7 +10,7 @@ Terminal kullanmanıza gerek yok. Her şeyi web arayüzünden yapabilirsiniz.
 
 ### Adım 1: Dashboard'u Açın
 ```
-http://localhost/dashboard.php
+http://localhost:8000/dashboard.php
 ```
 
 ### Adım 2: Tamamlanmış Videoları Görün
@@ -41,7 +41,7 @@ http://localhost/dashboard.php
 
 ### Açış:
 ```
-http://localhost/queues.php
+http://localhost:8000/queues.php
 ```
 
 ### Özellikler:
@@ -64,12 +64,12 @@ http://localhost/queues.php
 
 ### Açış:
 ```
-http://localhost/youtube.php
+http://localhost:8000/accounts.php
 ```
 
 ### Özellikler:
 
-**🔗 Hesap Bağlama**
+**🔗 YouTube Hesap Bağlama (Accounts)**
 - **"+ YouTube Hesabı Bağla"** butonuna tıklayın
 - Tarayıcıda OAuth sayfası açılır
 - Google hesabınızla giriş yapın
@@ -93,7 +93,7 @@ http://localhost/youtube.php
 
 ### 1️⃣ Dashboard'u Açın
 ```
-http://localhost/dashboard.php
+http://localhost:8000/dashboard.php
 ```
 
 ### 2️⃣ Tamamlanmış Video Bulun

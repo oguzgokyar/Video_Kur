@@ -100,18 +100,10 @@ def _load_custom_script(base_dir: str, job_data: dict, video_type: str):
         return None
 
     script_id = (job_data.get('scriptId') or '').strip()
-    content_type = (job_data.get('contentType') or '').strip().lower()
-
     if script_id:
         for s in scripts:
             if s.get('id') == script_id:
                 return s
-
-    for s in scripts:
-        s_type = (s.get('videoType') or 'short').strip().lower()
-        s_content = (s.get('contentType') or '').strip().lower()
-        if s.get('isDefault') and s_type == video_type and s_content == content_type:
-            return s
     return None
 
 
@@ -295,9 +287,12 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
     video_height = job_data.get('videoHeight', 1920)
     video_type = _get_video_type(video_width, video_height)
     
-    # Subtitle style - önce config'den al, sonra job'dan, hiçbiri yoksa None
+    # Subtitle style - Ayarlar > Altyazı (config) her zaman varsayılan kaynak
     subtitle_style = config.get('subtitleStyle', None)
-    if job_data.get('subtitleStyle'):
+    if job_data.get('subtitleStyle') and subtitle_style is not None:
+        print("  [Altyazı] Job içi stil yok sayıldı, Ayarlar > Altyazı varsayılanı kullanılıyor")
+    elif job_data.get('subtitleStyle') and subtitle_style is None:
+        # Config eksikse eski job stilini son çare olarak kullan
         subtitle_style = job_data['subtitleStyle']
     
     # Handle string preset names (e.g., 'classic', 'bold_bottom')
@@ -396,6 +391,12 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
     log_to_job(log_file, "Starting script generation phase", "INFO")
     
     selected_script = _load_custom_script(base_dir, job_data, video_type)
+    if not selected_script:
+        error_msg = 'Script seçimi zorunlu: geçerli bir scriptId bulunamadı'
+        update_job(jobs_dir, job_id, {'status': 'failed', 'error': error_msg}, log_file=log_file)
+        log_to_job(log_file, error_msg, "ERROR")
+        return
+
     selected_prompt = selected_script.get('prompt') if selected_script else None
     selected_max_duration = int(selected_script.get('maxDuration', 55)) if selected_script else 55
 

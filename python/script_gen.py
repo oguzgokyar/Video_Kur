@@ -5,6 +5,7 @@ import sys
 import os
 import threading
 import time
+import random
 
 # Import error messages
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'utils'))
@@ -227,53 +228,70 @@ def generate_script_with_fallback(title: str, text: str, api_keys: list, max_dur
     
     # Bu hatalarda sonraki key'e fallback yapılır
     KEY_FALLBACK_ERRORS = ['403', '429', '503', '500', '502', 'timeout']
-    
-    last_error = None
-    for idx, key in enumerate(api_keys):
-        print(f"Trying API key {idx + 1}/{len(api_keys)}...")
-        
-        result = generate_script(title, text, key, max_duration, model_name, prompt_template, timeout)
-        
-        if result['success']:
-            print(f"✅ Success with API key {idx + 1}")
-            return result
-        
-        last_error = result.get('error', 'Unknown error')
-        error_code = extract_error_code(last_error)
-        
-        print(f"❌ Key {idx + 1} failed: {error_code}")
-        
-        # Check if we should try next key
-        should_try_next_key = any(code in str(last_error) for code in KEY_FALLBACK_ERRORS)
-        
-        # Special logging for common errors
-        if '403' in str(last_error):
-            print(f"   ⚠️  403 PERMISSION_DENIED: API key banned or project access denied")
-        elif '429' in str(last_error):
-            print(f"   ⚠️  429 RESOURCE_EXHAUSTED: Quota exceeded, trying next key...")
-        elif '503' in str(last_error):
-            print(f"   ⚠️  503 SERVICE_UNAVAILABLE: Server busy, trying next key...")
-        
-        # Last key?
-        if idx == len(api_keys) - 1:
-            # Last key - return error
-            print(f"⚠️ All {len(api_keys)} API keys failed")
-            print(f"   Last error: {error_code}")
-            return result
-        
-        # Not last key - check if should fallback
-        if should_try_next_key:
-            print(f"♻️ Fallback error ({error_code}), trying next key...")
-            continue
-        else:
-            # Non-retriable error - stop trying
-            print(f"🛑 Non-retriable error ({error_code}), stopping")
-            return result
-    
-    # All keys exhausted
+    MAX_ROUNDS = 2  # tüm key setini en fazla 2 tur dener
+    service_busy_count = 0
+    attempts = []
+    last_result = {'success': False, 'error': 'Unknown error'}
+
+    for round_idx in range(MAX_ROUNDS):
+        print(f"🔁 API key round {round_idx + 1}/{MAX_ROUNDS}")
+        all_retriable = True
+
+        for idx, key in enumerate(api_keys):
+            print(f"Trying API key {idx + 1}/{len(api_keys)}...")
+            result = generate_script(title, text, key, max_duration, model_name, prompt_template, timeout)
+            last_result = result
+
+            if result['success']:
+                print(f"✅ Success with API key {idx + 1}")
+                result['attempts'] = attempts
+                return result
+
+            last_error = result.get('error', 'Unknown error')
+            error_code = extract_error_code(last_error)
+            attempts.append({'round': round_idx + 1, 'key_index': idx + 1, 'error_code': error_code})
+            print(f"❌ Key {idx + 1} failed: {error_code}")
+
+            # Check if we should try next key
+            should_try_next_key = any(code in str(last_error) for code in KEY_FALLBACK_ERRORS)
+            if not should_try_next_key:
+                all_retriable = False
+                print(f"🛑 Non-retriable error ({error_code}), stopping")
+                result['attempts'] = attempts
+                return result
+
+            # Special logging for common errors
+            if '403' in str(last_error):
+                print("   ⚠️  403 PERMISSION_DENIED: API key banned or project access denied")
+            elif '429' in str(last_error):
+                print("   ⚠️  429 RESOURCE_EXHAUSTED: Quota exceeded, trying next key...")
+            elif '503' in str(last_error):
+                print("   ⚠️  503 SERVICE_UNAVAILABLE: Server busy, trying next key...")
+                service_busy_count += 1
+                base_delay = min(45.0, 5.0 * (2 ** max(0, service_busy_count - 1)))
+                jitter = random.uniform(0.0, 3.0)
+                sleep_time = round(base_delay + jitter, 1)
+                print(f"⏳ 503 backoff: {sleep_time}s bekleniyor (base={base_delay:.1f}s, jitter={jitter:.1f}s)")
+                time.sleep(sleep_time)
+
+            if idx < len(api_keys) - 1:
+                print(f"♻️ Fallback error ({error_code}), trying next key...")
+
+        # Tüm key turu bitti: sadece retriable hatalar varsa bir tur daha dene
+        if round_idx < MAX_ROUNDS - 1 and all_retriable:
+            wait_time = 10 + (round_idx * 10)
+            print(f"⏳ All keys failed with retriable errors, waiting {wait_time}s before next round...")
+            time.sleep(wait_time)
+
+    # All keys exhausted across all rounds
+    final_error = last_result.get('error', 'Unknown error')
     return {
-        'success': False, 
-        'error': format_error_for_job('quota_exceeded', f'All {len(api_keys)} API keys failed. Last error: {last_error}')
+        'success': False,
+        'attempts': attempts,
+        'error': format_error_for_job(
+            'quota_exceeded',
+            f'All {len(api_keys)} API keys failed after {MAX_ROUNDS} round(s). Last error: {final_error}'
+        )
     }
 
 

@@ -154,14 +154,13 @@ class ProductionScheduler:
             
             print(f"🚀 Starting pipeline: {' '.join(cmd)}")
             
-            # Use subprocess.Popen for async execution
-            # The pipeline will handle the lock and queue completion
+            # Use detached async execution.
+            # Do NOT pipe stdout/stderr without readers; PIPE buffers can block child process.
             process = subprocess.Popen(
                 cmd,
                 cwd=str(self.base_dir),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT
             )
             
             print(f"✅ Pipeline started (PID: {process.pid})")

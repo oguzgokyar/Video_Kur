@@ -103,10 +103,14 @@
 
           <form @submit.prevent="
             loading=true; error='';
+            if(!scriptId){ error='Lütfen bir script seçin'; loading=false; return; }
             steps=['Haber çekiliyor...'];
             fetch('/api/jobs.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, template, scriptId, contentType, videoWidth, videoHeight, subtitleStyle})})
               .then(r=>r.json())
-              .then(d=>{ jobId=d.jobId; status='pending'; loading=false; steps.push('İş oluşturuldu: '+d.jobId); })
+              .then(d=>{
+                if(d.error){ error=d.error; loading=false; return; }
+                jobId=d.jobId; status='pending'; loading=false; steps.push('İş oluşturuldu: '+d.jobId);
+              })
               .catch(e=>{ error='İş başlatılamadı. Backend çalışıyor mu?'; loading=false; })
           " class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <label class="block mb-2 text-sm font-semibold text-gray-700">Haber Linki</label>
@@ -170,16 +174,15 @@
               <span class="text-xs text-blue-500" x-text="videoWidth > videoHeight ? 'Yatay' : (videoWidth < videoHeight ? 'Dikey' : 'Kare')"></span>
             </div>
 
-            <label class="block mb-2 text-sm font-semibold text-gray-700">Script (Opsiyonel)</label>
+            <label class="block mb-2 text-sm font-semibold text-gray-700">Script (Zorunlu)</label>
             <div class="flex flex-wrap gap-2 mb-4">
-              <button type="button" @click="scriptId=''" class="px-3 py-1.5 rounded-full border text-sm transition"
-                :class="scriptId==='' ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Otomatik Varsayılan</button>
               <template x-for="script in contextScripts" :key="script.id">
                 <button type="button" @click="scriptId=script.id" class="px-3 py-1.5 rounded-full border text-sm transition"
                   :class="scriptId===script.id ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'"
                   x-text="script.name"></button>
               </template>
             </div>
+            <p x-show="contextScripts.length === 0" class="text-xs text-red-600 mb-4">Bu kategori ve video tipi için script bulunamadı. Script Yönetimi'nden script ekleyin.</p>
 
             <!-- Altyazı Stili Seçimi -->
             <label class="block mb-2 text-sm font-semibold text-gray-700">Altyazı Stili</label>

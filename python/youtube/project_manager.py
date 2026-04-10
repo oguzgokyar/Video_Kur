@@ -374,10 +374,10 @@ class YouTubeProjectManager:
         return self.credentials_dir / project['client_secrets_file']
     
     def get_token_path(self, project_id: str, channel_id: Optional[str] = None) -> Path:
-        """Get token file path for a project"""
+        """Get token file path for a project (JSON token format)."""
         if channel_id:
-            return self.credentials_dir / f"{project_id}_{channel_id}_token.pickle"
-        return self.credentials_dir / f"{project_id}_token.pickle"
+            return self.credentials_dir / f"{project_id}_{channel_id}_token.json"
+        return self.credentials_dir / f"{project_id}_token.json"
     
     def record_upload(self, project_id: str, success: bool = True, with_thumbnail: bool = False):
         """

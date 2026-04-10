@@ -6,9 +6,9 @@ Supports multiple Google Cloud projects for quota rotation
 import os
 import sys
 import json
-import pickle
 from pathlib import Path
 from typing import Optional, Dict
+from datetime import datetime
 
 try:
     from google.oauth2.credentials import Credentials
@@ -171,30 +171,41 @@ class YouTubeAuth:
         # Load existing token
         if token_file.exists():
             try:
-                # First try JSON format (from web OAuth flow)
-                try:
-                    with open(token_file, 'r', encoding='utf-8') as f:
-                        token_data = json.load(f)
-                    
-                    # Web OAuth stores as 'access_token', Python expects 'token'
-                    access_token = token_data.get('access_token') or token_data.get('token')
-                    
-                    # Build Credentials from JSON token data
-                    creds = Credentials(
-                        token=access_token,
-                        refresh_token=token_data.get('refresh_token'),
-                        token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
-                        client_id=token_data.get('client_id'),
-                        client_secret=token_data.get('client_secret'),
-                        scopes=token_data.get('scopes') or token_data.get('scope') or SCOPES
-                    )
-                    print(f"✅ JSON token yüklendi: {token_file.name}", file=sys.stderr)
-                except (json.JSONDecodeError, UnicodeDecodeError, KeyError) as json_err:
-                    # Not JSON or malformed, try pickle (legacy format)
-                    with open(token_file, 'rb') as f:
-                        creds = pickle.load(f)
-                    print(f"✅ Pickle token yüklendi (legacy): {token_file.name}", file=sys.stderr)
-                    print(f"⚠️  Eski pickle formatı kullanılıyor. Web'den yeniden login yapın.", file=sys.stderr)
+                with open(token_file, 'r', encoding='utf-8') as f:
+                    token_data = json.load(f)
+
+                # Web OAuth stores as 'access_token', Python client may expect 'token'
+                access_token = token_data.get('access_token') or token_data.get('token')
+                if not access_token:
+                    print(f"❌ Geçersiz token dosyası (access_token yok): {token_file.name}", file=sys.stderr)
+                    return None
+
+                raw_scopes = token_data.get('scopes') or token_data.get('scope') or SCOPES
+                scopes = raw_scopes.split() if isinstance(raw_scopes, str) else raw_scopes
+
+                expiry_raw = token_data.get('expiry')
+                expiry = None
+                if expiry_raw:
+                    try:
+                        expiry = datetime.fromisoformat(expiry_raw.replace('Z', '+00:00'))
+                    except ValueError:
+                        expiry = None
+
+                # Build Credentials from JSON token data
+                creds = Credentials(
+                    token=access_token,
+                    refresh_token=token_data.get('refresh_token'),
+                    token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
+                    client_id=token_data.get('client_id'),
+                    client_secret=token_data.get('client_secret'),
+                    scopes=scopes,
+                    expiry=expiry
+                )
+                print(f"✅ JSON token yüklendi: {token_file.name}", file=sys.stderr)
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                print(f"❌ Token JSON formatı bozuk ({token_file.name}): {e}", file=sys.stderr)
+                print("🔑 Çözüm: Hesaplar sayfasından ilgili API için yeniden login yapın.", file=sys.stderr)
+                return None
             except Exception as e:
                 print(f"Token yükleme hatası: {e}", file=sys.stderr)
                 return None
@@ -279,6 +290,12 @@ class YouTubeAuth:
             )
             print(error_msg, file=sys.stderr)
             return None
+        
+        if not creds.valid:
+            print("Geçersiz YouTube kimlik bilgisi bulundu.", file=sys.stderr)
+            return None
+        
+        return creds
     
     def build_service(self, channel_id: Optional[str] = None):
         """
@@ -357,46 +374,82 @@ class YouTubeAuth:
             return False
     
     def _get_token_file(self, channel_id: Optional[str] = None) -> Path:
-        """Get token file path for channel and project
-        
-        Supports both legacy pickle format and new JSON token format from unified system
-        """
-        prefix = f"{self.project_id}_" if self.project_id else ""
-        
-        # First try to find existing JSON tokens from unified system
-        # These have format: {project_id}_{channel_id}_{api_id}_token.json
+        """Get token file path for channel and project (JSON only)."""
         if self.project_id:
+            channel_match = self._find_token_from_channels(channel_id)
+            if channel_match:
+                return channel_match
+
             import glob
-            pattern = str(self.credentials_dir / f'{self.project_id}_*_token.json')
-            json_tokens = glob.glob(pattern)
-            if json_tokens:
-                # Return first matching JSON token
-                return Path(json_tokens[0])
-        
-        # Legacy format: {project}_{channel}_token.pickle
+            if channel_id:
+                exact_pattern = str(self.credentials_dir / f'{self.project_id}_{channel_id}_*_token.json')
+                exact_matches = sorted(glob.glob(exact_pattern))
+                if exact_matches:
+                    return Path(exact_matches[0])
+
+            project_pattern = str(self.credentials_dir / f'{self.project_id}_*_token.json')
+            project_matches = sorted(glob.glob(project_pattern))
+            if project_matches:
+                return Path(project_matches[0])
+
+            # Deterministic fallback path if no token exists yet.
+            fallback_channel = channel_id or 'default'
+            return self.credentials_dir / f'{self.project_id}_{fallback_channel}_token.json'
+
+        # Non-project mode: legacy default JSON path
         if channel_id:
-            pickle_path = self.credentials_dir / f'{prefix}{channel_id}_token.pickle'
-            if pickle_path.exists():
-                return pickle_path
-                
-        default_pickle = self.credentials_dir / f'{prefix}default_token.pickle'
-        if default_pickle.exists():
-            return default_pickle
-            
-        # Return default path for new token creation
-        if channel_id:
-            return self.credentials_dir / f'{prefix}{channel_id}_token.pickle'
-        return self.credentials_dir / f'{prefix}default_token.pickle'
+            return self.credentials_dir / f'{channel_id}_token.json'
+        return self.credentials_dir / 'default_token.json'
     
     def _save_token(self, creds: Credentials, channel_id: Optional[str] = None):
-        """Save credentials to file"""
+        """Save credentials to JSON token file."""
         token_file = self._get_token_file(channel_id)
         try:
-            with open(token_file, 'wb') as f:
-                pickle.dump(creds, f)
+            token_data = {
+                'access_token': creds.token,
+                'refresh_token': creds.refresh_token,
+                'token_uri': creds.token_uri,
+                'client_id': creds.client_id,
+                'client_secret': creds.client_secret,
+                'scopes': creds.scopes or SCOPES,
+                'expiry': creds.expiry.isoformat() if creds.expiry else None
+            }
+            with open(token_file, 'w', encoding='utf-8') as f:
+                json.dump(token_data, f, ensure_ascii=False, indent=2)
             print(f"Token kaydedildi: {token_file.name}", file=sys.stderr)
         except Exception as e:
             print(f"Token kaydetme hatası: {e}", file=sys.stderr)
+
+    def _find_token_from_channels(self, channel_id: Optional[str]) -> Optional[Path]:
+        """Resolve token file from youtube_channels.json when available."""
+        channels_file = self.credentials_dir.parent / 'youtube_channels.json'
+        if not channels_file.exists():
+            return None
+
+        try:
+            with open(channels_file, 'r', encoding='utf-8') as f:
+                channels_data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return None
+
+        matched_paths = []
+        for channel in channels_data.get('channels', []):
+            if channel_id and channel.get('id') != channel_id:
+                continue
+
+            for api in channel.get('apis', []):
+                if api.get('project_id') != self.project_id:
+                    continue
+                token_name = (api.get('token_file') or '').strip()
+                if not token_name:
+                    continue
+                token_path = self.credentials_dir / token_name
+                if token_path.exists():
+                    matched_paths.append(token_path)
+
+        if matched_paths:
+            return sorted(matched_paths)[0]
+        return None
 
 
 def main():

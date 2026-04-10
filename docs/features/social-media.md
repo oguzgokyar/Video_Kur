@@ -83,8 +83,8 @@ auth.authenticate()
 
 ### Web Arayüzü
 
-1. **http://localhost/social.php** adresini açın
-2. "Platformlar" sekmesinde bağlı hesapları görün
+1. **http://localhost:8000/accounts.php** adresini açın
+2. Bağlı platform hesaplarını bu ekrandan yönetin
 3. Dashboard'dan video seçip "Çoklu Platform Paylaşımı" yapın
 
 ### Scheduler Başlatma
@@ -102,7 +102,7 @@ python scheduler/social_scheduler.py --interval 60
 
 #### Çoklu Platform Zamanlama
 ```bash
-curl -X POST http://localhost/api/social.php \
+curl -X POST http://localhost:8000/api/social.php \
   -H "Content-Type: application/json" \
   -d '{
     "action": "schedule_multi",
@@ -120,12 +120,12 @@ curl -X POST http://localhost/api/social.php \
 
 #### Platform Durumu Sorgulama
 ```bash
-curl "http://localhost/api/social.php?action=get_platforms"
+curl "http://localhost:8000/api/social.php?action=get_platforms"
 ```
 
 #### Kuyruk Görüntüleme
 ```bash
-curl "http://localhost/api/social.php?action=get_queue"
+curl "http://localhost:8000/api/social.php?action=get_queue"
 ```
 
 ## 🔧 Dosya Yapısı

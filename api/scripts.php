@@ -21,6 +21,7 @@ function loadScripts() {
     $scripts = $data['scripts'] ?? [];
     foreach ($scripts as &$script) {
         $script['videoType'] = normalizeVideoType($script['videoType'] ?? 'short');
+        unset($script['isDefault']);
     }
     unset($script);
     return $scripts;
@@ -74,7 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $videoType = normalizeVideoType($input['videoType'] ?? 'short');
     $prompt = trim($input['prompt'] ?? '');
     $maxDuration = intval($input['maxDuration'] ?? 55);
-    $isDefault = boolval($input['isDefault'] ?? false);
     
     if (empty($name) || empty($prompt)) {
         http_response_code(400);
@@ -84,24 +84,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     $scripts = loadScripts();
     
-    // Eğer yeni script varsayılan yapılıyorsa, diğerlerinin varsayılanlığını kaldır
-    if ($isDefault) {
-        foreach ($scripts as &$s) {
-            $sVideoType = normalizeVideoType($s['videoType'] ?? 'short');
-            if ($s['contentType'] === $contentType && $sVideoType === $videoType) {
-                $s['isDefault'] = false;
-            }
-        }
-        unset($s);
-    }
-    
     $newScript = [
         'id' => uniqid('script_', true),
         'name' => $name,
         'description' => $description,
         'contentType' => $contentType,
         'videoType' => $videoType,
-        'isDefault' => $isDefault,
         'maxDuration' => $maxDuration,
         'prompt' => $prompt,
         'createdAt' => date('c'),
@@ -132,19 +120,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     foreach ($scripts as &$script) {
         if ($script['id'] === $id) {
             $found = true;
-            $nextContentType = isset($input['contentType']) ? trim($input['contentType']) : ($script['contentType'] ?? 'genel');
-            $nextVideoType = isset($input['videoType']) ? normalizeVideoType($input['videoType']) : normalizeVideoType($script['videoType'] ?? 'short');
-            
-            // Eğer varsayılan yapılıyorsa, aynı contentType'daki diğerlerini kaldır
-            if (isset($input['isDefault']) && $input['isDefault']) {
-                foreach ($scripts as &$s) {
-                    $sVideoType = normalizeVideoType($s['videoType'] ?? 'short');
-                    if ($s['id'] !== $id && $s['contentType'] === $nextContentType && $sVideoType === $nextVideoType) {
-                        $s['isDefault'] = false;
-                    }
-                }
-                unset($s);
-            }
             
             // Güncelle
             if (isset($input['name'])) $script['name'] = trim($input['name']);
@@ -153,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             if (isset($input['videoType'])) $script['videoType'] = normalizeVideoType($input['videoType']);
             if (isset($input['prompt'])) $script['prompt'] = trim($input['prompt']);
             if (isset($input['maxDuration'])) $script['maxDuration'] = intval($input['maxDuration']);
-            if (isset($input['isDefault'])) $script['isDefault'] = boolval($input['isDefault']);
+            unset($script['isDefault']);
             $script['updatedAt'] = date('c');
             
             break;

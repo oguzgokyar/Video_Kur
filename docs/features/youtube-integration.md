@@ -82,7 +82,7 @@ Bu komut:
 1. Tarayıcınızda OAuth sayfasını açar
 2. Google hesabınızla giriş yapmanızı ister
 3. İzinleri onaylamanızı bekler
-4. Token'ı kaydeder: `data/youtube_credentials/default_token.pickle`
+4. Token'ı kaydeder: `data/youtube_credentials/<project>_<channel>_<api>_token.json`
 5. Kanal bilgilerini çeker: `data/youtube_channels.json`
 
 ### Test Users Ekleme
@@ -120,7 +120,7 @@ Tamamlanmış videolar için:
 
 #### Manuel Upload
 ```bash
-curl -X POST http://localhost/api/youtube.php \
+curl -X POST http://localhost:8000/api/youtube_upload.php \
   -H "Content-Type: application/json" \
   -d '{
     "action": "upload",
@@ -139,7 +139,7 @@ curl -X POST http://localhost/api/youtube.php \
 
 #### Kuyruğa Ekleme
 ```bash
-curl -X POST http://localhost/api/queues.php \
+curl -X POST http://localhost:8000/api/queues.php \
   -H "Content-Type: application/json" \
   -d '{
     "action": "add_video",
@@ -187,11 +187,15 @@ Videolar arası bekleme süresini dakika cinsinden ayarlar.
 ```json
 {
   "schedule": {
-    "type": "interval",
-    "start_time": "09:00",
-    "interval_minutes": 120,
-    "daily_limit": 4,
     "timezone": "Europe/Istanbul"
+  },
+  "platform_settings": {
+    "youtube": {
+      "scheduleType": "interval",
+      "startTime": "09:00",
+      "intervalMinutes": 120,
+      "dailyLimit": 4
+    }
   }
 }
 ```
@@ -200,10 +204,12 @@ Sonuç: 09:00, 11:00, 13:00, 15:00
 **Hemen Başla, Her 90 Dakikada 1, Limitsiz:**
 ```json
 {
-  "schedule": {
-    "type": "interval",
-    "interval_minutes": 90,
-    "daily_limit": 0
+  "platform_settings": {
+    "youtube": {
+      "scheduleType": "interval",
+      "intervalMinutes": 90,
+      "dailyLimit": 0
+    }
   }
 }
 ```
@@ -325,9 +331,8 @@ Tahmini kalan: ~12 video
 ### Token Dosyaları
 ```
 data/youtube_credentials/
-├── default.pkl              # Default channel token
-├── <channel_id_1>.pkl       # Channel-specific tokens
-└── project_2_default.pkl    # Multi-project tokens
+├── <project>_<channel>_<api>_token.json  # OAuth token'ları
+└── client_secrets_<project>.json         # OAuth client credentials
 ```
 
 ### Token Hataları ve Çözümleri
@@ -351,7 +356,7 @@ Bu komut:
 **Manuel Çözüm:**
 ```bash
 # Token dosyalarını sil
-rm data/youtube_credentials/*_token.pickle
+rm data/youtube_credentials/*_token.json
 # Yeniden kimlik doğrula
 python youtube/auth.py
 ```
@@ -468,7 +473,7 @@ Video_Kur/
 │   ├── youtube_credentials/
 │   │   ├── client_secrets.json      # OAuth credentials
 │   │   ├── client_secrets_2.json    # İkinci proje
-│   │   └── *_token.pickle           # Token'lar
+│   │   └── *_token.json             # Token'lar
 │   ├── youtube_channels.json    # Bağlı kanallar
 │   ├── youtube_projects.json    # Multi-project config
 │   └── queues.json              # Publish kuyrukları

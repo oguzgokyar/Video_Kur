@@ -114,6 +114,33 @@ class UnifiedQueueManager:
 
         pending = []
         queues_changed = False
+
+        def _status_value(status_obj) -> str:
+            if isinstance(status_obj, dict):
+                return str(status_obj.get('status', 'pending'))
+            if status_obj is None:
+                return 'pending'
+            return str(status_obj)
+
+        def _is_missing_video_failed(status_obj) -> bool:
+            if not isinstance(status_obj, dict):
+                return False
+            if str(status_obj.get('status', '')) != 'failed':
+                return False
+            return 'video file not found' in str(status_obj.get('error', '')).lower()
+
+        def _is_job_ready_for_publish(job_id: str) -> bool:
+            if not job_id:
+                return False
+            job_file = self.base_dir / 'data' / 'jobs' / f'{job_id}.json'
+            if not job_file.exists():
+                return False
+            try:
+                with open(job_file, 'r', encoding='utf-8') as f:
+                    job_data = json.load(f)
+                return str(job_data.get('status', '')).lower() in ('done', 'completed')
+            except Exception:
+                return False
         
         for queue in queues_data.get('queues', []):
             # Skip inactive queues
@@ -139,11 +166,8 @@ class UnifiedQueueManager:
                     has_pending = False
                     for plat in platforms:
                         status_obj = platform_status.get(plat, {})
-                        if isinstance(status_obj, dict):
-                            status = status_obj.get('status', 'pending')
-                        else:
-                            status = status_obj
-                        if status in ('pending', 'processing'):
+                        status = _status_value(status_obj)
+                        if status in ('pending', 'processing') or _is_missing_video_failed(status_obj):
                             has_pending = True
                             break
                     
@@ -169,26 +193,14 @@ class UnifiedQueueManager:
                 # Build video path
                 job_id = video.get('job_id')
                 video_path = str(self.base_dir / 'output' / job_id / 'final_video.mp4')
+
+                # Never publish before production is fully completed
+                if not _is_job_ready_for_publish(job_id):
+                    continue
                 
                 # Check if video file exists
                 if not os.path.exists(video_path):
-                    print(f"⚠️  Video file not found: {video_path}")
-                    # Mark missing-video platforms as failed once to avoid infinite retry loop
-                    if 'platform_status' not in video or not isinstance(video.get('platform_status'), dict):
-                        video['platform_status'] = {}
-                    for plat in platforms:
-                        status_obj = video['platform_status'].get(plat, {})
-                        current_status = status_obj.get('status') if isinstance(status_obj, dict) else status_obj
-                        if current_status not in ('published', 'failed'):
-                            video['platform_status'][plat] = {
-                                'status': 'failed',
-                                'error': f'Video file not found: {video_path}',
-                                'retry': False,
-                                'failed_at': datetime.now(timezone.utc).isoformat()
-                            }
-                            queues_changed = True
-                    video['status'] = 'failed'
-                    video['last_error'] = f'Video file not found: {video_path}'
+                    # Production may still be finalizing files; keep pending instead of hard-failing
                     continue
                 
                 # Check platform status
@@ -202,23 +214,20 @@ class UnifiedQueueManager:
                         continue
                     
                     status_obj = platform_status.get(plat, {})
-                    
-                    # Handle both dict and string status
-                    if isinstance(status_obj, dict):
-                        status = status_obj.get('status', 'pending')
-                    else:
-                        status = status_obj
+                    status = _status_value(status_obj)
                     
                     # Include pending and processing (stuck items after restart)
-                    if status in ('pending', 'processing'):
+                    if status in ('pending', 'processing') or _is_missing_video_failed(status_obj):
                         pending_platforms.append(plat)
                         
-                        # Reset processing to pending (after scheduler restart)
-                        if status == 'processing':
-                            if isinstance(platform_status[plat], dict):
+                        # Reset processing/missing-file-failed back to pending
+                        if status == 'processing' or _is_missing_video_failed(status_obj):
+                            if isinstance(platform_status.get(plat), dict):
                                 platform_status[plat]['status'] = 'pending'
+                                platform_status[plat]['error'] = None
                             else:
                                 platform_status[plat] = 'pending'
+                            queues_changed = True
                 
                 if not pending_platforms:
                     continue  # All platforms completed or no pending ones

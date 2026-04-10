@@ -71,7 +71,7 @@ python python/content/scheduler.py
 
 ### 2️⃣ Frontend Kullanımı
 
-1. **Tarayıcıda aç:** `http://localhost/frontend/content.php`
+1. **Tarayıcıda aç:** `http://localhost:8000/content.php`
 
 2. **Manuel URL Ekle:**
    - "URL Ekle" butonuna tıkla
@@ -238,12 +238,12 @@ python python/content/batch_processor.py content_abc123 content_def456
 
 **Content API:**
 ```bash
-curl http://localhost/api/content.php?list=1
+curl http://localhost:8000/api/content.php?list=1
 ```
 
 **Sources API:**
 ```bash
-curl http://localhost/api/content_sources.php
+curl http://localhost:8000/api/content_sources.php
 ```
 
 ---

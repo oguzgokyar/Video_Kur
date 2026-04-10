@@ -1,8 +1,6 @@
 # ===== CREDENTIALS & SECRETS =====
 # YouTube OAuth credentials
 data/youtube_credentials/client_secrets.json
-data/youtube_credentials/*.pickle
-data/youtube_credentials/*_token.pickle
 data/youtube_credentials/*_token.json
 
 # Social Media Credentials
