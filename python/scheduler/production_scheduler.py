@@ -135,12 +135,15 @@ class ProductionScheduler:
                 job_data = json.load(f)
             
             url = job_data.get('url')
+            source_mode = (job_data.get('source_mode') or 'url').lower()
             template = job_data.get('template', 'short_haber')
             
-            if not url:
+            if source_mode != 'prompt' and not url:
                 print(f"❌ No URL in job data")
                 self.queue_manager.complete_job(job_id, success=False, error='No URL in job data')
                 return
+            if source_mode == 'prompt' and not url:
+                url = f'prompt://{job_id}'
             
             # Start pipeline in background
             cmd = [

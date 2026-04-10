@@ -8,6 +8,8 @@
 <body class="bg-gray-100 min-h-screen" x-data="{ 
   sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === '1', 
   url: '', 
+  sourceMode: 'url',
+  promptText: '',
   template: 'short_haber', 
   jobId: '', 
   loading: false, 
@@ -19,6 +21,8 @@
   scripts: [],
   scriptId: '',
   contentType: 'haber',
+  visualThemeId: 'default',
+  visualThemePrompt: '',
   darkMode: localStorage.getItem('darkMode')==='1', 
   toggleDark(){ this.darkMode=!this.darkMode; localStorage.setItem('darkMode',this.darkMode?'1':'0'); document.documentElement.classList.toggle('dark',this.darkMode); },
   
@@ -45,6 +49,23 @@
       const sCategory = (s.contentType || '').toLowerCase() === this.contentType.toLowerCase();
       return sType && sCategory;
     });
+  },
+  visualThemes: [
+    { id: 'default', label: 'Default', prompt: '' },
+    { id: 'realistic', label: 'Realistic', prompt: 'ultra realistic photo style, natural lighting, real-world textures' },
+    { id: 'cinematic', label: 'Cinematic', prompt: 'cinematic film still, dramatic lighting, high contrast, anamorphic composition' },
+    { id: 'photographic', label: 'Photographic', prompt: 'professional photography style, crisp details, editorial quality' },
+    { id: '3d-model', label: '3D Model', prompt: 'high quality 3D render, stylized 3D model look, clean geometry' },
+    { id: 'anime', label: 'Anime', prompt: 'anime style illustration, vibrant cel shading, Japanese animation aesthetic' },
+    { id: 'digital-art', label: 'Digital Art', prompt: 'digital painting style, concept art quality, rich color grading' },
+    { id: 'dark', label: 'Dark', prompt: 'dark moody atmosphere, low-key lighting, dramatic shadows' },
+    { id: 'reportage-sketch', label: 'Reportage Sketch', prompt: 'reportage sketch style, monochrome ink and charcoal texture' },
+    { id: 'infinity', label: 'Infinity', prompt: 'epic fantasy concept art, monumental scale, surreal atmosphere' }
+  ],
+  get selectedThemePrompt() {
+    if (this.visualThemeId === 'default') return this.visualThemePrompt || '';
+    const found = this.visualThemes.find(t => t.id === this.visualThemeId);
+    return found ? found.prompt : '';
   },
   
   // Subtitle style settings - varsayılan olarak config'den yükleniyor
@@ -103,9 +124,11 @@
 
           <form @submit.prevent="
             loading=true; error='';
+            if(sourceMode==='url' && !url){ error='Lütfen URL girin'; loading=false; return; }
+            if(sourceMode==='prompt' && (!promptText || promptText.trim().length < 20)){ error='Prompt en az 20 karakter olmalı'; loading=false; return; }
             if(!scriptId){ error='Lütfen bir script seçin'; loading=false; return; }
             steps=['Haber çekiliyor...'];
-            fetch('/api/jobs.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, template, scriptId, contentType, videoWidth, videoHeight, subtitleStyle})})
+            fetch('/api/jobs.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, source_mode: sourceMode, prompt_text: promptText, template, scriptId, contentType, videoWidth, videoHeight, subtitleStyle, visual_theme_id: visualThemeId, visual_theme_prompt: selectedThemePrompt})})
               .then(r=>r.json())
               .then(d=>{
                 if(d.error){ error=d.error; loading=false; return; }
@@ -113,8 +136,28 @@
               })
               .catch(e=>{ error='İş başlatılamadı. Backend çalışıyor mu?'; loading=false; })
           " class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-            <label class="block mb-2 text-sm font-semibold text-gray-700">Haber Linki</label>
-            <input type="url" x-model="url" required placeholder="https://www.example.com/haber/..." class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+            <label class="block mb-2 text-sm font-semibold text-gray-700">Kaynak Türü</label>
+            <div class="flex gap-2 mb-4">
+              <button type="button" @click="sourceMode='url'" class="px-3 py-1.5 rounded-full border text-sm transition"
+                :class="sourceMode==='url' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">URL</button>
+              <button type="button" @click="sourceMode='prompt'" class="px-3 py-1.5 rounded-full border text-sm transition"
+                :class="sourceMode==='prompt' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Prompt</button>
+            </div>
+
+            <template x-if="sourceMode==='url'">
+              <div>
+                <label class="block mb-2 text-sm font-semibold text-gray-700">Haber Linki</label>
+                <input type="url" x-model="url" placeholder="https://www.example.com/haber/..." class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+              </div>
+            </template>
+
+            <template x-if="sourceMode==='prompt'">
+              <div>
+                <label class="block mb-2 text-sm font-semibold text-gray-700">Video Prompt</label>
+                <textarea x-model="promptText" rows="4" maxlength="2000" placeholder="Videoda anlatılmasını istediğiniz konuyu detaylı yazın..." class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"></textarea>
+                <p class="text-xs text-gray-500 mb-4"><span x-text="promptText.length"></span> / 2000</p>
+              </div>
+            </template>
 
             <label class="block mb-2 text-sm font-semibold text-gray-700">Video Formatı</label>
             <select x-model="template" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
@@ -172,6 +215,16 @@
                 📐 Görsel & Video Ebatı: <span class="font-bold" x-text="videoWidth + ' x ' + videoHeight + ' px'"></span>
               </span>
               <span class="text-xs text-blue-500" x-text="videoWidth > videoHeight ? 'Yatay' : (videoWidth < videoHeight ? 'Dikey' : 'Kare')"></span>
+            </div>
+
+            <label class="block mb-2 text-sm font-semibold text-gray-700">Görsel Tema</label>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+              <template x-for="theme in visualThemes" :key="theme.id">
+                <button type="button" @click="visualThemeId=theme.id" class="px-3 py-2 rounded-lg border text-sm transition text-left"
+                  :class="visualThemeId===theme.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-700 hover:bg-gray-50'">
+                  <span x-text="theme.label"></span>
+                </button>
+              </template>
             </div>
 
             <label class="block mb-2 text-sm font-semibold text-gray-700">Script (Zorunlu)</label>

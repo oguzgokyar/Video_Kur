@@ -98,10 +98,20 @@ function resolveVideoSettingsFromQueue($queue) {
     $videoWidth = 1080;
     $videoHeight = 1920;
     $subtitleStyle = null;
+    $visualThemeId = 'default';
+    $visualThemePrompt = null;
     
     if ($settings) {
         $videoWidth = $settings['videoWidth'] ?? 1080;
         $videoHeight = $settings['videoHeight'] ?? 1920;
+        $visualThemeId = trim((string)($settings['visualThemeId'] ?? 'default'));
+        if ($visualThemeId === '') {
+            $visualThemeId = 'default';
+        }
+        $visualThemePrompt = trim((string)($settings['visualThemePrompt'] ?? ''));
+        if ($visualThemePrompt === '') {
+            $visualThemePrompt = null;
+        }
         
         $subtitleMode = $settings['subtitleMode'] ?? 'config';
         
@@ -133,7 +143,9 @@ function resolveVideoSettingsFromQueue($queue) {
     return [
         'videoWidth' => $videoWidth,
         'videoHeight' => $videoHeight,
-        'subtitleStyle' => $subtitleStyle
+        'subtitleStyle' => $subtitleStyle,
+        'visualThemeId' => $visualThemeId,
+        'visualThemePrompt' => $visualThemePrompt
     ];
 }
 
@@ -518,7 +530,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $videoSettings = [
             'videoWidth' => 1080,
             'videoHeight' => 1920,
-            'subtitleStyle' => getDefaultSubtitleStyle()
+            'subtitleStyle' => getDefaultSubtitleStyle(),
+            'visualThemeId' => 'default',
+            'visualThemePrompt' => null
         ];
         
         if (!empty($queue_id)) {
@@ -552,6 +566,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'videoWidth' => $videoSettings['videoWidth'],
             'videoHeight' => $videoSettings['videoHeight'],
             'subtitleStyle' => $videoSettings['subtitleStyle'],
+            'visual_theme_id' => $videoSettings['visualThemeId'] ?? 'default',
+            'visual_theme_prompt' => $videoSettings['visualThemePrompt'] ?? null,
             'status' => 'pending',
             'created_at' => date('Y-m-d H:i:s'),
             'previewUrl' => '',

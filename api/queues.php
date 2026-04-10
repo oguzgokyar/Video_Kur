@@ -610,6 +610,8 @@ function getDefaultVideoSettings() {
         'dimensionPreset' => 'vertical',
         'videoWidth' => 1080,
         'videoHeight' => 1920,
+        'visualThemeId' => 'default',
+        'visualThemePrompt' => null,
         'subtitleMode' => 'config',
         'subtitlePreset' => 'classic',
         'customSubtitle' => null
@@ -634,6 +636,14 @@ function resolveVideoSettings($queue) {
     // Varsayılan değerler
     $videoWidth = $settings['videoWidth'] ?? 1080;
     $videoHeight = $settings['videoHeight'] ?? 1920;
+    $visualThemeId = trim((string)($settings['visualThemeId'] ?? 'default'));
+    if ($visualThemeId === '') {
+        $visualThemeId = 'default';
+    }
+    $visualThemePrompt = trim((string)($settings['visualThemePrompt'] ?? ''));
+    if ($visualThemePrompt === '') {
+        $visualThemePrompt = null;
+    }
     
     // Altyazı stilini çöz
     $subtitleStyle = null;
@@ -688,7 +698,9 @@ function resolveVideoSettings($queue) {
     return [
         'videoWidth' => $videoWidth,
         'videoHeight' => $videoHeight,
-        'subtitleStyle' => $subtitleStyle
+        'subtitleStyle' => $subtitleStyle,
+        'visualThemeId' => $visualThemeId,
+        'visualThemePrompt' => $visualThemePrompt
     ];
 }
 
@@ -1501,6 +1513,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'status' => 'queued',
                         'added_at' => date('c')
                     ];
+                    $queueVideoSettings = $queue['video_settings'] ?? [];
+                    if (empty($job['visual_theme_id']) && !empty($queueVideoSettings['visualThemeId'])) {
+                        $job['visual_theme_id'] = $queueVideoSettings['visualThemeId'];
+                    }
+                    if (empty($job['visual_theme_prompt']) && !empty($queueVideoSettings['visualThemePrompt'])) {
+                        $job['visual_theme_prompt'] = $queueVideoSettings['visualThemePrompt'];
+                    }
                     saveJob($jobId, $job);
                     
                     break;

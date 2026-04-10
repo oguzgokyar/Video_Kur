@@ -89,6 +89,46 @@ def _get_video_type(width: int, height: int) -> str:
     return 'short'
 
 
+VISUAL_THEME_PROMPTS = {
+    'default': '',
+    'realistic': 'ultra realistic photo style, natural lighting, real-world textures',
+    'cinematic': 'cinematic film still, dramatic lighting, high contrast, anamorphic composition',
+    'photographic': 'professional photography style, crisp details, editorial quality',
+    '3d-model': 'high quality 3D render, stylized 3D model look, clean geometry',
+    'anime': 'anime style illustration, vibrant cel shading, Japanese animation aesthetic',
+    'digital-art': 'digital painting style, concept art quality, rich color grading',
+    'dark': 'dark moody atmosphere, low-key lighting, dramatic shadows',
+    'reportage-sketch': 'reportage sketch style, monochrome ink and charcoal texture',
+    'infinity': 'epic fantasy concept art, monumental scale, surreal atmosphere'
+}
+
+
+def resolve_visual_theme(job_data: dict) -> tuple[str, str | None]:
+    theme_id = (job_data.get('visual_theme_id') or 'default').strip().lower()
+    custom_prompt = (job_data.get('visual_theme_prompt') or '').strip() or None
+    return theme_id, custom_prompt
+
+
+def apply_visual_theme(base_prompt: str, theme_id: str, custom_prompt: str | None) -> str:
+    parts = [base_prompt.strip()]
+    if custom_prompt:
+        parts.append(custom_prompt.strip())
+    else:
+        theme_prompt = VISUAL_THEME_PROMPTS.get(theme_id, '')
+        if theme_prompt:
+            parts.append(theme_prompt)
+    return ', '.join([p for p in parts if p])
+
+
+def build_prompt_news(prompt_text: str) -> dict:
+    text = (prompt_text or '').strip()
+    if not text:
+        return {'title': 'Prompt Video', 'text': 'Prompt içeriği girilmedi'}
+    first_line = text.splitlines()[0].strip()
+    title = first_line[:120] if first_line else text[:120]
+    return {'title': title or 'Prompt Video', 'text': text}
+
+
 def _load_custom_script(base_dir: str, job_data: dict, video_type: str):
     scripts_file = os.path.join(base_dir, 'data', 'scripts.json')
     if not os.path.exists(scripts_file):
@@ -281,6 +321,9 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
     if os.path.exists(job_file):
         with open(job_file, 'r', encoding='utf-8') as f:
             job_data = json.load(f)
+    source_mode = (job_data.get('source_mode') or 'url').lower()
+    prompt_text = (job_data.get('prompt_text') or '').strip()
+    visual_theme_id, visual_theme_prompt = resolve_visual_theme(job_data)
     
     # Video ve görsel ebatları - job'dan al, yoksa varsayılan
     video_width = job_data.get('videoWidth', 1080)
@@ -371,12 +414,16 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
     update_job(jobs_dir, job_id, {'status': 'scraping'}, log_file=log_file)
     log_to_job(log_file, "Starting scraping phase", "INFO")
 
-    news = scrape_news(url)
-    if not news.get('text'):
-        error_msg = 'Haber metni çekilemedi'
-        update_job(jobs_dir, job_id, {'status': 'failed', 'error': error_msg}, log_file=log_file)
-        log_to_job(log_file, f"Scraping failed: {error_msg}", "ERROR")
-        return
+    if source_mode == 'prompt':
+        news = build_prompt_news(prompt_text)
+        log_to_job(log_file, "Prompt mode active: scraping skipped", "INFO")
+    else:
+        news = scrape_news(url)
+        if not news.get('text'):
+            error_msg = 'Haber metni çekilemedi'
+            update_job(jobs_dir, job_id, {'status': 'failed', 'error': error_msg}, log_file=log_file)
+            log_to_job(log_file, f"Scraping failed: {error_msg}", "ERROR")
+            return
 
     with open(os.path.join(output_dir, 'news.json'), 'w', encoding='utf-8') as f:
         json.dump(news, f, ensure_ascii=False, indent=2)
@@ -534,6 +581,7 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
         # Hook görseli üret (AI tarafından üretilen prompt'u kullan)
         if script.get('hook'):
             hook_prompt = script.get('hook_image_prompt', f"Eye-catching video thumbnail, attention grabbing intro visual, viral content style, breaking news cover, dramatic lighting, {news.get('title', 'news')[:50]}")
+            hook_prompt = apply_visual_theme(hook_prompt, visual_theme_id, visual_theme_prompt)
             hook_img_path = os.path.join(images_dir, 'hook.png')
             hook_service = _generate_image(hook_prompt, hook_img_path)
             script['hook_used_service'] = hook_service
@@ -546,6 +594,7 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
         # Sahne görselleri üret
         for i, scene in enumerate(scenes):
             prompt = scene.get('image_prompt', 'news background')
+            prompt = apply_visual_theme(prompt, visual_theme_id, visual_theme_prompt)
             img_path = os.path.join(images_dir, f"scene_{i+1}.png")
             used_service = _generate_image(prompt, img_path)
 
@@ -561,6 +610,7 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
         # Outro görseli üret (AI tarafından üretilen prompt'u kullan)
         if script.get('outro'):
             outro_prompt = script.get('outro_image_prompt', "Video outro closing scene, call to action visual, subscribe and comment icons, social media engagement, like and follow buttons, channel subscribe reminder, clean modern design")
+            outro_prompt = apply_visual_theme(outro_prompt, visual_theme_id, visual_theme_prompt)
             outro_img_path = os.path.join(images_dir, 'outro.png')
             outro_service = _generate_image(outro_prompt, outro_img_path)
             script['outro_used_service'] = outro_service
@@ -574,6 +624,7 @@ def run_pipeline(job_id: str, url: str, template: str, config_file: str):
         
         # Thumbnail görseli üret (YouTube kapak için)
         thumbnail_prompt = script.get('thumbnail_image_prompt', f"Professional YouTube thumbnail, dramatic lighting, bold colors, eye-catching, news media style, {news.get('title', 'breaking news')[:50]}, space for text overlay")
+        thumbnail_prompt = apply_visual_theme(thumbnail_prompt, visual_theme_id, visual_theme_prompt)
         thumbnail_path = os.path.join(output_dir, 'thumbnail.jpg')
         thumbnail_service = _generate_image(thumbnail_prompt, thumbnail_path)
         script['thumbnail_used_service'] = thumbnail_service

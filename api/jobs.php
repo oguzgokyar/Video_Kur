@@ -398,21 +398,43 @@ function mapResumeSectionForRegenerate($resumeFrom) {
 // POST: Yeni iş oluştur
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
-    $url = $input['url'] ?? '';
+    $url = trim((string)($input['url'] ?? ''));
     $template = $input['template'] ?? 'short_haber';
     $scriptId = trim((string)($input['scriptId'] ?? ''));
     $contentType = trim((string)($input['contentType'] ?? ''));
     $videoWidth = intval($input['videoWidth'] ?? 1080);
     $videoHeight = intval($input['videoHeight'] ?? 1920);
     $subtitleStyle = $input['subtitleStyle'] ?? null;
+    $sourceMode = strtolower(trim((string)($input['source_mode'] ?? 'url')));
+    if (!in_array($sourceMode, ['url', 'prompt'], true)) {
+        $sourceMode = 'url';
+    }
+    $promptText = trim((string)($input['prompt_text'] ?? ''));
+    $visualThemeId = trim((string)($input['visual_theme_id'] ?? 'default'));
+    if ($visualThemeId === '') {
+        $visualThemeId = 'default';
+    }
+    $visualThemePrompt = trim((string)($input['visual_theme_prompt'] ?? ''));
 
     // Ebat sınırları kontrolü
     $videoWidth = max(360, min(4096, $videoWidth));
     $videoHeight = max(360, min(4096, $videoHeight));
 
-    if (empty($url)) {
-        echo json_encode(['error' => 'URL gerekli']);
-        exit;
+    if ($sourceMode === 'url') {
+        if (empty($url)) {
+            echo json_encode(['error' => 'URL gerekli']);
+            exit;
+        }
+    } else {
+        $promptLen = function_exists('mb_strlen') ? mb_strlen($promptText, 'UTF-8') : strlen($promptText);
+        if ($promptText === '' || $promptLen < 20) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Prompt en az 20 karakter olmalı']);
+            exit;
+        }
+        if ($url === '') {
+            $url = 'prompt://' . uniqid('job_', true);
+        }
     }
 
     if ($scriptId === '') {
@@ -435,16 +457,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $jobId = uniqid('job_', true);
     
-    // URL'den basit bir başlık oluştur
-    $parsedUrl = parse_url($url);
-    $path = $parsedUrl['path'] ?? '';
-    $titleGuess = basename($path);
-    $titleGuess = preg_replace('/[^a-zA-Z0-9\s-]/', ' ', urldecode($titleGuess));
-    $titleGuess = ucfirst(trim($titleGuess)) ?: 'Yeni Video';
+    // Başlık fallback'i oluştur
+    $titleGuess = 'Yeni Video';
+    if ($sourceMode === 'prompt' && $promptText !== '') {
+        $normalizedPrompt = trim(preg_replace('/\s+/', ' ', $promptText));
+        $titleGuess = function_exists('mb_substr') ? mb_substr($normalizedPrompt, 0, 90, 'UTF-8') : substr($normalizedPrompt, 0, 90);
+    } else {
+        $parsedUrl = parse_url($url);
+        $path = $parsedUrl['path'] ?? '';
+        $titleGuess = basename($path);
+        $titleGuess = preg_replace('/[^a-zA-Z0-9\s-]/', ' ', urldecode($titleGuess));
+        $titleGuess = ucfirst(trim($titleGuess)) ?: 'Yeni Video';
+    }
     
     $jobData = [
         'id' => $jobId,
         'url' => $url,
+        'source_mode' => $sourceMode,
+        'prompt_text' => $sourceMode === 'prompt' ? $promptText : null,
         'template' => $template,
         'scriptId' => $scriptId,
         'scriptName' => $selectedScript['name'] ?? '',
@@ -452,6 +482,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'videoWidth' => $videoWidth,
         'videoHeight' => $videoHeight,
         'subtitleStyle' => $subtitleStyle,
+        'visual_theme_id' => $visualThemeId,
+        'visual_theme_prompt' => $visualThemePrompt !== '' ? $visualThemePrompt : null,
         'status' => 'pending',
         'created_at' => date('Y-m-d H:i:s'),
         'previewUrl' => '',
