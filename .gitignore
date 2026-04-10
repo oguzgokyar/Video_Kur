@@ -3,6 +3,10 @@
 data/youtube_credentials/client_secrets.json
 data/youtube_credentials/*.pickle
 data/youtube_credentials/*_token.pickle
+data/youtube_credentials/*_token.json
+data/youtube_credentials.backup/
+yedek/data/youtube_credentials/*_token.json
+data/.locks/
 
 # Social Media Credentials
 data/social_credentials/
