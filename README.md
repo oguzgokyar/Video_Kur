@@ -14,7 +14,7 @@ Haber URL'lerinden otomatik YouTube Shorts videoları üreten ve çoklu sosyal m
 ## ✨ Özellikler
 
 ### 🤖 AI Destekli İçerik Üretimi
-- **Script Üretimi** - Gemini 2.0 Flash / Pollinations AI
+- **Script Üretimi** - Gemini / Pollinations AI
 - **Görsel Üretimi** - Fal.ai FLUX / Pollinations / HuggingFace / Pexels
 - **Ses Sentezi** - ElevenLabs (Premium) / Edge-TTS (Ücretsiz)
 
@@ -71,10 +71,7 @@ cd Video_Kur
 # Python bağımlılıklarını yükleyin
 cd python
 pip install -r requirements.txt
-
-# Config dosyasını oluşturun
-cp data/config.example.json data/config.json
-# API anahtarlarınızı config.json'a ekleyin
+cd ..
 ```
 
 ### Yapılandırma
@@ -93,11 +90,11 @@ cp data/config.example.json data/config.json
 ### Çalıştırma
 
 ```bash
-# PHP sunucusunu başlatın
-php -S localhost:8000 router.php
+# Tek komutla başlatın (önerilen)
+start_all.bat
 
-# Tarayıcıda açın
-# http://localhost:8000/frontend/dashboard.php
+# veya manuel:
+php -S localhost:8000 router.php
 ```
 
 ---
@@ -106,8 +103,8 @@ php -S localhost:8000 router.php
 
 ```
 Video_Kur/
-├── api/                    # REST API endpoints (11 PHP)
-├── python/                 # Video üretim pipeline (31 script)
+├── api/                    # REST API endpoints
+├── python/                 # Video üretim pipeline
 │   ├── scraper.py          # Haber çekme
 │   ├── script_gen.py       # AI script üretimi
 │   ├── image_gen.py        # AI görsel üretimi
@@ -117,7 +114,7 @@ Video_Kur/
 │   ├── scheduler/          # Zamanlama modülleri
 │   ├── social/             # Sosyal medya uploaderları
 │   └── youtube/            # YouTube API modülleri
-├── frontend/               # Web arayüzü (21 dosya)
+├── frontend/               # Web arayüzü
 ├── data/                   # Yapılandırma ve veriler
 └── output/                 # Üretilen videolar
 ```
@@ -190,13 +187,24 @@ URL Girişi
 
 ## 📚 Dokümantasyon
 
-- [📋 QUICKSTART.md](QUICKSTART.md) - Hızlı başlangıç
-- [📺 YOUTUBE_README.md](YOUTUBE_README.md) - YouTube entegrasyonu
-- [📱 SOCIAL_MEDIA_README.md](SOCIAL_MEDIA_README.md) - Sosyal medya
-- [🎬 CUSTOM_SCRIPT_GUIDE.md](CUSTOM_SCRIPT_GUIDE.md) - Script sistemi
-- [💬 SUBTITLE_STYLE_GUIDE.md](SUBTITLE_STYLE_GUIDE.md) - Altyazı stilleri
-- [📊 PROJECT_STATUS.md](PROJECT_STATUS.md) - Proje durumu
-- [📜 CHANGELOG.md](CHANGELOG.md) - Değişiklik günlüğü
+### 🚀 Başlangıç
+- [📋 Hızlı Başlangıç](QUICKSTART.md) - 5 dakikada kurulum
+- [🌐 Web Kullanım](docs/user-guides/web-kullanim.md) - Dashboard kullanımı
+
+### 👤 Kullanıcı Kılavuzları
+- [📖 Nasıl Kullanılır](docs/user-guides/kullanim.md) - Temel kullanım
+- [🎬 Custom Script](docs/user-guides/custom-scripts.md) - Özel script oluşturma
+- [💬 Altyazı Stilleri](docs/user-guides/subtitle-styling.md) - Altyazı özelleştirme
+
+### ⚙️ Özellikler ve Entegrasyonlar
+- [📺 YouTube Entegrasyonu](docs/features/youtube-integration.md) - OAuth, zamanlama, çoklu proje
+- [📱 Sosyal Medya](docs/features/social-media.md) - TikTok, Instagram, Facebook
+- [🔍 İçerik Keşfi](docs/features/content-discovery.md) - Trending içerik bulma
+
+### 📊 Proje Bilgileri
+- [📈 Proje Durumu](PROJECT_STATUS.md) - Mevcut durum ve yol haritası
+- [📜 Değişiklik Geçmişi](CHANGELOG.md) - Sürüm notları
+- [📁 Dokümantasyon İndeksi](docs/setup/DOCUMENTATION_INDEX.md) - Aktif/arşiv sınıflandırması
 
 ---
 

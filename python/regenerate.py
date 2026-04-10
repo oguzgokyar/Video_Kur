@@ -16,6 +16,17 @@ if sys.platform == 'win32':
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from pipeline import update_job, get_audio_duration, concat_audio_files
+from utils.video_lock import VideoCompositorLock, setup_job_temp_dir, cleanup_job_temp_dir
+
+def ensure_outro_cta(script: dict) -> dict:
+    outro = (script.get('outro') or '').strip()
+    if not outro:
+        outro = "Abone ol, Beğen ve Yorum yap! Daha fazlası için bizi takip et."
+    required_terms = ['Abone ol', 'Beğen', 'Yorum yap']
+    if not all(term in outro for term in required_terms):
+        outro = f"{outro} Abone ol, Beğen ve Yorum yap!".strip()
+    script['outro'] = outro
+    return script
 
 
 # ── Görsel Versiyonlama ────────────────────────────────────────────────────────
@@ -111,6 +122,9 @@ def run_regenerate(job_id: str, section: str, config_file: str, extra: dict = No
             config = json.load(f)
 
     gemini_key   = config.get('geminiKey', '')
+    gemini_keys  = config.get('geminiKeys', [])
+    if not gemini_keys and gemini_key:
+        gemini_keys = [gemini_key]
     eleven_key   = config.get('elevenKey', '')
     hf_key       = config.get('hfKey', '')
     pexels_key   = config.get('pexelsKey', '')
@@ -144,7 +158,7 @@ def run_regenerate(job_id: str, section: str, config_file: str, extra: dict = No
 
     try:
         _run_section(section, job_id, job, prev_status, extra, config, jobs_dir, output_dir, images_dir, audio_dir,
-                     gemini_key, eleven_key, hf_key, pexels_key, pollinations_key, fal_key, 
+                     gemini_keys, eleven_key, hf_key, pexels_key, pollinations_key, fal_key, 
                      tts_provider, gemini_model, pollinations_model, fal_width, fal_height, fal_steps,
                      restore_done, fail)
     except Exception as e:
@@ -154,7 +168,7 @@ def run_regenerate(job_id: str, section: str, config_file: str, extra: dict = No
 
 
 def _run_section(section, job_id, job, prev_status, extra, config, jobs_dir, output_dir, images_dir, audio_dir,
-                 gemini_key, eleven_key, hf_key, pexels_key, pollinations_key, fal_key,
+                 gemini_keys, eleven_key, hf_key, pexels_key, pollinations_key, fal_key,
                  tts_provider, gemini_model, pollinations_model, fal_width, fal_height, fal_steps,
                  restore_done, fail):
     """Bölüm bazlı yeniden üretim mantığı."""
@@ -174,7 +188,7 @@ def _run_section(section, job_id, job, prev_status, extra, config, jobs_dir, out
 
     # ── Script yeniden oluştur ─────────────────────────────────────────────────
     elif section == 'script':
-        from script_gen import generate_script
+        from script_gen import generate_script_with_fallback
         news_file = os.path.join(output_dir, 'news.json')
         if not os.path.exists(news_file):
             update_job(jobs_dir, job_id, {'status': prev_status, 'error': 'news.json bulunamadı'})
@@ -182,11 +196,19 @@ def _run_section(section, job_id, job, prev_status, extra, config, jobs_dir, out
         with open(news_file, 'r', encoding='utf-8') as f:
             news = json.load(f)
         update_job(jobs_dir, job_id, {'status': 'scripting'})
-        result = generate_script(news['title'], news['text'], gemini_key, model_name=gemini_model)
+        if not gemini_keys:
+            update_job(jobs_dir, job_id, {'status': prev_status, 'error': 'Script hatası: Gemini API key eksik'})
+            return
+        result = generate_script_with_fallback(
+            news['title'],
+            news['text'],
+            gemini_keys,
+            model_name=gemini_model
+        )
         if not result.get('success'):
             update_job(jobs_dir, job_id, {'status': prev_status, 'error': f"Script hatası: {result.get('error', '')}"})
             return
-        script = result['script']
+        script = ensure_outro_cta(result['script'])
         with open(os.path.join(output_dir, 'script.json'), 'w', encoding='utf-8') as f:
             json.dump(script, f, ensure_ascii=False, indent=2)
         restore_done()
@@ -433,7 +455,8 @@ def _run_section(section, job_id, job, prev_status, extra, config, jobs_dir, out
         update_job(jobs_dir, job_id, {'status': 'done', 'subtitles': srt_content})
 
     # ── Video yeniden birleştir ────────────────────────────────────────────────
-    elif section == 'video':
+    elif section == 'video' or section == 'composing':
+        # 'composing' is an alias for 'video' (used by resume feature)
         from video_composer import compose_video, SUBTITLE_PRESETS
         script_file = os.path.join(output_dir, 'script.json')
         if not os.path.exists(script_file):
@@ -472,25 +495,73 @@ def _run_section(section, job_id, job, prev_status, extra, config, jobs_dir, out
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-        # Altyazı stili: extra'dan al, job'dan al, yoksa preset adı
+        # Altyazı stili: extra'dan al, yoksa Ayarlar > Altyazı (config), yoksa classic preset
         subtitle_style = extra.get('subtitle_style')  # dict or preset name
         if isinstance(subtitle_style, str):
             subtitle_style = SUBTITLE_PRESETS.get(subtitle_style, SUBTITLE_PRESETS['classic'])
         elif subtitle_style is None:
-            saved_style = job.get('subtitleStyle')
-            if isinstance(saved_style, str):
-                subtitle_style = SUBTITLE_PRESETS.get(saved_style, SUBTITLE_PRESETS['classic'])
-            elif isinstance(saved_style, dict):
-                subtitle_style = saved_style
-            else:
+            # 1. Try to load from config.json
+            config_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'config.json')
+            if os.path.exists(config_file_path):
+                try:
+                    with open(config_file_path, 'r', encoding='utf-8') as cf:
+                        config_data = json.load(cf)
+                        config_subtitle = config_data.get('subtitleStyle')
+                        if config_subtitle:
+                            print("  [Altyazı] Config'den yüklendi (Ayarlar varsayılanı)")
+                            subtitle_style = config_subtitle
+                except Exception as e:
+                    print(f"  [Altyazı] Config okuma hatası: {e}")
+
+            # 2. Config yoksa eski job stilini son çare olarak kullan
+            if subtitle_style is None:
+                saved_style = job_data.get('subtitleStyle')
+                if isinstance(saved_style, str):
+                    subtitle_style = SUBTITLE_PRESETS.get(saved_style, SUBTITLE_PRESETS['classic'])
+                elif isinstance(saved_style, dict):
+                    subtitle_style = saved_style
+
+            # 3. Fallback to classic
+            if subtitle_style is None:
+                print("  [Altyazı] Fallback: classic preset")
                 subtitle_style = SUBTITLE_PRESETS['classic']
 
         # Stili job'a kaydet
         if extra.get('subtitle_style'):
             update_job(jobs_dir, job_id, {'subtitleStyle': extra['subtitle_style']})
 
-        video_ok = compose_video(video_scenes, images_dir, audio_path, srt_path, video_path,
-                                 subtitle_style=subtitle_style)
+        # ===== VIDEO COMPOSITION WITH LOCK & TEMP ISOLATION =====
+        job_temp_dir = setup_job_temp_dir(job_id)
+        original_temp = os.environ.get('TEMP', '')
+        original_tmp = os.environ.get('TMP', '')
+        
+        lock = VideoCompositorLock()
+        video_ok = False
+        
+        try:
+            os.environ['TEMP'] = job_temp_dir
+            os.environ['TMP'] = job_temp_dir
+            
+            lock.acquire(job_id, blocking=True)
+            
+            video_ok = compose_video(video_scenes, images_dir, audio_path, srt_path, video_path,
+                                     subtitle_style=subtitle_style)
+        except TimeoutError as e:
+            print(f"  [Lock] Timeout: {e}")
+            update_job(jobs_dir, job_id, {'status': prev_status, 'error': f'Lock timeout: {e}'})
+            return
+        except Exception as e:
+            print(f"  [Error] Composition error: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            lock.release()
+            if original_temp:
+                os.environ['TEMP'] = original_temp
+            if original_tmp:
+                os.environ['TMP'] = original_tmp
+            cleanup_job_temp_dir(job_temp_dir, max_age_hours=1)
+        # ===== END VIDEO COMPOSITION =====
 
         if video_ok and os.path.exists(video_path):
             preview_url = f"/output/{job_id}/final_video.mp4"
@@ -562,4 +633,3 @@ if __name__ == '__main__':
         except Exception:
             pass
     run_regenerate(sys.argv[1], sys.argv[2], sys.argv[3], extra_arg)
-

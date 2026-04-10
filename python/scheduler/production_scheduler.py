@@ -1,427 +1,307 @@
 """
-Production Scheduler
-Serial video production scheduler - processes one video at a time
+Production Scheduler - Active Mode
+Processes production queue sequentially - one video at a time
 """
 import sys
-import os
 import time
 import json
 import subprocess
-import uuid
+import traceback
 from pathlib import Path
-from datetime import datetime, timezone, timedelta
-from typing import Optional
+from datetime import datetime
 
-# Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scheduler.production_queue_manager import ProductionQueueManager
+from utils.production_lock import GlobalProductionLock
 
 
 class ProductionScheduler:
-    """Background scheduler for serial video production"""
+    """Production scheduler - processes queue sequentially"""
     
-    def __init__(self, base_dir: str, check_interval: int = 30):
-        """
-        Initialize production scheduler
-        
-        Args:
-            base_dir: Base directory of the application
-            check_interval: Check interval in seconds (default 30 seconds)
-        """
+    def __init__(self, base_dir: str, check_interval: int = 10):
         self.base_dir = Path(base_dir)
         self.check_interval = check_interval
+        self.stuck_threshold = 600  # 10 minutes in seconds
+        self.watchdog_check_interval = 30  # Check every 30 seconds
+        self.last_watchdog_check = 0
         
-        # Setup paths
-        data_dir = self.base_dir / 'data'
-        self.jobs_dir = data_dir / 'jobs'
-        self.config_file = data_dir / 'config.json'
-        self.upload_queue_file = data_dir / 'upload_queue.json'
+        # Initialize queue manager and lock
+        self.queue_manager = ProductionQueueManager(str(self.base_dir / 'data'))
+        self.production_lock = GlobalProductionLock()
         
-        # Initialize manager
-        self.queue_manager = ProductionQueueManager(
-            str(data_dir / 'production_queue.json'),
-            str(self.jobs_dir),
-            str(data_dir / 'queues.json')
-        )
+        # Paths
+        self.config_file = self.base_dir / 'data' / 'config.json'
+        self.python_dir = self.base_dir / 'python'
+        self.jobs_dir = self.base_dir / 'data' / 'jobs'
         
-        print("Production Scheduler başlatıldı")
-        print(f"Kontrol aralığı: {check_interval} saniye")
+        print("=" * 70)
+        print("Production Scheduler - ACTIVE MODE")
+        print("=" * 70)
         print(f"Base directory: {base_dir}")
-        print("Max concurrent: 1 (serial production)")
+        print(f"Check interval: {check_interval}s")
+        print(f"Stuck detection: {self.stuck_threshold}s ({self.stuck_threshold//60} min)")
+        print(f"Watchdog check: {self.watchdog_check_interval}s")
+        print()
+        print("✅ Sequential video production enabled")
+        print("✅ One video at a time - no parallel processing")
+        print("✅ Stuck job detection enabled")
+        print("=" * 70)
     
     def run(self):
-        """Main scheduler loop"""
-        print("\nProduction Scheduler çalışıyor...\n")
-        print("🔐 YouTube Token Monitoring: Aktif")
-        print("⚠️  Token hatası alındığında otomatik yeniden auth yapılacak\n")
+        """Main loop - process production queue"""
+        print()
+        print("🚀 Production Scheduler started")
+        print("📋 Monitoring production queue...")
+        print("🔍 Watchdog monitoring for stuck jobs...")
+        print("Press Ctrl+C to stop")
+        print()
         
         try:
             while True:
-                self.process_production_queue()
+                # Run watchdog check if needed
+                now = time.time()
+                if now - self.last_watchdog_check > self.watchdog_check_interval:
+                    self._check_stuck_jobs()
+                    self.last_watchdog_check = now
+                
+                # Process queue
+                self._process_queue()
                 time.sleep(self.check_interval)
                 
         except KeyboardInterrupt:
-            print("\n\n⏹️  Production Scheduler durduruldu")
+            print("\n\n⏸️  Production Scheduler stopped")
         except Exception as e:
-            print(f"\n❌ Scheduler hatası: {e}")
-            import traceback
+            print(f"\n❌ Error: {e}")
             traceback.print_exc()
             raise
     
-    def process_production_queue(self):
-        """Process production queue - start next video if none is producing"""
+    def _process_queue(self):
+        """Check queue and process next job if available"""
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
-        # Check if something is currently producing
-        current = self.queue_manager.get_current_production()
-        if current:
-            job_id = current['job_id']
-            elapsed = self._get_elapsed_time(current['started_at'])
-            print(f"[{now}] Üretiliyor: {job_id} (Geçen süre: {elapsed})", end='\r')
-            
-            # Check if job is done or failed
-            job_status = self._get_job_status(job_id)
-            if job_status == 'done':
-                print(f"\n[{now}] TAMAMLANDI: {job_id}")
-                self.queue_manager.mark_done(current['prod_queue_id'])
-                
-                # Add to upload queue
-                self._add_to_upload_queue(job_id, current['queue_id'])
-                
-            elif job_status == 'failed':
-                error = self._get_job_error(job_id)
-                print(f"\n[{now}] ❌ Başarısız: {job_id} - {error}")
-                self.queue_manager.mark_failed(current['prod_queue_id'], error)
-            
+        # Check if production is locked (another process running)
+        if self.production_lock.is_locked():
+            current_job = self.production_lock.get_current_job()
+            print(f"[{now}] ⏳ Production in progress: {current_job}", end='\r')
             return
         
-        # No current production - get next job
+        # Get queue status
+        status = self.queue_manager.get_status()
+        queue_length = status['queue_length']
+        current_job = status['current_job']
+        
+        if queue_length == 0 and not current_job:
+            print(f"[{now}] 💤 Queue empty - waiting for jobs...", end='\r')
+            return
+        
+        # Get next job
         next_job = self.queue_manager.get_next_job()
         
         if not next_job:
-            waiting_count = self.queue_manager.get_waiting_count()
-            if waiting_count > 0:
-                print(f"[{now}] ⏸️  {waiting_count} video bekliyor (kuyruklar durdurulmuş)", end='\r')
-            else:
-                print(f"[{now}] Bekleyen video yok", end='\r')
+            print(f"[{now}] ⏸️  Queue: {queue_length} job(s) | No jobs ready", end='\r')
             return
         
-        # Start production
-        print(f"\n[{now}] ÜRETIM BAŞLIYOR: {next_job['job_id']}")
-        print(f"    📋 Kuyruk: {next_job['queue_id']}")
-        print(f"    ⏰ Sırada bekletilme: {self._get_elapsed_time(next_job['added_at'])}")
+        job_id = next_job['job_id']
+        position = next_job.get('position', '?')
         
-        self.queue_manager.mark_producing(next_job['prod_queue_id'])
+        print(f"\n[{now}] 🎬 Starting production: {job_id} (position {position}/{queue_length})")
         
-        # Start pipeline
-        success = self._start_pipeline(next_job['job_id'])
-        
-        if not success:
-            print(f"[{now}] ❌ Pipeline başlatılamadı: {next_job['job_id']}")
-            self.queue_manager.mark_failed(next_job['prod_queue_id'], 'Pipeline başlatma hatası')
+        # Start the job
+        self._start_production(job_id)
     
-    def _start_pipeline(self, job_id: str) -> bool:
-        """
-        Start video production pipeline
-        
-        Args:
-            job_id: Job ID
-            
-        Returns:
-            Success status
-        """
+    def _start_production(self, job_id: str):
+        """Start video production for a job"""
         try:
-            # Load job data
-            job_file = self.jobs_dir / f"{job_id}.json"
+            # Mark job as started
+            result = self.queue_manager.start_job(job_id)
+            if not result['success']:
+                print(f"❌ Failed to start job: {result.get('error')}")
+                return
+            
+            print(f"📝 Job marked as processing: {job_id}")
+            
+            # Build pipeline command
+            pipeline_script = self.python_dir / 'pipeline.py'
+            
+            # Get URL from job file
+            job_file = self.base_dir / 'data' / 'jobs' / f'{job_id}.json'
             if not job_file.exists():
-                print(f"❌ Job dosyası bulunamadı: {job_id}")
-                return False
+                print(f"❌ Job file not found: {job_file}")
+                self.queue_manager.complete_job(job_id, success=False, error='Job file not found')
+                return
             
             with open(job_file, 'r', encoding='utf-8') as f:
                 job_data = json.load(f)
             
-            url = job_data.get('url', '')
+            url = job_data.get('url')
             template = job_data.get('template', 'short_haber')
             
             if not url:
-                print(f"❌ Job URL eksik: {job_id}")
-                return False
+                print(f"❌ No URL in job data")
+                self.queue_manager.complete_job(job_id, success=False, error='No URL in job data')
+                return
             
             # Start pipeline in background
-            python_script = self.base_dir / 'python' / 'pipeline.py'
+            cmd = [
+                'python',
+                str(pipeline_script),
+                job_id,
+                url,
+                template,
+                str(self.config_file)
+            ]
             
-            if sys.platform == 'win32':
-                # Windows: start /B for background
-                cmd = f'start /B cmd /c python "{python_script}" "{job_id}" "{url}" "{template}" "{self.config_file}"'
-            else:
-                # Linux/Mac: & for background
-                cmd = f'python "{python_script}" "{job_id}" "{url}" "{template}" "{self.config_file}" &'
+            print(f"🚀 Starting pipeline: {' '.join(cmd)}")
             
-            subprocess.Popen(cmd, shell=True)
-            print(f"✅ Pipeline başlatıldı: {job_id}")
-            return True
+            # Use detached async execution.
+            # Do NOT pipe stdout/stderr without readers; PIPE buffers can block child process.
+            process = subprocess.Popen(
+                cmd,
+                cwd=str(self.base_dir),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT
+            )
             
-        except Exception as e:
-            print(f"❌ Pipeline başlatma hatası: {e}")
-            return False
-    
-    def _get_job_status(self, job_id: str) -> str:
-        """Get current job status from job file"""
-        try:
-            job_file = self.jobs_dir / f"{job_id}.json"
-            if not job_file.exists():
-                return 'unknown'
-            
-            with open(job_file, 'r', encoding='utf-8') as f:
-                job_data = json.load(f)
-            
-            return job_data.get('status', 'unknown')
-        except:
-            return 'unknown'
-    
-    def _get_job_error(self, job_id: str) -> str:
-        """Get job error message"""
-        try:
-            job_file = self.jobs_dir / f"{job_id}.json"
-            if not job_file.exists():
-                return 'Job dosyası bulunamadı'
-            
-            with open(job_file, 'r', encoding='utf-8') as f:
-                job_data = json.load(f)
-            
-            return job_data.get('error', 'Bilinmeyen hata')
-        except:
-            return 'Hata okunamadı'
-    
-    def _get_elapsed_time(self, iso_time: str) -> str:
-        """Get elapsed time since timestamp"""
-        try:
-            start_time = datetime.fromisoformat(iso_time.replace('Z', '+00:00'))
-            now = datetime.now(timezone.utc)
-            elapsed = now - start_time
-            
-            hours = int(elapsed.total_seconds() // 3600)
-            minutes = int((elapsed.total_seconds() % 3600) // 60)
-            seconds = int(elapsed.total_seconds() % 60)
-            
-            if hours > 0:
-                return f"{hours}s {minutes}d {seconds}sn"
-            elif minutes > 0:
-                return f"{minutes}d {seconds}sn"
-            else:
-                return f"{seconds}sn"
-        except:
-            return "?"
-    
-    def _add_to_upload_queue(self, job_id: str, queue_id: str):
-        """
-        Add completed video to upload queue
-        
-        Args:
-            job_id: Job ID
-            queue_id: Queue ID (for scheduling info)
-        """
-        try:
-            # Load job data
-            job_file = self.jobs_dir / f"{job_id}.json"
-            if not job_file.exists():
-                print(f"⚠️  Job dosyası bulunamadı: {job_id}")
-                return
-            
-            with open(job_file, 'r', encoding='utf-8') as f:
-                job_data = json.load(f)
-            
-            # Check if video exists
-            video_path = self.base_dir / 'output' / job_id / 'final_video.mp4'
-            if not video_path.exists():
-                print(f"⚠️  Video dosyası bulunamadı: {job_id}")
-                return
-            
-            # Load queue data for scheduling
-            queues_file = self.base_dir / 'data' / 'queues.json'
-            with open(queues_file, 'r', encoding='utf-8') as f:
-                queues_data = json.load(f)
-            
-            target_queue = None
-            for queue in queues_data.get('queues', []):
-                if queue['id'] == queue_id:
-                    target_queue = queue
-                    break
-            
-            if not target_queue:
-                print(f"⚠️  Kuyruk bulunamadı: {queue_id}")
-                return
-            
-            # Calculate scheduled time based on queue schedule
-            scheduled_time = self._calculate_scheduled_time(target_queue)
-            
-            # Add to queue's video list
-            video_item = {
-                'job_id': job_id,
-                'added_at': datetime.now(timezone.utc).isoformat(),
-                'scheduled_at': scheduled_time,
-                'status': 'queued',
-                'platform_status': {platform: 'pending' for platform in target_queue.get('platforms', ['youtube'])},
-                'position': len(target_queue.get('videos', []))
-            }
-            
-            if 'videos' not in target_queue:
-                target_queue['videos'] = []
-            
-            target_queue['videos'].append(video_item)
-            
-            # Save queues
-            with open(queues_file, 'w', encoding='utf-8') as f:
-                json.dump(queues_data, f, indent=2, ensure_ascii=False)
-            
-            print(f"✅ Upload kuyruğuna eklendi: {job_id} → {target_queue['name']}")
-            
-            # Also add to social_queue.json for social scheduler
-            self._add_to_social_queue(job_id, job_data, target_queue, scheduled_time, str(video_path))
+            print(f"✅ Pipeline started (PID: {process.pid})")
+            print(f"📊 Status will be monitored by pipeline process")
             
         except Exception as e:
-            print(f"⚠️  Upload queue ekleme hatası: {e}")
+            print(f"❌ Error starting production: {e}")
+            traceback.print_exc()
+            
+            # Mark job as failed
+            self.queue_manager.complete_job(job_id, success=False, error=str(e))
     
-    def _calculate_scheduled_time(self, queue: dict) -> str:
-        """Calculate next scheduled time based on queue settings"""
-        schedule = queue.get('schedule', {})
-        schedule_type = schedule.get('type', 'now')
+    def _check_stuck_jobs(self):
+        """
+        Watchdog: Check for stuck jobs and mark them as stuck
         
-        now = datetime.now(timezone.utc)
-        
-        if schedule_type == 'now':
-            # Immediate
-            return now.isoformat()
-        
-        elif schedule_type == 'interval':
-            # Get last publish time or use now
-            last_publish = queue.get('last_publish')
-            if last_publish:
-                last_time = datetime.fromisoformat(last_publish.replace('Z', '+00:00'))
-            else:
-                last_time = now
+        A job is considered stuck if:
+        - Status is 'processing', 'scripting', 'rendering', etc.
+        - No progress update for stuck_threshold seconds (default 10 minutes)
+        """
+        try:
+            # Get all job files
+            if not self.jobs_dir.exists():
+                return
             
-            interval_hours = schedule.get('interval_hours', 2)
-            next_time = last_time + timedelta(hours=interval_hours)
+            now = time.time()
+            stuck_count = 0
             
-            # If next time is in the past, schedule for now
-            if next_time < now:
-                next_time = now
-            
-            return next_time.isoformat()
-        
-        elif schedule_type == 'specific':
-            # Find next specific time
-            specific_times = schedule.get('specific_times', ['09:00', '15:00', '21:00'])
-            
-            for time_str in sorted(specific_times):
-                hour, minute = map(int, time_str.split(':'))
-                candidate = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            for job_file in self.jobs_dir.glob('*.json'):
+                # Skip temp files
+                if job_file.name.endswith('.tmp'):
+                    continue
                 
-                if candidate > now:
-                    return candidate.isoformat()
+                try:
+                    with open(job_file, 'r', encoding='utf-8') as f:
+                        job = json.load(f)
+                    
+                    job_id = job.get('id', job_file.stem)
+                    status = job.get('status', '')
+                    
+                    # Only check active jobs
+                    if status not in ['processing', 'scripting', 'rendering', 'generating']:
+                        continue
+                    
+                    # Check last update time
+                    last_update = job.get('last_update_time', job.get('created_at', now))
+                    
+                    # Convert created_at string to timestamp if needed
+                    if isinstance(last_update, str):
+                        try:
+                            from datetime import datetime
+                            dt = datetime.fromisoformat(last_update)
+                            last_update = dt.timestamp()
+                        except:
+                            last_update = now
+                    
+                    elapsed = now - last_update
+                    
+                    # Check if stuck
+                    if elapsed > self.stuck_threshold:
+                        stuck_count += 1
+                        elapsed_minutes = int(elapsed // 60)
+                        
+                        print(f"\n🚨 STUCK JOB DETECTED: {job_id}")
+                        print(f"   Status: {status}")
+                        print(f"   No update for: {elapsed_minutes} minutes")
+                        print(f"   Threshold: {self.stuck_threshold//60} minutes")
+                        
+                        # Mark as stuck
+                        self._mark_job_stuck(job_id, elapsed_minutes, status)
+                        
+                except Exception as e:
+                    # Skip problematic job files
+                    print(f"⚠️ Error checking job {job_file.name}: {e}")
+                    continue
             
-            # All times passed today, schedule for tomorrow
-            first_time = sorted(specific_times)[0]
-            hour, minute = map(int, first_time.split(':'))
-            next_day = now + timedelta(days=1)
-            return next_day.replace(hour=hour, minute=minute, second=0, microsecond=0).isoformat()
-        
-        # Default: now
-        return now.isoformat()
+            if stuck_count > 0:
+                print(f"\n⚠️ Watchdog found {stuck_count} stuck job(s)\n")
+                
+        except Exception as e:
+            print(f"⚠️ Watchdog error: {e}")
     
-    def _load_script_text(self, job_id: str) -> str:
-        """output/job_id/script.json'dan duz metin olustur (metadata motoru icin)"""
-        script_file = self.base_dir / 'output' / job_id / 'script.json'
-        if not script_file.exists():
-            return ''
+    def _mark_job_stuck(self, job_id: str, elapsed_minutes: int, previous_status: str):
+        """Mark a job as stuck and notify user"""
+        job_file = self.jobs_dir / f'{job_id}.json'
+        
         try:
-            with open(script_file, 'r', encoding='utf-8') as f:
-                script = json.load(f)
-            parts = []
-            if script.get('hook'):
-                parts.append(script['hook'])
-            for scene in script.get('scenes', []):
-                if scene.get('text'):
-                    parts.append(scene['text'])
-            if script.get('outro'):
-                parts.append(script['outro'])
-            return ' '.join(parts)
-        except Exception:
-            return ''
-
-    def _add_to_social_queue(self, job_id: str, job_data: dict, queue: dict, scheduled_time: str, video_path: str):
-        """Add video to social_queue.json for social scheduler"""
-        try:
-            social_queue_file = self.base_dir / 'data' / 'social_queue.json'
+            with open(job_file, 'r', encoding='utf-8') as f:
+                job = json.load(f)
             
-            if social_queue_file.exists():
-                with open(social_queue_file, 'r', encoding='utf-8') as f:
-                    social_data = json.load(f)
-            else:
-                social_data = {'queue': []}
+            # Update job status
+            job['status'] = 'stuck'
+            job['previous_status'] = previous_status
+            job['error'] = (
+                f"İşlem Takıldı\n"
+                f"{elapsed_minutes} dakikadır ilerleme yok.\n\n"
+                f"Yapılması gerekenler: \"Devam Et\" butonuna tıklayın veya \"Log Gör\" ile detayları inceleyin.\n"
+                f"İşlem tekrarlanıyorsa lütfen log dosyalarını kontrol edin.\n\n"
+                f"Teknik detay: No progress update for {elapsed_minutes} minutes (threshold: {self.stuck_threshold//60} min)"
+            )
+            job['stuck_at'] = datetime.now().isoformat()
+            job['stuck_elapsed_minutes'] = elapsed_minutes
+            job['last_update_time'] = time.time()
+            job['updated_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
             
-            platforms = queue.get('platforms', ['youtube'])
+            # Write atomically
+            temp_file = self.jobs_dir / f'{job_id}.json.tmp'
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(job, f, ensure_ascii=False, indent=2)
             
-            # Create platform status
-            platform_status = {}
-            for platform in platforms:
-                platform_status[platform] = {
-                    'status': 'pending',
-                    'post_id': None,
-                    'post_url': None,
-                    'error': None,
-                    'uploaded_at': None
-                }
-
-            # Gercek script metnini yukle — metadata motoru bunu kullanacak
-            script_text = self._load_script_text(job_id)
-
-            queue_item = {
-                'queue_id': f"social_{uuid.uuid4().hex[:16]}",
-                'job_id': job_id,
-                'video_path': video_path,
-                'platforms': platforms,
-                'platform_status': platform_status,
-                'scheduled_time': scheduled_time,
-                'status': 'pending',
-                'priority': 0,
-                'metadata': {
-                    'title': job_data.get('title', 'Video'),
-                    # description = gercek script metni (upload oncesi AI optimizasyon icin)
-                    'description': script_text or job_data.get('description', ''),
-                    'tags': job_data.get('tags', []),
-                    'privacy_status': 'public'
-                },
-                'platform_metadata': {},  # social_scheduler upload oncesi dolduracak
-                'created_at': datetime.now(timezone.utc).isoformat(),
-                'retry_count': 0,
-                'last_error': None
-            }
+            temp_file.replace(job_file)
             
-            social_data['queue'].append(queue_item)
-            
-            with open(social_queue_file, 'w', encoding='utf-8') as f:
-                json.dump(social_data, f, indent=2, ensure_ascii=False)
-            
-            print(f"\u2705 Social queue'ya eklendi: {job_id} | Script: {len(script_text)} kar | Zamanlama: {scheduled_time}")
+            print(f"✅ Job {job_id} marked as stuck")
             
         except Exception as e:
-            print(f"\u26a0\ufe0f  Social queue ekleme hatasi: {e}")
+            print(f"❌ Error marking job as stuck: {e}")
+    
+    def _check_status(self):
+        """Check and display queue status"""
+        status = self.queue_manager.get_status()
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        queue_length = status['queue_length']
+        current_job = status['current_job']
+        stats = status['stats']
+        
+        if current_job:
+            print(f"[{now}] 🎬 Processing: {current_job} | Queue: {queue_length}", end='\r')
+        elif queue_length > 0:
+            print(f"[{now}] 📋 Queue: {queue_length} job(s) waiting", end='\r')
+        else:
+            print(f"[{now}] 💤 Queue empty | Total completed: {stats['total_completed']}", end='\r')
 
 
-# CLI Entry Point
 if __name__ == '__main__':
     import argparse
     
-    parser = argparse.ArgumentParser(description='Production Scheduler - Serial Video Production')
-    parser.add_argument('--interval', type=int, default=30, help='Check interval in seconds (default: 30)')
-    
+    parser = argparse.ArgumentParser(description='Production Scheduler (Passive Mode)')
+    parser.add_argument('--interval', type=int, default=30, help='Check interval in seconds')
     args = parser.parse_args()
     
-    # Get base directory (2 levels up from this script)
     base_dir = Path(__file__).parent.parent.parent
-    
-    scheduler = ProductionScheduler(str(base_dir), check_interval=args.interval)
+    scheduler = ProductionScheduler(str(base_dir), args.interval)
     scheduler.run()

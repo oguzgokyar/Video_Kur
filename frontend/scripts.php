@@ -1,9 +1,17 @@
 <?php $page_title = 'Script Yönetimi - YouTube Shorts Otomasyon'; $active_page = 'scripts'; ?>
 <!DOCTYPE html>
 <html lang="tr">
-<head>
+  <head>
   <?php include __DIR__ . '/components/_head.php'; ?>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js" defer></script>
+  <style>
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
 </head>
 <body class="bg-gray-100 min-h-screen" x-data="scriptManager()">
   <div class="flex flex-col h-screen">
@@ -14,47 +22,86 @@
 
       <main class="flex-1 overflow-y-auto p-6 md:p-8">
         <div class="max-w-6xl mx-auto">
-          <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">Script Yönetimi</h1>
-            <button @click="openNewScriptModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Yeni Script
-            </button>
+          <div class="bg-white rounded-lg border border-gray-200 p-3 mb-4 space-y-2">
+            <div class="flex flex-col md:flex-row gap-2">
+              <input
+                x-model.trim="searchQuery"
+                type="text"
+                placeholder="Script ara..."
+                class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              >
+              <button
+                @click="sortOrder = sortOrder === 'updated_desc' ? 'name_asc' : 'updated_desc'"
+                class="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm hover:bg-gray-50 transition"
+                x-text="sortOrder === 'updated_desc' ? 'Son Güncellenen' : 'Ada Göre'"
+              ></button>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <div class="flex flex-wrap gap-1.5 items-center">
+                <div class="flex flex-wrap gap-1.5">
+                  <button @click="contentTypeFilter = 'all'" class="px-2.5 py-1 rounded-md border transition"
+                    :class="contentTypeFilter === 'all' ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Kategori: Tümü</button>
+                  <template x-for="type in uniqueContentTypes" :key="type">
+                    <button @click="contentTypeFilter = type" class="px-2.5 py-1 rounded-md border transition"
+                      :class="contentTypeFilter === type ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'"
+                      x-text="type"></button>
+                  </template>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <button @click="videoTypeFilter = 'all'" class="px-2.5 py-1 rounded-md border transition"
+                    :class="videoTypeFilter === 'all' ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Tip: Tümü</button>
+                  <button @click="videoTypeFilter = 'short'" class="px-2.5 py-1 rounded-md border transition"
+                    :class="videoTypeFilter === 'short' ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Short</button>
+                  <button @click="videoTypeFilter = 'square'" class="px-2.5 py-1 rounded-md border transition"
+                    :class="videoTypeFilter === 'square' ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Kare</button>
+                  <button @click="videoTypeFilter = 'wide'" class="px-2.5 py-1 rounded-md border transition"
+                    :class="videoTypeFilter === 'wide' ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Geniş</button>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-gray-500"><span x-text="filteredScripts.length"></span> / <span x-text="scripts.length"></span></span>
+                <button @click="clearFilters()" class="text-gray-500 hover:text-gray-700 underline">Temizle</button>
+              </div>
+            </div>
           </div>
 
           <!-- Scripts List -->
-          <div class="grid gap-4 md:grid-cols-2">
-            <template x-for="script in scripts" :key="script.id">
-              <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
-                <div class="flex justify-between items-start mb-3">
-                  <div class="flex-1">
-                    <h3 class="font-bold text-gray-800 text-lg" x-text="script.name"></h3>
-                    <p class="text-sm text-gray-500 mt-1" x-text="script.description"></p>
+          <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <template x-if="filteredScripts.length > 0">
+              <div class="divide-y divide-gray-100">
+                <template x-for="script in filteredScripts" :key="script.id">
+                  <div class="p-3">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                          <h3 class="font-semibold text-gray-800 truncate" x-text="script.name"></h3>
+                        </div>
+                        <p class="text-sm text-gray-500 line-clamp-2" x-text="script.description || 'Açıklama yok'"></p>
+                        <p class="text-xs text-gray-500 mt-1">
+                          <span x-text="script.contentType"></span> ·
+                          <span x-text="videoTypeLabel(script.videoType)"></span> ·
+                          <span x-text="script.maxDuration + 's'"></span> ·
+                          <span x-text="getPromptLineCount(script.prompt) + ' satır'"></span>
+                        </p>
+                      </div>
+                      <div class="flex gap-2 md:flex-shrink-0">
+                        <button @click="editScript(script)" class="border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded-md text-sm transition">
+                          Düzenle
+                        </button>
+                        <button @click="deleteScript(script.id)" class="border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded-md text-sm transition">
+                          Sil
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <template x-if="script.isDefault">
-                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Varsayılan</span>
-                  </template>
-                </div>
-                
-                <div class="flex gap-2 text-xs text-gray-600 mb-3">
-                  <span class="px-2 py-1 bg-gray-100 rounded">📁 <span x-text="script.contentType"></span></span>
-                  <span class="px-2 py-1 bg-gray-100 rounded">⏱️ <span x-text="script.maxDuration"></span>s</span>
-                </div>
-                
-                <div class="flex gap-2">
-                  <button @click="editScript(script)" class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg text-sm font-semibold transition">
-                    ✏️ Düzenle
-                  </button>
-                  <button @click="deleteScript(script.id)" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg text-sm font-semibold transition">
-                    🗑️ Sil
-                  </button>
-                </div>
+                </template>
               </div>
             </template>
 
-            <template x-if="scripts.length === 0">
-              <div class="col-span-2 bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p class="text-gray-500">Henüz script oluşturulmamış. Yukarıdaki butona tıklayarak yeni script ekleyin.</p>
+            <template x-if="filteredScripts.length === 0">
+              <div class="p-12 text-center">
+                <p class="text-gray-500">Filtreye uygun script bulunamadı.</p>
               </div>
             </template>
           </div>
@@ -97,9 +144,16 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
-          <input type="checkbox" x-model="form.isDefault" class="w-4 h-4 accent-blue-600">
-          <label class="text-sm font-medium text-gray-700">Bu içerik tipi için varsayılan script yap</label>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Video Tipi</label>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" @click="form.videoType='short'" class="px-3 py-1.5 rounded-full border text-sm transition"
+              :class="form.videoType==='short' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Short (9:16)</button>
+            <button type="button" @click="form.videoType='square'" class="px-3 py-1.5 rounded-full border text-sm transition"
+              :class="form.videoType==='square' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Kare (1:1)</button>
+            <button type="button" @click="form.videoType='wide'" class="px-3 py-1.5 rounded-full border text-sm transition"
+              :class="form.videoType==='wide' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Geniş (16:9)</button>
+          </div>
         </div>
 
         <div>
@@ -130,6 +184,10 @@
       
       // Scripts State
       scripts: [],
+      searchQuery: '',
+      contentTypeFilter: 'all',
+      videoTypeFilter: 'all',
+      sortOrder: 'updated_desc',
       modalOpen: false,
       editMode: false,
       saving: false,
@@ -138,13 +196,61 @@
         name: '',
         description: '',
         contentType: 'haber',
+        videoType: 'short',
         maxDuration: 55,
-        isDefault: false,
         prompt: ''
       },
 
       init() {
         this.loadScripts();
+      },
+      get uniqueContentTypes() {
+        const types = this.scripts.map(s => (s.contentType || '').trim()).filter(Boolean);
+        return [...new Set(types)].sort((a, b) => a.localeCompare(b, 'tr'));
+      },
+      get filteredScripts() {
+        const q = this.searchQuery.trim().toLowerCase();
+        let items = this.scripts.filter(script => {
+          const name = (script.name || '').toLowerCase();
+          const desc = (script.description || '').toLowerCase();
+          const type = (script.contentType || '').toLowerCase();
+          const videoType = (script.videoType || 'short').toLowerCase();
+          const matchText = !q || name.includes(q) || desc.includes(q) || type.includes(q);
+          if (!matchText) return false;
+          if (this.contentTypeFilter !== 'all' && (script.contentType || '') !== this.contentTypeFilter) return false;
+          if (this.videoTypeFilter !== 'all' && videoType !== this.videoTypeFilter) return false;
+          return true;
+        });
+        items.sort((a, b) => {
+          if (this.sortOrder === 'name_asc') {
+            return (a.name || '').localeCompare((b.name || ''), 'tr');
+          }
+          const da = new Date(a.updatedAt || a.createdAt || 0).getTime();
+          const db = new Date(b.updatedAt || b.createdAt || 0).getTime();
+          return db - da;
+        });
+        return items;
+      },
+      clearFilters() {
+        this.searchQuery = '';
+        this.contentTypeFilter = 'all';
+        this.videoTypeFilter = 'all';
+        this.sortOrder = 'updated_desc';
+      },
+      videoTypeLabel(v) {
+        if (v === 'square') return 'Kare';
+        if (v === 'wide') return 'Geniş';
+        return 'Short';
+      },
+      getPromptLineCount(prompt) {
+        if (!prompt) return 0;
+        return prompt.split('\n').filter(Boolean).length;
+      },
+      formatDate(value) {
+        if (!value) return '-';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleString('tr-TR');
       },
       
       toggleDark() {
@@ -166,8 +272,8 @@
           name: '',
           description: '',
           contentType: 'haber',
+          videoType: 'short',
           maxDuration: 55,
-          isDefault: false,
           prompt: `Sen bir profesyonel YouTube Shorts video scripti yazarısın.
 Aşağıdaki haber içeriğinden maksimum {{MAX_DURATION}} saniyelik, dikkat çekici bir Türkçe video scripti yaz.
 
@@ -216,7 +322,7 @@ Yanıtı şu JSON formatında ver (sadece JSON, başka açıklama yazma):
 
       editScript(script) {
         this.editMode = true;
-        this.form = { ...script };
+        this.form = { ...script, videoType: script.videoType || 'short' };
         this.modalOpen = true;
       },
 

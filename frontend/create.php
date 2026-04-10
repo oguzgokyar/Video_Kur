@@ -16,6 +16,9 @@
   error: '', 
   steps: [], 
   configLoaded: false,
+  scripts: [],
+  scriptId: '',
+  contentType: 'haber',
   darkMode: localStorage.getItem('darkMode')==='1', 
   toggleDark(){ this.darkMode=!this.darkMode; localStorage.setItem('darkMode',this.darkMode?'1':'0'); document.documentElement.classList.toggle('dark',this.darkMode); },
   
@@ -31,19 +34,31 @@
   },
   get videoWidth() { return this.dimensionPreset === 'custom' ? this.customWidth : this.dimensionPresets[this.dimensionPreset].width; },
   get videoHeight() { return this.dimensionPreset === 'custom' ? this.customHeight : this.dimensionPresets[this.dimensionPreset].height; },
+  get videoType() {
+    if (this.videoWidth === this.videoHeight) return 'square';
+    if (this.videoWidth > this.videoHeight) return 'wide';
+    return 'short';
+  },
+  get contextScripts() {
+    return this.scripts.filter(s => {
+      const sType = (s.videoType || 'short') === this.videoType;
+      const sCategory = (s.contentType || '').toLowerCase() === this.contentType.toLowerCase();
+      return sType && sCategory;
+    });
+  },
   
   // Subtitle style settings - varsayılan olarak config'den yükleniyor
   subtitleMode: 'config',
   selectedSubtitlePreset: 'classic',
-  configSubtitle: { FontName: 'Arial', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 3, Shadow: 1, MarginV: 100, Bold: 1 },
-  customSubtitle: { FontName: 'Arial', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 2, MarginV: 60, Bold: 1 },
+  configSubtitle: { FontName: 'Arial', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 3, Shadow: 1, MarginV: 100, MarginL: 40, MarginR: 40, Bold: 1 },
+  customSubtitle: { FontName: 'Arial', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 2, MarginV: 60, MarginL: 40, MarginR: 40, Bold: 1 },
   subtitlePresets: {
-    classic: { label: 'Klasik', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 2, MarginV: 60, Bold: 1 },
-    neon: { label: 'Neon', FontSize: 26, PrimaryColour: '#00FF00', OutlineColour: '#000000', Outline: 2, MarginV: 60, Bold: 1 },
-    cinematic: { label: 'Sinematik', FontSize: 22, PrimaryColour: '#F5F5DC', OutlineColour: '#2C2C2C', Outline: 1.5, MarginV: 80, Bold: 0 },
-    bold: { label: 'Kalın', FontSize: 28, PrimaryColour: '#FFD700', OutlineColour: '#000000', Outline: 3, MarginV: 50, Bold: 1 },
-    minimal: { label: 'Minimal', FontSize: 20, PrimaryColour: '#FFFFFF', OutlineColour: '#333333', Outline: 1, MarginV: 70, Bold: 0 },
-    news: { label: 'Haber', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#CC0000', Outline: 2, MarginV: 55, Bold: 1 }
+    classic: { label: 'Klasik', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 2, MarginV: 60, MarginL: 40, MarginR: 40, Bold: 1 },
+    neon: { label: 'Neon', FontSize: 26, PrimaryColour: '#00FF00', OutlineColour: '#000000', Outline: 2, MarginV: 60, MarginL: 40, MarginR: 40, Bold: 1 },
+    cinematic: { label: 'Sinematik', FontSize: 22, PrimaryColour: '#F5F5DC', OutlineColour: '#2C2C2C', Outline: 1.5, MarginV: 80, MarginL: 40, MarginR: 40, Bold: 0 },
+    bold: { label: 'Kalın', FontSize: 28, PrimaryColour: '#FFD700', OutlineColour: '#000000', Outline: 3, MarginV: 50, MarginL: 40, MarginR: 40, Bold: 1 },
+    minimal: { label: 'Minimal', FontSize: 20, PrimaryColour: '#FFFFFF', OutlineColour: '#333333', Outline: 1, MarginV: 70, MarginL: 40, MarginR: 40, Bold: 0 },
+    news: { label: 'Haber', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#CC0000', Outline: 2, MarginV: 55, MarginL: 40, MarginR: 40, Bold: 1 }
   },
   get subtitleStyle() {
     if (this.subtitleMode === 'config') {
@@ -65,8 +80,15 @@
       })
       .catch(() => { this.configLoaded = true; });
   },
+  loadScripts() {
+    fetch('/api/scripts.php')
+      .then(r => r.json())
+      .then(d => { this.scripts = d.scripts || []; })
+      .catch(() => { this.scripts = []; });
+  },
   init() {
     this.loadConfig();
+    this.loadScripts();
   }
 }" x-init="init()">
   <div class="flex flex-col h-screen">
@@ -81,10 +103,14 @@
 
           <form @submit.prevent="
             loading=true; error='';
+            if(!scriptId){ error='Lütfen bir script seçin'; loading=false; return; }
             steps=['Haber çekiliyor...'];
-            fetch('/api/jobs.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, template, videoWidth, videoHeight, subtitleStyle})})
+            fetch('/api/jobs.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url, template, scriptId, contentType, videoWidth, videoHeight, subtitleStyle})})
               .then(r=>r.json())
-              .then(d=>{ jobId=d.jobId; status='pending'; loading=false; steps.push('İş oluşturuldu: '+d.jobId); })
+              .then(d=>{
+                if(d.error){ error=d.error; loading=false; return; }
+                jobId=d.jobId; status='pending'; loading=false; steps.push('İş oluşturuldu: '+d.jobId);
+              })
               .catch(e=>{ error='İş başlatılamadı. Backend çalışıyor mu?'; loading=false; })
           " class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <label class="block mb-2 text-sm font-semibold text-gray-700">Haber Linki</label>
@@ -94,6 +120,16 @@
             <select x-model="template" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
               <option value="short_haber">Short Haber (60sn)</option>
             </select>
+
+            <label class="block mb-2 text-sm font-semibold text-gray-700">Kategori</label>
+            <div class="flex flex-wrap gap-2 mb-4">
+              <button type="button" @click="contentType='haber'" class="px-3 py-1.5 rounded-full border text-sm transition"
+                :class="contentType==='haber' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Haber</button>
+              <button type="button" @click="contentType='komedi'" class="px-3 py-1.5 rounded-full border text-sm transition"
+                :class="contentType==='komedi' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Komedi</button>
+              <button type="button" @click="contentType='muzik'" class="px-3 py-1.5 rounded-full border text-sm transition"
+                :class="contentType==='muzik' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">Müzik</button>
+            </div>
 
             <!-- Video Ebat Seçimi -->
             <label class="block mb-2 text-sm font-semibold text-gray-700">Video Ebatı</label>
@@ -137,6 +173,16 @@
               </span>
               <span class="text-xs text-blue-500" x-text="videoWidth > videoHeight ? 'Yatay' : (videoWidth < videoHeight ? 'Dikey' : 'Kare')"></span>
             </div>
+
+            <label class="block mb-2 text-sm font-semibold text-gray-700">Script (Zorunlu)</label>
+            <div class="flex flex-wrap gap-2 mb-4">
+              <template x-for="script in contextScripts" :key="script.id">
+                <button type="button" @click="scriptId=script.id" class="px-3 py-1.5 rounded-full border text-sm transition"
+                  :class="scriptId===script.id ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'"
+                  x-text="script.name"></button>
+              </template>
+            </div>
+            <p x-show="contextScripts.length === 0" class="text-xs text-red-600 mb-4">Bu kategori ve video tipi için script bulunamadı. Script Yönetimi'nden script ekleyin.</p>
 
             <!-- Altyazı Stili Seçimi -->
             <label class="block mb-2 text-sm font-semibold text-gray-700">Altyazı Stili</label>
@@ -210,6 +256,14 @@
                       <input type="range" min="20" max="300" x-model.number="customSubtitle.MarginV" class="w-full accent-indigo-600">
                     </div>
                     <div>
+                      <label class="block text-xs font-medium text-gray-600 mb-1">Sol Boşluk: <span x-text="customSubtitle.MarginL + 'px'"></span></label>
+                      <input type="range" min="0" max="200" x-model.number="customSubtitle.MarginL" class="w-full accent-indigo-600">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-600 mb-1">Sağ Boşluk: <span x-text="customSubtitle.MarginR + 'px'"></span></label>
+                      <input type="range" min="0" max="200" x-model.number="customSubtitle.MarginR" class="w-full accent-indigo-600">
+                    </div>
+                    <div>
                       <label class="block text-xs font-medium text-gray-600 mb-1">Yazı Rengi</label>
                       <input type="color" x-model="customSubtitle.PrimaryColour" class="w-full h-8 rounded border border-gray-200 cursor-pointer p-0.5">
                     </div>
@@ -266,12 +320,54 @@
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold text-gray-800">İş Durumu</h2>
-                <span class="px-3 py-1 rounded-full text-xs font-semibold" :class="status==='done' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'" x-text="status"></span>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold" :class="status==='done' ? 'bg-green-100 text-green-700' : status==='failed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'" x-text="status"></span>
               </div>
               <p class="text-sm text-gray-500 mb-3">Job ID: <span class="font-mono" x-text="jobId"></span></p>
-              <button class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition" @click="fetch('/api/jobs.php?jobId='+jobId).then(r=>r.json()).then(d=>{status=d.status; previewUrl=d.previewUrl||'';}).catch(()=>{})">
-                🔄 Durumu Güncelle
-              </button>
+              
+              <div class="flex gap-2 mb-4">
+                <button class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition" 
+                        @click="fetch('/api/jobs.php?jobId='+jobId).then(r=>r.json()).then(d=>{status=d.status; error=d.error||''; previewUrl=d.previewUrl||'';}).catch(()=>{})">
+                  🔄 Durumu Güncelle
+                </button>
+                
+                <!-- Resume Button -->
+                <template x-if="status === 'failed'">
+                  <button class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2" 
+                          @click="async function(){
+                            if (!confirm('Bu işi kaldığı yerden devam ettirmek istiyor musunuz?')) return;
+                            try {
+                              const res = await fetch('/api/jobs.php', {
+                                method: 'PATCH',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({action: 'resume', jobId: jobId})
+                              });
+                              const data = await res.json();
+                              if (data.success) {
+                                alert('İş kuyruğa eklendi! ' + data.resume_info.message);
+                                status = 'waiting';
+                                error = '';
+                              } else {
+                                alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+                              }
+                            } catch(e) {
+                              alert('Bağlantı hatası: ' + e.message);
+                            }
+                          }()">
+                    <span>🔄</span>
+                    <span>Kaldığı Yerden Devam Et</span>
+                  </button>
+                </template>
+              </div>
+              
+              <!-- Error display -->
+              <template x-if="error">
+                <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p class="text-sm text-red-700">
+                    <strong>Hata:</strong> <span x-text="error"></span>
+                  </p>
+                </div>
+              </template>
+              
               <template x-if="previewUrl">
                 <div class="mt-4">
                   <video controls class="w-full rounded-lg shadow">

@@ -63,6 +63,10 @@ switch ($action) {
         getStats($dataDir);
         break;
     
+    case 'requeue':
+        requeueVideo($input, $dataDir, $baseDir);
+        break;
+    
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);
@@ -288,12 +292,32 @@ function getJobStatus($input, $dataDir) {
  */
 function getPlatforms($dataDir) {
     $credsDir = $dataDir . '/social_credentials';
+    $youtubeConfigured = false;
+    $youtubeChannelsFile = $dataDir . '/youtube_channels.json';
+    
+    if (file_exists($youtubeChannelsFile)) {
+        $channelsData = json_decode(file_get_contents($youtubeChannelsFile), true);
+        foreach (($channelsData['channels'] ?? []) as $channel) {
+            foreach (($channel['apis'] ?? []) as $api) {
+                $tokenFile = trim($api['token_file'] ?? '');
+                if (
+                    !empty($tokenFile) &&
+                    !empty($api['is_authenticated']) &&
+                    !empty($api['is_active']) &&
+                    file_exists($dataDir . '/youtube_credentials/' . $tokenFile)
+                ) {
+                    $youtubeConfigured = true;
+                    break 2;
+                }
+            }
+        }
+    }
     
     $platforms = [
         'youtube' => [
             'name' => 'YouTube',
             'icon' => '📺',
-            'configured' => file_exists($dataDir . '/youtube_credentials/default_token.pickle'),
+            'configured' => $youtubeConfigured,
             'description' => 'YouTube Shorts'
         ],
         'tiktok' => [
@@ -466,5 +490,221 @@ function getStats($dataDir) {
         'stats' => $stats,
         'total' => $total,
         'history_count' => count($history['history'])
+    ]);
+}
+
+/**
+ * Re-queue a video for publishing
+ * Allows re-adding completed/failed videos back to the social queue
+ */
+function requeueVideo($input, $dataDir, $baseDir) {
+    $jobId = $input['job_id'] ?? '';
+    $queueId = $input['queue_id'] ?? '';  // Target queue ID (from queues.json)
+    $platforms = $input['platforms'] ?? ['youtube'];
+    
+    if (empty($jobId)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'job_id gerekli']);
+        return;
+    }
+    
+    // Load job data
+    $jobFile = $dataDir . '/jobs/' . $jobId . '.json';
+    if (!file_exists($jobFile)) {
+        http_response_code(404);
+        echo json_encode(['error' => 'Job bulunamadı: ' . $jobId]);
+        return;
+    }
+    
+    $job = json_decode(file_get_contents($jobFile), true);
+    
+    // Check if video exists
+    $videoPath = $baseDir . '/output/' . $jobId . '/final_video.mp4';
+    if (!file_exists($videoPath)) {
+        http_response_code(404);
+        echo json_encode(['error' => 'Video dosyası bulunamadı']);
+        return;
+    }
+    
+    // Load queue settings for scheduling
+    $queuesFile = $dataDir . '/queues.json';
+    $queuesData = file_exists($queuesFile) ? json_decode(file_get_contents($queuesFile), true) : ['queues' => []];
+    
+    $targetQueue = null;
+    foreach ($queuesData['queues'] as $q) {
+        if ($q['id'] === $queueId) {
+            $targetQueue = $q;
+            break;
+        }
+    }
+    
+    // Load social queue
+    $queueFile = $dataDir . '/social_queue.json';
+    $queue = file_exists($queueFile) ? json_decode(file_get_contents($queueFile), true) : ['queue' => []];
+    
+    // Generate new queue item ID
+    $newQueueId = 'social_' . bin2hex(random_bytes(8));
+    
+    // Validate platforms
+    $validPlatforms = ['youtube', 'tiktok', 'instagram', 'facebook'];
+    $platforms = array_filter($platforms, function($p) use ($validPlatforms) {
+        return in_array(strtolower($p), $validPlatforms);
+    });
+    $platforms = array_map('strtolower', $platforms);
+    
+    if (empty($platforms)) {
+        $platforms = ['youtube'];
+    }
+    
+    // Build platform status
+    $platformStatus = [];
+    foreach ($platforms as $p) {
+        $platformStatus[$p] = [
+            'status' => 'pending',
+            'post_id' => null,
+            'post_url' => null,
+            'error' => null,
+            'uploaded_at' => null
+        ];
+    }
+    
+    // Get metadata from job
+    $metadata = [
+        'title' => $job['title'] ?? 'Video',
+        'description' => $job['description'] ?? '',
+        'tags' => $job['tags'] ?? []
+    ];
+    
+    // Calculate scheduled time based on queue settings
+    $scheduledTime = date('c');  // Default: now
+    if ($targetQueue) {
+        $schedule = $targetQueue['schedule'] ?? [];
+        $platformSettings = $targetQueue['platform_settings']['youtube'] ?? [];
+        
+        // Use start_time if set
+        $startTime = $platformSettings['startTime'] ?? $schedule['start_time'] ?? null;
+        $intervalMinutes = intval($platformSettings['intervalMinutes'] ?? $schedule['interval_minutes'] ?? 60);
+        
+        if ($startTime) {
+            // Parse start time and set for today or tomorrow
+            $today = new DateTime('now', new DateTimeZone('Europe/Istanbul'));
+            list($hour, $minute) = explode(':', $startTime);
+            $scheduled = clone $today;
+            $scheduled->setTime((int)$hour, (int)$minute, 0);
+            
+            // If time has passed, use next interval or tomorrow
+            if ($scheduled <= $today) {
+                $scheduled->modify("+{$intervalMinutes} minutes");
+            }
+            
+            $scheduledTime = $scheduled->format('c');
+        }
+    }
+    
+    // Create queue item
+    $queueItem = [
+        'queue_id' => $newQueueId,
+        'job_id' => $jobId,
+        'video_path' => $videoPath,
+        'platforms' => $platforms,
+        'platform_status' => $platformStatus,
+        'scheduled_time' => $input['scheduled_time'] ?? $scheduledTime,
+        'status' => 'pending',
+        'priority' => intval($input['priority'] ?? 0),
+        'metadata' => $metadata,
+        'platform_metadata' => [],
+        'created_at' => date('c'),
+        'retry_count' => 0,
+        'last_error' => null,
+        'requeued' => true,
+        'original_queue_id' => $queueId
+    ];
+    
+    // Add to social_queue
+    $queue['queue'][] = $queueItem;
+    
+    // Save social_queue
+    file_put_contents($queueFile, json_encode($queue, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    
+    // Also add to queues.json if target queue specified
+    if ($targetQueue && $queueId) {
+        // Check if video already in queue
+        $alreadyInQueue = false;
+        foreach ($targetQueue['videos'] ?? [] as $v) {
+            if ($v['job_id'] === $jobId) {
+                $alreadyInQueue = true;
+                break;
+            }
+        }
+        
+        if (!$alreadyInQueue) {
+            // Build platform status for queue entry
+            $queuePlatformStatus = [];
+            foreach ($platforms as $p) {
+                $queuePlatformStatus[$p] = 'pending';
+            }
+            
+            // Calculate position (after published videos)
+            $pendingVideos = array_filter($targetQueue['videos'] ?? [], function($v) {
+                $status = $v['status'] ?? 'queued';
+                return in_array($status, ['queued', 'pending']);
+            });
+            $position = count($pendingVideos) + 1;
+            
+            // Create video entry for queues.json
+            $videoEntry = [
+                'job_id' => $jobId,
+                'added_at' => date('c'),
+                'status' => 'queued',
+                'platform_status' => $queuePlatformStatus,
+                'position' => $position,
+                'scheduled_time' => $queueItem['scheduled_time'],
+                'retry_count' => 0,
+                'last_error' => null,
+                'requeued' => true
+            ];
+            
+            // Update queues.json
+            foreach ($queuesData['queues'] as &$q) {
+                if ($q['id'] === $queueId) {
+                    if (!isset($q['videos'])) {
+                        $q['videos'] = [];
+                    }
+                    $q['videos'][] = $videoEntry;
+                    break;
+                }
+            }
+            unset($q);
+            
+            file_put_contents($queuesFile, json_encode($queuesData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        }
+    }
+    
+    // Update job status
+    $job['social_upload'] = [
+        'queue_id' => $newQueueId,
+        'status' => 'pending',
+        'platforms' => $platformStatus,
+        'requeued_at' => date('c')
+    ];
+    
+    // Also update queue_status in job
+    if ($targetQueue && $queueId) {
+        $job['queue_status'] = [
+            'queue_id' => $queueId,
+            'queue_name' => $targetQueue['name'] ?? 'Unknown',
+            'status' => 'queued',
+            'added_at' => date('c')
+        ];
+    }
+    
+    file_put_contents($jobFile, json_encode($job, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    
+    echo json_encode([
+        'success' => true,
+        'queue_id' => $newQueueId,
+        'scheduled_time' => $queueItem['scheduled_time'],
+        'platforms' => $platforms,
+        'message' => 'Video kuyruğa eklendi'
     ]);
 }
