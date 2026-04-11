@@ -168,9 +168,15 @@ if (isset($_GET['code'])) {
         showPage('Token Hatası', $error, 'error');
     }
     
-    // Save token to credentials file
+    // Save token to credentials file with complete OAuth2 format
     $tokenFile = $credentialsDir . '/' . $api['project_id'] . '_' . $channelId . '_' . $apiId . '_token.json';
     $tokenData['created_at'] = time();
+    
+    // Add required fields for Google OAuth2 Credentials class (python/youtube/auth.py)
+    $tokenData['client_id'] = $clientConfig['client_id'];
+    $tokenData['client_secret'] = $clientConfig['client_secret'];
+    $tokenData['token_uri'] = $clientConfig['token_uri'];
+    
     file_put_contents($tokenFile, json_encode($tokenData, JSON_PRETTY_PRINT));
     
     // Update API status in youtube_channels.json

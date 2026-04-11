@@ -192,12 +192,42 @@ class YouTubeAuth:
                         expiry = None
 
                 # Build Credentials from JSON token data
+                # Backfill missing fields from client_secrets if not in token file
+                client_id = token_data.get('client_id')
+                client_secret = token_data.get('client_secret')
+                token_uri = token_data.get('token_uri')
+                
+                # If missing, try to load from client_secrets file
+                if not (client_id and client_secret and token_uri):
+                    try:
+                        with open(self.client_secrets_file, 'r', encoding='utf-8') as f:
+                            secrets = json.load(f)
+                        secret_config = secrets.get('web') or secrets.get('installed', {})
+                        
+                        if not client_id:
+                            client_id = secret_config.get('client_id')
+                        if not client_secret:
+                            client_secret = secret_config.get('client_secret')
+                        if not token_uri:
+                            token_uri = secret_config.get('token_uri', 'https://oauth2.googleapis.com/token')
+                        
+                        if client_id and client_secret and token_uri:
+                            print(f"📦 Eksik fields backfill'ed from client_secrets: {self.client_secrets_file.name}", file=sys.stderr)
+                    except Exception as e:
+                        print(f"⚠️  Backfill error: {e}", file=sys.stderr)
+                
+                # Validate required fields before creating Credentials
+                if not (client_id and client_secret and token_uri):
+                    print(f"❌ Token incomplete - missing client_id/client_secret/token_uri. Re-auth required.", file=sys.stderr)
+                    print("🔑 Çözüm: Hesaplar sayfasından ilgili API için yeniden login yapın.", file=sys.stderr)
+                    return None
+                
                 creds = Credentials(
                     token=access_token,
                     refresh_token=token_data.get('refresh_token'),
-                    token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
-                    client_id=token_data.get('client_id'),
-                    client_secret=token_data.get('client_secret'),
+                    token_uri=token_uri,
+                    client_id=client_id,
+                    client_secret=client_secret,
                     scopes=scopes,
                     expiry=expiry
                 )
