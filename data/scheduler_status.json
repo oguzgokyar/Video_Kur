@@ -1,14 +1,13 @@
 {
-    "last_updated": "2026-04-03T00:28:08+02:00",
+    "last_updated": "2026-04-11T19:21:30+02:00",
     "production": {
         "running": true,
-        "pid": 18068,
-        "started_at": "2026-04-02T20:47:23+02:00"
+        "pid": 21680,
+        "started_at": "2026-04-11T18:51:03+02:00"
     },
     "social": {
         "running": true,
-        "pid": 7312,
-        "started_at": "2026-04-02T23:10:24+02:00",
-        "restarted": true
+        "pid": 6380,
+        "started_at": "2026-04-11T18:51:04+02:00"
     }
 }

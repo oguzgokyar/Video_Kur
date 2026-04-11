@@ -102,6 +102,7 @@ $active_page = 'settings';
       tabs: [
         { id:'genel', label:'Genel', icon:'⚙️' },
         { id:'scheduler', label:'Zamanlayıcı', icon:'⏰' },
+        { id:'bakim', label:'Bakım', icon:'🧹' },
         { id:'script', label:'Script', icon:'📝' },
         { id:'gorsel', label:'Görsel', icon:'🖼️' },
         { id:'ses', label:'Ses', icon:'🔊' },
@@ -268,6 +269,9 @@ $active_page = 'settings';
       },
       schedulerLogs: [],
       schedulerLoading: false,
+      maintenanceLoading: false,
+      maintenanceConfirmText: '',
+      maintenanceResult: null,
       
       // Scheduler methods
       async loadSchedulerStatus() {
@@ -374,6 +378,43 @@ $active_page = 'settings';
           this.schedulerLogs = [];
         } catch(e) {
           console.error('Log temizleme hatası:', e);
+        }
+      },
+      async runVideoCleanup() {
+        this.maintenanceResult = null;
+        await this.loadSchedulerStatus();
+        const prodRunning = this.schedulerStatus.production?.running;
+        const socialRunning = this.schedulerStatus.social?.running;
+        if (prodRunning || socialRunning) {
+          alert('Önce Zamanlayıcı sekmesinden Production ve Social scheduler\'ı durdurun.');
+          return;
+        }
+        if (this.maintenanceConfirmText.trim().toUpperCase() !== 'TEMIZLE') {
+          alert('Devam etmek için TEMIZLE yazın.');
+          return;
+        }
+        if (!confirm('Tüm video üretimleri ve bağlı dosyalar silinecek. Hesap/API ayarları korunur. Devam edilsin mi?')) {
+          return;
+        }
+
+        this.maintenanceLoading = true;
+        try {
+          const r = await fetch('/api/jobs.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'clear_all_videos' })
+          });
+          const d = await r.json();
+          if (!r.ok || !d.success) {
+            this.maintenanceResult = { success: false, message: d.error || 'Temizlik başarısız' };
+            return;
+          }
+          this.maintenanceResult = { success: true, message: d.message || 'Temizlik tamamlandı', stats: d.stats || {} };
+          this.maintenanceConfirmText = '';
+        } catch (e) {
+          this.maintenanceResult = { success: false, message: e.message || 'Temizlik isteği başarısız' };
+        } finally {
+          this.maintenanceLoading = false;
         }
       },
       toggleDark() {
@@ -511,7 +552,7 @@ $active_page = 'settings';
       <?php include __DIR__ . '/components/_sidebar.php'; ?>
       <!-- Main Content -->
       <main class="flex-1 overflow-y-auto p-6 md:p-8">
-        <div class="max-w-3xl mx-auto">
+        <div class="max-w-5xl mx-auto">
           <!-- Save Message -->
           <template x-if="saveMsg">
             <div class="mb-4 p-3 rounded-lg text-sm font-semibold" :class="saveError ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'" x-text="saveMsg"></div>
@@ -800,6 +841,67 @@ $active_page = 'settings';
                 </div>
               </div>
               
+            </div>
+
+            <!-- ═══════════ TAB: BAKIM ═══════════ -->
+            <div x-show="activeTab === 'bakim'" x-transition>
+              <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-2">🧹 Bakım Modu</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  Sadece video üretim verileri temizlenir. Hesaplar, API ayarları, scriptler ve credential dosyaları korunur.
+                </p>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800 mb-4">
+                  Temizlik kapsamı: <strong>data/jobs</strong>, <strong>output/job_*</strong>, kuyruklardaki video referansları ve içerik havuzu job bağlantıları.
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                  <div class="p-3 rounded-lg border border-gray-200 dark:border-slate-600">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Production Scheduler</p>
+                    <p class="font-semibold" :class="schedulerStatus.production?.running ? 'text-red-600' : 'text-green-600'" x-text="schedulerStatus.production?.running ? 'Çalışıyor' : 'Durduruldu'"></p>
+                  </div>
+                  <div class="p-3 rounded-lg border border-gray-200 dark:border-slate-600">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Social Scheduler</p>
+                    <p class="font-semibold" :class="schedulerStatus.social?.running ? 'text-red-600' : 'text-green-600'" x-text="schedulerStatus.social?.running ? 'Çalışıyor' : 'Durduruldu'"></p>
+                  </div>
+                </div>
+
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Onay için <span class="font-bold">TEMIZLE</span> yazın
+                </label>
+                <input
+                  type="text"
+                  x-model="maintenanceConfirmText"
+                  placeholder="TEMIZLE"
+                  class="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2.5 mb-4 bg-white dark:bg-slate-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-red-500 outline-none"
+                >
+
+                <button
+                  type="button"
+                  @click="runVideoCleanup()"
+                  :disabled="maintenanceLoading"
+                  class="px-4 py-2.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 transition"
+                >
+                  <span x-show="!maintenanceLoading">Videoları Temizle</span>
+                  <span x-show="maintenanceLoading">Temizleniyor...</span>
+                </button>
+              </div>
+
+              <template x-if="maintenanceResult">
+                <div class="rounded-xl border p-4"
+                  :class="maintenanceResult.success ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-700'">
+                  <p class="font-semibold" x-text="maintenanceResult.message"></p>
+                  <template x-if="maintenanceResult.success && maintenanceResult.stats">
+                    <div class="mt-2 text-sm space-y-1">
+                      <p>Jobs silindi: <span class="font-semibold" x-text="maintenanceResult.stats.jobs_deleted ?? 0"></span></p>
+                      <p>Output klasörü silindi: <span class="font-semibold" x-text="maintenanceResult.stats.output_dirs_deleted ?? 0"></span></p>
+                      <p>Kuyruk referansı temizlendi: <span class="font-semibold" x-text="maintenanceResult.stats.queues_videos_removed ?? 0"></span></p>
+                      <p>Social queue temizlendi: <span class="font-semibold" x-text="maintenanceResult.stats.social_queue_removed ?? 0"></span></p>
+                      <p>Production queue temizlendi: <span class="font-semibold" x-text="maintenanceResult.stats.production_queue_removed ?? 0"></span></p>
+                    </div>
+                  </template>
+                </div>
+              </template>
             </div>
 
             <!-- ═══════════ TAB: SCRIPT ═══════════ -->

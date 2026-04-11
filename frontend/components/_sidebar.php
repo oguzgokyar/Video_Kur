@@ -92,6 +92,19 @@ $active_page = $active_page ?? 'videos';
         Script Yönetimi
       </div>
     </a>
+
+    <a 
+      href="music.php" 
+      class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group <?= $active_page === 'music' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700' ?>"
+      :class="sidebarCollapsedState ? 'justify-center' : ''"
+      :title="sidebarCollapsedState ? 'Müzik Yönetimi' : ''"
+    >
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-2v13M9 19a2 2 0 11-4 0 2 2 0 014 0zm12-2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+      <span x-show="!sidebarCollapsedState" class="whitespace-nowrap">Müzik Yönetimi</span>
+      <div x-show="sidebarCollapsedState" class="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">
+        Müzik Yönetimi
+      </div>
+    </a>
     
     <a 
       href="accounts.php" 

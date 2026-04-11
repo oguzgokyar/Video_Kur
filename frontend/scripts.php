@@ -66,6 +66,31 @@
             </div>
           </div>
 
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+            <div class="bg-white rounded-lg border border-gray-200 p-4">
+              <h3 class="font-semibold text-gray-800 mb-3">📂 Kategoriler</h3>
+              <div class="flex gap-2 mb-3">
+                <input x-model.trim="newCategoryName" type="text" placeholder="Yeni kategori adı"
+                  class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                <button @click="addCategory()" class="px-3 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 transition">Ekle</button>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <template x-for="cat in categories" :key="cat.id">
+                  <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md border border-gray-200 text-sm text-gray-700 bg-gray-50">
+                    <span x-text="cat.name"></span>
+                    <button @click="deleteCategory(cat.id)" class="text-red-500 hover:text-red-700 text-xs">Sil</button>
+                  </span>
+                </template>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-lg border border-gray-200 p-4">
+              <h3 class="font-semibold text-gray-800 mb-2">🎵 Müzik Yönetimi</h3>
+              <p class="text-sm text-gray-600 mb-3">Müzik ekleme/silme işlemleri ayrı sayfaya taşındı.</p>
+              <a href="music.php" class="inline-flex items-center px-3 py-2 rounded-md bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition">Müzik Yönetimine Git</a>
+            </div>
+          </div>
+
           <!-- Scripts List -->
           <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <template x-if="filteredScripts.length > 0">
@@ -135,8 +160,12 @@
 
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">İçerik Tipi</label>
-            <input type="text" x-model="form.contentType" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Örn: haber, eğlence">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Kategori</label>
+            <select x-model="form.categoryId" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+              <template x-for="cat in categories" :key="cat.id">
+                <option :value="cat.id" x-text="cat.name"></option>
+              </template>
+            </select>
           </div>
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">Maksimum Süre (sn)</label>
@@ -184,6 +213,8 @@
       
       // Scripts State
       scripts: [],
+      categories: [],
+      newCategoryName: '',
       searchQuery: '',
       contentTypeFilter: 'all',
       videoTypeFilter: 'all',
@@ -195,6 +226,7 @@
         id: '',
         name: '',
         description: '',
+        categoryId: 'genel',
         contentType: 'haber',
         videoType: 'short',
         maxDuration: 55,
@@ -263,14 +295,46 @@
         const res = await fetch('/api/scripts.php');
         const data = await res.json();
         this.scripts = data.scripts || [];
+        this.categories = data.categories || [];
+        if (!this.categories.length) {
+          this.categories = [{ id: 'genel', name: 'genel' }];
+        }
       },
-
+      async addCategory() {
+        if (!this.newCategoryName) return;
+        const res = await fetch('/api/scripts.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create_category', name: this.newCategoryName })
+        });
+        if (res.ok) {
+          this.newCategoryName = '';
+          await this.loadScripts();
+        } else {
+          alert('Kategori eklenemedi');
+        }
+      },
+      async deleteCategory(id) {
+        if (!confirm('Kategori silinsin mi?')) return;
+        const res = await fetch('/api/scripts.php', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete_category', id })
+        });
+        if (res.ok) {
+          await this.loadScripts();
+        } else {
+          const d = await res.json().catch(() => ({}));
+          alert(d.error || 'Kategori silinemedi');
+        }
+      },
       openNewScriptModal() {
         this.editMode = false;
         this.form = {
           id: '',
           name: '',
           description: '',
+          categoryId: this.categories[0]?.id || 'genel',
           contentType: 'haber',
           videoType: 'short',
           maxDuration: 55,
@@ -322,7 +386,7 @@ Yanıtı şu JSON formatında ver (sadece JSON, başka açıklama yazma):
 
       editScript(script) {
         this.editMode = true;
-        this.form = { ...script, videoType: script.videoType || 'short' };
+        this.form = { ...script, categoryId: script.categoryId || script.contentType || (this.categories[0]?.id || 'genel'), videoType: script.videoType || 'short' };
         this.modalOpen = true;
       },
 
@@ -335,6 +399,8 @@ Yanıtı şu JSON formatında ver (sadece JSON, başka açıklama yazma):
         const method = this.editMode ? 'PUT' : 'POST';
         
         try {
+          const selectedCategory = this.categories.find(c => c.id === this.form.categoryId);
+          this.form.contentType = selectedCategory?.name || this.form.categoryId || this.form.contentType;
           const res = await fetch('/api/scripts.php', {
             method,
             headers: { 'Content-Type': 'application/json' },

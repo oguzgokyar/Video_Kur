@@ -15,6 +15,8 @@ $jobsDir = $dataDir . '/jobs';
 $contentPoolFile = $dataDir . '/content_pool.json';
 $schedulerStatusFile = $dataDir . '/scheduler_status.json';
 $schedulerErrorsFile = $dataDir . '/scheduler_errors.json';
+$baseDir = dirname(__DIR__);
+require_once __DIR__ . '/music_helpers.php';
 
 // Kuyruk verilerini yükle
 function loadQueues() {
@@ -610,6 +612,8 @@ function getDefaultVideoSettings() {
         'dimensionPreset' => 'vertical',
         'videoWidth' => 1080,
         'videoHeight' => 1920,
+        'visualThemeId' => 'default',
+        'visualThemePrompt' => null,
         'subtitleMode' => 'config',
         'subtitlePreset' => 'classic',
         'customSubtitle' => null
@@ -634,6 +638,14 @@ function resolveVideoSettings($queue) {
     // Varsayılan değerler
     $videoWidth = $settings['videoWidth'] ?? 1080;
     $videoHeight = $settings['videoHeight'] ?? 1920;
+    $visualThemeId = trim((string)($settings['visualThemeId'] ?? 'default'));
+    if ($visualThemeId === '') {
+        $visualThemeId = 'default';
+    }
+    $visualThemePrompt = trim((string)($settings['visualThemePrompt'] ?? ''));
+    if ($visualThemePrompt === '') {
+        $visualThemePrompt = null;
+    }
     
     // Altyazı stilini çöz
     $subtitleStyle = null;
@@ -688,7 +700,9 @@ function resolveVideoSettings($queue) {
     return [
         'videoWidth' => $videoWidth,
         'videoHeight' => $videoHeight,
-        'subtitleStyle' => $subtitleStyle
+        'subtitleStyle' => $subtitleStyle,
+        'visualThemeId' => $visualThemeId,
+        'visualThemePrompt' => $visualThemePrompt
     ];
 }
 
@@ -1501,6 +1515,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'status' => 'queued',
                         'added_at' => date('c')
                     ];
+                    $queueVideoSettings = $queue['video_settings'] ?? [];
+                    if (empty($job['visual_theme_id']) && !empty($queueVideoSettings['visualThemeId'])) {
+                        $job['visual_theme_id'] = $queueVideoSettings['visualThemeId'];
+                    }
+                    if (empty($job['visual_theme_prompt']) && !empty($queueVideoSettings['visualThemePrompt'])) {
+                        $job['visual_theme_prompt'] = $queueVideoSettings['visualThemePrompt'];
+                    }
+                    if (empty($job['bgm_track_id']) && (($job['music_mode'] ?? 'off') === 'auto')) {
+                        $scriptCategory = resolveScriptCategory($job, $job['contentType'] ?? 'genel');
+                        $selectedMusic = selectMusicTrackForCategory($baseDir, $scriptCategory);
+                        if ($selectedMusic) {
+                            $job['bgm_category_id'] = $selectedMusic['categoryId'];
+                            $job['bgm_track_id'] = $selectedMusic['id'];
+                            $job['bgm_track_name'] = $selectedMusic['name'];
+                            $job['bgm_file'] = $selectedMusic['file'];
+                            if (!isset($job['bgm_volume_db'])) {
+                                $job['bgm_volume_db'] = (float)($selectedMusic['volumeDb'] ?? -22.0);
+                            }
+                        }
+                    }
                     saveJob($jobId, $job);
                     
                     break;

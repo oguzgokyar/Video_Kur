@@ -21,6 +21,8 @@ $SOCIAL_QUEUE_FILE = __DIR__ . '/../data/social_queue.json';
 $PRODUCTION_QUEUE_FILE = __DIR__ . '/../data/production_queue.json';
 $CONFIG_FILE = __DIR__ . '/../data/config.json';
 $SCRIPTS_FILE = __DIR__ . '/../data/scripts.json';
+$BASE_DIR = dirname(__DIR__);
+require_once __DIR__ . '/music_helpers.php';
 
 // Helper functions
 function loadContentPool() {
@@ -98,10 +100,20 @@ function resolveVideoSettingsFromQueue($queue) {
     $videoWidth = 1080;
     $videoHeight = 1920;
     $subtitleStyle = null;
+    $visualThemeId = 'default';
+    $visualThemePrompt = null;
     
     if ($settings) {
         $videoWidth = $settings['videoWidth'] ?? 1080;
         $videoHeight = $settings['videoHeight'] ?? 1920;
+        $visualThemeId = trim((string)($settings['visualThemeId'] ?? 'default'));
+        if ($visualThemeId === '') {
+            $visualThemeId = 'default';
+        }
+        $visualThemePrompt = trim((string)($settings['visualThemePrompt'] ?? ''));
+        if ($visualThemePrompt === '') {
+            $visualThemePrompt = null;
+        }
         
         $subtitleMode = $settings['subtitleMode'] ?? 'config';
         
@@ -133,7 +145,9 @@ function resolveVideoSettingsFromQueue($queue) {
     return [
         'videoWidth' => $videoWidth,
         'videoHeight' => $videoHeight,
-        'subtitleStyle' => $subtitleStyle
+        'subtitleStyle' => $subtitleStyle,
+        'visualThemeId' => $visualThemeId,
+        'visualThemePrompt' => $visualThemePrompt
     ];
 }
 
@@ -470,6 +484,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $queue_id = $input['queue_id'] ?? '';
         $scriptId = trim((string)($input['scriptId'] ?? ''));
         $contentType = trim((string)($input['contentType'] ?? ''));
+        $musicMode = normalizeMusicMode($input['music_mode'] ?? 'off');
+        $bgmVolumeDb = (float)($input['bgm_volume_db'] ?? -22.0);
         
         if (empty($content_id)) {
             http_response_code(400);
@@ -494,6 +510,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $contentType = trim((string)($selectedScript['contentType'] ?? 'genel'));
         }
         $contentType = strtolower($contentType);
+        $scriptCategoryId = resolveScriptCategory($selectedScript, $contentType);
+        $selectedMusic = null;
+        if ($musicMode === 'auto') {
+            $selectedMusic = selectMusicTrackForCategory($BASE_DIR, $scriptCategoryId);
+        }
         
         // İçeriği bul
         $pool = loadContentPool();
@@ -518,7 +539,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $videoSettings = [
             'videoWidth' => 1080,
             'videoHeight' => 1920,
-            'subtitleStyle' => getDefaultSubtitleStyle()
+            'subtitleStyle' => getDefaultSubtitleStyle(),
+            'visualThemeId' => 'default',
+            'visualThemePrompt' => null
         ];
         
         if (!empty($queue_id)) {
@@ -552,6 +575,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'videoWidth' => $videoSettings['videoWidth'],
             'videoHeight' => $videoSettings['videoHeight'],
             'subtitleStyle' => $videoSettings['subtitleStyle'],
+            'visual_theme_id' => $videoSettings['visualThemeId'] ?? 'default',
+            'visual_theme_prompt' => $videoSettings['visualThemePrompt'] ?? null,
+            'music_mode' => $musicMode,
+            'bgm_category_id' => $scriptCategoryId,
+            'bgm_track_id' => $selectedMusic['id'] ?? null,
+            'bgm_track_name' => $selectedMusic['name'] ?? null,
+            'bgm_file' => $selectedMusic['file'] ?? null,
+            'bgm_volume_db' => $selectedMusic ? (float)($selectedMusic['volumeDb'] ?? $bgmVolumeDb) : $bgmVolumeDb,
             'status' => 'pending',
             'created_at' => date('Y-m-d H:i:s'),
             'previewUrl' => '',

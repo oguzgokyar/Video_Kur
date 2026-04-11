@@ -5,7 +5,7 @@ import random
 import math
 from moviepy import (
     ImageClip, AudioFileClip,
-    CompositeVideoClip, concatenate_videoclips
+    CompositeAudioClip, CompositeVideoClip, concatenate_audioclips, concatenate_videoclips
 )
 from moviepy.config import FFMPEG_BINARY
 
@@ -356,7 +356,8 @@ def build_subtitle_style(style_params: dict) -> str:
 
 
 def compose_video(scenes: list, images_dir: str, audio_path: str, srt_path: str,
-                  output_path: str, subtitle_style: dict = None, enable_effects: bool = True) -> bool:
+                  output_path: str, subtitle_style: dict = None, enable_effects: bool = True,
+                  bgm_path: str = None, bgm_volume_db: float = -22.0) -> bool:
     """Görseller, ses ve altyazıdan Short video oluşturur. scenes artık hook/outro dahil tüm segmentleri içerir."""
     try:
         audio = AudioFileClip(audio_path)
@@ -419,7 +420,21 @@ def compose_video(scenes: list, images_dir: str, audio_path: str, srt_path: str,
         if abs(final.duration - audio.duration) > 0.5:
             if audio.duration < final.duration:
                 final = final.subclipped(0, audio.duration)
-        final = final.with_audio(audio)
+        mixed_audio = audio
+        bgm_clip = None
+        if bgm_path and os.path.exists(bgm_path):
+            try:
+                bgm_clip = AudioFileClip(bgm_path)
+                if bgm_clip.duration > 0:
+                    repeat_count = max(1, int(math.ceil(audio.duration / bgm_clip.duration)))
+                    looped = concatenate_audioclips([bgm_clip] * repeat_count).subclipped(0, audio.duration)
+                    bgm_gain = max(0.01, min(1.0, 10 ** (float(bgm_volume_db) / 20.0)))
+                    looped = looped.with_volume_scaled(bgm_gain)
+                    mixed_audio = CompositeAudioClip([looped, audio]).with_duration(audio.duration)
+            except Exception as e:
+                print(f"  [BGM] Müzik mix atlandı: {e}")
+
+        final = final.with_audio(mixed_audio)
 
         # Önce geçici video oluştur
         temp_path = output_path.replace('.mp4', '_temp.mp4')
@@ -435,6 +450,11 @@ def compose_video(scenes: list, images_dir: str, audio_path: str, srt_path: str,
         # Close all clips and wait for file handles to release (Windows fix)
         final.close()
         audio.close()
+        if bgm_clip:
+            try:
+                bgm_clip.close()
+            except Exception:
+                pass
         for clip in clips:
             try:
                 clip.close()

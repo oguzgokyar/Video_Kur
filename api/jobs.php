@@ -16,9 +16,26 @@ $queuesFile = $dataDir . '/queues.json';
 $socialQueueFile = $dataDir . '/social_queue.json';
 $contentPoolFile = $dataDir . '/content_pool.json';
 $pythonCmd = 'python';
+require_once __DIR__ . '/music_helpers.php';
 
 if (!is_dir($jobsDir)) { mkdir($jobsDir, 0777, true); }
 if (!is_dir($outputDir)) { mkdir($outputDir, 0777, true); }
+
+function deleteDirectoryRecursive($dir) {
+    if (!is_dir($dir)) {
+        return false;
+    }
+    $items = array_diff(scandir($dir), ['.', '..']);
+    foreach ($items as $item) {
+        $path = $dir . DIRECTORY_SEPARATOR . $item;
+        if (is_dir($path)) {
+            deleteDirectoryRecursive($path);
+        } elseif (file_exists($path)) {
+            @unlink($path);
+        }
+    }
+    return @rmdir($dir);
+}
 
 function findScriptById($scriptId) {
     global $scriptsFile;
@@ -273,6 +290,121 @@ function clearContentPoolJobReferences($jobId) {
     return $updated;
 }
 
+function clearAllVideoProductions() {
+    global $jobsDir, $outputDir, $socialQueueFile, $dataDir, $contentPoolFile;
+
+    $jobFiles = glob("$jobsDir/*.json") ?: [];
+    $jobIds = [];
+    foreach ($jobFiles as $jobFile) {
+        $jobIds[] = pathinfo($jobFile, PATHINFO_FILENAME);
+    }
+
+    $deletedJobFiles = 0;
+    foreach ($jobFiles as $jobFile) {
+        if (@unlink($jobFile)) {
+            $deletedJobFiles++;
+        }
+    }
+
+    $deletedOutputDirs = 0;
+    $outputJobDirs = glob("$outputDir/job_*", GLOB_ONLYDIR) ?: [];
+    foreach ($outputJobDirs as $dir) {
+        if (deleteDirectoryRecursive($dir)) {
+            $deletedOutputDirs++;
+        }
+    }
+
+    $queuesRemoved = 0;
+    $queuesData = loadQueuesData();
+    $queuesUpdated = false;
+    foreach ($queuesData['queues'] ?? [] as &$queue) {
+        $videos = $queue['videos'] ?? [];
+        $queuesRemoved += count($videos);
+        if (!empty($videos)) {
+            $queue['videos'] = [];
+            $queuesUpdated = true;
+        }
+    }
+    unset($queue);
+    if ($queuesUpdated) {
+        saveQueuesData($queuesData);
+    }
+
+    $socialRemoved = 0;
+    if (file_exists($socialQueueFile)) {
+        $socialData = json_decode(file_get_contents($socialQueueFile), true);
+        if (!is_array($socialData)) {
+            $socialData = [];
+        }
+        $socialRemoved = count($socialData['queue'] ?? []);
+        $socialData['queue'] = [];
+        $socialData['current_job'] = null;
+        if (isset($socialData['metadata']) && is_array($socialData['metadata'])) {
+            $socialData['metadata']['last_updated'] = date('c');
+        }
+        file_put_contents($socialQueueFile, json_encode($socialData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    $productionRemoved = 0;
+    $productionData = loadProductionQueueData();
+    $productionRemoved += count($productionData['queue'] ?? []);
+    $productionRemoved += count($productionData['production_queue'] ?? []);
+    if (!empty($productionData['current_job'])) {
+        $productionRemoved++;
+    }
+    $productionData['queue'] = [];
+    $productionData['production_queue'] = [];
+    $productionData['current_job'] = null;
+    saveProductionQueueData($productionData);
+
+    $contentPoolUpdated = 0;
+    if (file_exists($contentPoolFile)) {
+        $pool = json_decode(file_get_contents($contentPoolFile), true);
+        if (is_array($pool)) {
+            foreach ($pool['content'] ?? [] as &$item) {
+                if (!empty($item['processed_job_id'])) {
+                    $item['processed_job_id'] = null;
+                    if (($item['status'] ?? '') !== 'completed') {
+                        $item['status'] = 'pending';
+                    }
+                    $contentPoolUpdated++;
+                }
+            }
+            unset($item);
+            if ($contentPoolUpdated > 0) {
+                if (!isset($pool['metadata']) || !is_array($pool['metadata'])) {
+                    $pool['metadata'] = [];
+                }
+                $pool['metadata']['last_updated'] = gmdate('Y-m-d\TH:i:s\Z');
+                $pool['metadata']['total_items'] = count($pool['content'] ?? []);
+                file_put_contents($contentPoolFile, json_encode($pool, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            }
+        }
+    }
+
+    $schedulerErrorsCleared = 0;
+    $schedulerErrorsFile = $dataDir . '/scheduler_errors.json';
+    if (file_exists($schedulerErrorsFile)) {
+        $errorsData = json_decode(file_get_contents($schedulerErrorsFile), true);
+        if (!is_array($errorsData)) {
+            $errorsData = [];
+        }
+        $schedulerErrorsCleared = count($errorsData['errors'] ?? []);
+        $errorsData['errors'] = [];
+        file_put_contents($schedulerErrorsFile, json_encode($errorsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    return [
+        'jobs_deleted' => $deletedJobFiles,
+        'output_dirs_deleted' => $deletedOutputDirs,
+        'queues_videos_removed' => $queuesRemoved,
+        'social_queue_removed' => $socialRemoved,
+        'production_queue_removed' => $productionRemoved,
+        'content_pool_updated' => $contentPoolUpdated,
+        'scheduler_errors_cleared' => $schedulerErrorsCleared
+    ];
+}
+
 // Helper: Detect resume point for a job
 function detectResumePoint($jobId) {
     global $outputDir;
@@ -398,21 +530,81 @@ function mapResumeSectionForRegenerate($resumeFrom) {
 // POST: Yeni iş oluştur
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
-    $url = $input['url'] ?? '';
+    if (!is_array($input)) {
+        $input = [];
+    }
+    $action = $input['action'] ?? '';
+
+    if ($action === 'clear_all_videos') {
+        $schedulerStatusFile = $dataDir . '/scheduler_status.json';
+        $force = (bool)($input['force'] ?? false);
+
+        if (file_exists($schedulerStatusFile) && !$force) {
+            $schedulerStatus = json_decode(file_get_contents($schedulerStatusFile), true);
+            $prodRunning = (bool)($schedulerStatus['production']['running'] ?? false);
+            $socialRunning = (bool)($schedulerStatus['social']['running'] ?? false);
+            if ($prodRunning || $socialRunning) {
+                http_response_code(409);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Temizlik için önce zamanlayıcıları durdurun',
+                    'details' => [
+                        'production_running' => $prodRunning,
+                        'social_running' => $socialRunning
+                    ]
+                ]);
+                exit;
+            }
+        }
+
+        $stats = clearAllVideoProductions();
+        echo json_encode([
+            'success' => true,
+            'message' => 'Tüm video üretimleri ve bağlı dosyalar temizlendi',
+            'stats' => $stats
+        ]);
+        exit;
+    }
+
+    $url = trim((string)($input['url'] ?? ''));
     $template = $input['template'] ?? 'short_haber';
     $scriptId = trim((string)($input['scriptId'] ?? ''));
     $contentType = trim((string)($input['contentType'] ?? ''));
     $videoWidth = intval($input['videoWidth'] ?? 1080);
     $videoHeight = intval($input['videoHeight'] ?? 1920);
     $subtitleStyle = $input['subtitleStyle'] ?? null;
+    $sourceMode = strtolower(trim((string)($input['source_mode'] ?? 'url')));
+    if (!in_array($sourceMode, ['url', 'prompt'], true)) {
+        $sourceMode = 'url';
+    }
+    $promptText = trim((string)($input['prompt_text'] ?? ''));
+    $visualThemeId = trim((string)($input['visual_theme_id'] ?? 'default'));
+    if ($visualThemeId === '') {
+        $visualThemeId = 'default';
+    }
+    $visualThemePrompt = trim((string)($input['visual_theme_prompt'] ?? ''));
+    $musicMode = normalizeMusicMode($input['music_mode'] ?? 'off');
+    $bgmVolumeDb = (float)($input['bgm_volume_db'] ?? -22.0);
 
     // Ebat sınırları kontrolü
     $videoWidth = max(360, min(4096, $videoWidth));
     $videoHeight = max(360, min(4096, $videoHeight));
 
-    if (empty($url)) {
-        echo json_encode(['error' => 'URL gerekli']);
-        exit;
+    if ($sourceMode === 'url') {
+        if (empty($url)) {
+            echo json_encode(['error' => 'URL gerekli']);
+            exit;
+        }
+    } else {
+        $promptLen = function_exists('mb_strlen') ? mb_strlen($promptText, 'UTF-8') : strlen($promptText);
+        if ($promptText === '' || $promptLen < 20) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Prompt en az 20 karakter olmalı']);
+            exit;
+        }
+        if ($url === '') {
+            $url = 'prompt://' . uniqid('job_', true);
+        }
     }
 
     if ($scriptId === '') {
@@ -432,19 +624,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $contentType = trim((string)($selectedScript['contentType'] ?? 'genel'));
     }
     $contentType = strtolower($contentType);
+    $scriptCategoryId = resolveScriptCategory($selectedScript, $contentType);
+
+    $selectedMusic = null;
+    if ($musicMode === 'auto') {
+        $selectedMusic = selectMusicTrackForCategory($baseDir, $scriptCategoryId);
+    }
 
     $jobId = uniqid('job_', true);
     
-    // URL'den basit bir başlık oluştur
-    $parsedUrl = parse_url($url);
-    $path = $parsedUrl['path'] ?? '';
-    $titleGuess = basename($path);
-    $titleGuess = preg_replace('/[^a-zA-Z0-9\s-]/', ' ', urldecode($titleGuess));
-    $titleGuess = ucfirst(trim($titleGuess)) ?: 'Yeni Video';
+    // Başlık fallback'i oluştur
+    $titleGuess = 'Yeni Video';
+    if ($sourceMode === 'prompt' && $promptText !== '') {
+        $normalizedPrompt = trim(preg_replace('/\s+/', ' ', $promptText));
+        $titleGuess = function_exists('mb_substr') ? mb_substr($normalizedPrompt, 0, 90, 'UTF-8') : substr($normalizedPrompt, 0, 90);
+    } else {
+        $parsedUrl = parse_url($url);
+        $path = $parsedUrl['path'] ?? '';
+        $titleGuess = basename($path);
+        $titleGuess = preg_replace('/[^a-zA-Z0-9\s-]/', ' ', urldecode($titleGuess));
+        $titleGuess = ucfirst(trim($titleGuess)) ?: 'Yeni Video';
+    }
     
     $jobData = [
         'id' => $jobId,
         'url' => $url,
+        'source_mode' => $sourceMode,
+        'prompt_text' => $sourceMode === 'prompt' ? $promptText : null,
         'template' => $template,
         'scriptId' => $scriptId,
         'scriptName' => $selectedScript['name'] ?? '',
@@ -452,6 +658,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'videoWidth' => $videoWidth,
         'videoHeight' => $videoHeight,
         'subtitleStyle' => $subtitleStyle,
+        'visual_theme_id' => $visualThemeId,
+        'visual_theme_prompt' => $visualThemePrompt !== '' ? $visualThemePrompt : null,
+        'music_mode' => $musicMode,
+        'bgm_category_id' => $scriptCategoryId,
+        'bgm_track_id' => $selectedMusic['id'] ?? null,
+        'bgm_track_name' => $selectedMusic['name'] ?? null,
+        'bgm_file' => $selectedMusic['file'] ?? null,
+        'bgm_volume_db' => $selectedMusic ? (float)($selectedMusic['volumeDb'] ?? $bgmVolumeDb) : $bgmVolumeDb,
         'status' => 'pending',
         'created_at' => date('Y-m-d H:i:s'),
         'previewUrl' => '',
@@ -666,16 +880,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     // Output klasörünü sil (tüm içeriğiyle)
     $jobOutputDir = "$outputDir/$jobId";
     if (is_dir($jobOutputDir)) {
-        function deleteDirectory($dir) {
-            if (!is_dir($dir)) return false;
-            $items = array_diff(scandir($dir), ['.', '..']);
-            foreach ($items as $item) {
-                $path = $dir . DIRECTORY_SEPARATOR . $item;
-                is_dir($path) ? deleteDirectory($path) : unlink($path);
-            }
-            return rmdir($dir);
-        }
-        deleteDirectory($jobOutputDir);
+        deleteDirectoryRecursive($jobOutputDir);
     }
 
     $sync = [

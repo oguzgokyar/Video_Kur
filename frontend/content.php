@@ -32,6 +32,8 @@
       activeQueueTab: null,
       scripts: [],
       selectedScriptId: '',
+      musicMode: 'off',
+      bgmVolumeDb: -22,
       
       // Seçim
       selectedItems: [],
@@ -260,7 +262,9 @@
                 content_id: item.id,
                 queue_id: this.activeQueueTab,
                 scriptId: this.selectedScriptId,
-                contentType: (selectedScript.contentType || this.getContentTypeForItem(item))
+                contentType: (selectedScript.contentType || this.getContentTypeForItem(item)),
+                music_mode: this.musicMode,
+                bgm_volume_db: this.bgmVolumeDb
               })
             });
             
@@ -744,6 +748,19 @@
                           <option :value="script.id" x-text="script.name + ' (' + (script.contentType || 'genel') + ')'"></option>
                         </template>
                       </select>
+                    </div>
+                    <div class="mt-2 flex items-center gap-2">
+                      <label class="text-xs text-blue-700 dark:text-blue-300 whitespace-nowrap">Müzik:</label>
+                      <select x-model="musicMode" class="text-xs border border-blue-200 dark:border-slate-600 rounded-md px-2 py-1.5 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                        <option value="off">Kapalı</option>
+                        <option value="auto">Otomatik</option>
+                      </select>
+                      <template x-if="musicMode==='auto'">
+                        <div class="flex items-center gap-2">
+                          <label class="text-xs text-blue-700 dark:text-blue-300">Ses:</label>
+                          <input type="range" min="-35" max="-8" step="1" x-model.number="bgmVolumeDb" class="w-24 accent-indigo-600">
+                        </div>
+                      </template>
                     </div>
                   </div>
                   <button

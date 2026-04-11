@@ -94,6 +94,8 @@
         dimensionPreset: 'vertical',
         customWidth: 1080,
         customHeight: 1920,
+        visualThemeId: 'default',
+        visualThemePrompt: '',
         subtitleMode: 'config',
         subtitlePreset: 'classic',
         customSubtitle: { FontName: 'Arial', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#000000', Outline: 2, MarginV: 60, MarginL: 40, MarginR: 40, Bold: 1 },
@@ -168,6 +170,18 @@
         minimal: { label: 'Minimal', FontSize: 20, PrimaryColour: '#FFFFFF', OutlineColour: '#333333', Outline: 1, MarginV: 70, MarginL: 40, MarginR: 40, Bold: 0 },
         news: { label: 'Haber', FontSize: 24, PrimaryColour: '#FFFFFF', OutlineColour: '#CC0000', Outline: 2, MarginV: 55, MarginL: 40, MarginR: 40, Bold: 1 }
       },
+      visualThemes: [
+        { id: 'default', label: 'Default', prompt: '' },
+        { id: 'realistic', label: 'Realistic', prompt: 'ultra realistic photo style, natural lighting, real-world textures' },
+        { id: 'cinematic', label: 'Cinematic', prompt: 'cinematic film still, dramatic lighting, high contrast, anamorphic composition' },
+        { id: 'photographic', label: 'Photographic', prompt: 'professional photography style, crisp details, editorial quality' },
+        { id: '3d-model', label: '3D Model', prompt: 'high quality 3D render, stylized 3D model look, clean geometry' },
+        { id: 'anime', label: 'Anime', prompt: 'anime style illustration, vibrant cel shading, Japanese animation aesthetic' },
+        { id: 'digital-art', label: 'Digital Art', prompt: 'digital painting style, concept art quality, rich color grading' },
+        { id: 'dark', label: 'Dark', prompt: 'dark moody atmosphere, low-key lighting, dramatic shadows' },
+        { id: 'reportage-sketch', label: 'Reportage Sketch', prompt: 'reportage sketch style, monochrome ink and charcoal texture' },
+        { id: 'infinity', label: 'Infinity', prompt: 'epic fantasy concept art, monumental scale, surreal atmosphere' }
+      ],
       
       // Computed video dimensions
       get formVideoWidth() { 
@@ -226,6 +240,8 @@
           dimensionPreset: vs.dimensionPreset || 'vertical',
           customWidth: vs.videoWidth || 1080,
           customHeight: vs.videoHeight || 1920,
+          visualThemeId: vs.visualThemeId || 'default',
+          visualThemePrompt: vs.visualThemePrompt || '',
           subtitleMode: vs.subtitleMode || 'config',
           subtitlePreset: vs.subtitlePreset || 'classic',
           customSubtitle: vs.customSubtitle || { ...this.configSubtitle },
@@ -375,6 +391,8 @@
             dimensionPreset: vs.dimensionPreset || 'vertical',
             customWidth: vs.videoWidth || 1080,
             customHeight: vs.videoHeight || 1920,
+            visualThemeId: vs.visualThemeId || 'default',
+            visualThemePrompt: vs.visualThemePrompt || '',
             subtitleMode: vs.subtitleMode || 'config',
             subtitlePreset: vs.subtitlePreset || 'classic',
             customSubtitle: vs.customSubtitle || { ...this.configSubtitle }
@@ -405,6 +423,8 @@
           dimensionPreset: vs.dimensionPreset || 'vertical',
           customWidth: vs.videoWidth || 1080,
           customHeight: vs.videoHeight || 1920,
+          visualThemeId: vs.visualThemeId || 'default',
+          visualThemePrompt: vs.visualThemePrompt || '',
           subtitleMode: vs.subtitleMode || 'config',
           subtitlePreset: vs.subtitlePreset || 'classic',
           customSubtitle: vs.customSubtitle || { ...this.configSubtitle },
@@ -461,10 +481,17 @@
       
       // Build video_settings object from form
       buildVideoSettings() {
+        let themePrompt = this.form.visualThemePrompt || '';
+        if (this.form.visualThemeId !== 'default') {
+          const selectedTheme = this.visualThemes.find(t => t.id === this.form.visualThemeId);
+          themePrompt = selectedTheme ? selectedTheme.prompt : themePrompt;
+        }
         return {
           dimensionPreset: this.form.dimensionPreset,
           videoWidth: this.formVideoWidth,
           videoHeight: this.formVideoHeight,
+          visualThemeId: this.form.visualThemeId || 'default',
+          visualThemePrompt: themePrompt || null,
           subtitleMode: this.form.subtitleMode,
           subtitlePreset: this.form.subtitlePreset,
           customSubtitle: this.form.subtitleMode === 'custom' ? this.form.customSubtitle : null
@@ -2181,6 +2208,22 @@
                 <option value="horizontal">🖥️ Yatay (16:9) - YouTube</option>
               </select>
             </div>
+
+            <div>
+              <label class="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                <span>🖼️</span>
+                <span>Görsel Tema</span>
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <template x-for="theme in visualThemes" :key="theme.id">
+                  <button type="button" @click="form.visualThemeId = theme.id"
+                    class="px-2.5 py-2 rounded-lg border text-xs text-left transition"
+                    :class="form.visualThemeId === theme.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'">
+                    <span x-text="theme.label"></span>
+                  </button>
+                </template>
+              </div>
+            </div>
           </div>
 
           <!-- Platform Selection -->
@@ -2567,6 +2610,22 @@
                 <option value="square">⬛ Kare (1:1) - Instagram</option>
                 <option value="horizontal">🖥️ Yatay (16:9) - YouTube</option>
               </select>
+            </div>
+
+            <div>
+              <label class="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                <span>🖼️</span>
+                <span>Görsel Tema</span>
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <template x-for="theme in visualThemes" :key="theme.id">
+                  <button type="button" @click="form.visualThemeId = theme.id"
+                    class="px-2.5 py-2 rounded-lg border text-xs text-left transition"
+                    :class="form.visualThemeId === theme.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'">
+                    <span x-text="theme.label"></span>
+                  </button>
+                </template>
+              </div>
             </div>
           </div>
 
