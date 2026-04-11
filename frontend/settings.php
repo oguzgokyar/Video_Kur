@@ -3,7 +3,7 @@ $page_title = 'Ayarlar - YouTube Shorts Otomasyon';
 $active_page = 'settings';
 ?>
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" x-data="{ darkMode: localStorage.getItem('darkMode') === '1' }" :class="{ 'dark': darkMode }">
 <head>
   <?php include __DIR__ . '/components/_head.php'; ?>
   <style>
@@ -29,6 +29,25 @@ $active_page = 'settings';
     html.dark .bg-green-50 { background-color: #14532d !important; }
     html.dark .bg-red-50 { background-color: #450a0a !important; }
     html.dark .bg-blue-50 { background-color: #1e3a5f !important; }
+    /* API Card dark mode */
+    html.dark .from-blue-50 { --tw-gradient-from: #1e3a5f !important; }
+    html.dark .to-indigo-50 { --tw-gradient-to: #312e81 !important; }
+    html.dark .from-purple-50 { --tw-gradient-from: #2d1b4e !important; }
+    html.dark .to-pink-50 { --tw-gradient-to: #4a1d5c !important; }
+    html.dark .from-amber-50 { --tw-gradient-from: #451a03 !important; }
+    html.dark .to-orange-50 { --tw-gradient-to: #431407 !important; }
+    html.dark .from-green-50 { --tw-gradient-from: #14532d !important; }
+    html.dark .to-emerald-50 { --tw-gradient-to: #064e3b !important; }
+    html.dark .from-yellow-50 { --tw-gradient-from: #422006 !important; }
+    html.dark .to-lime-50 { --tw-gradient-to: #365314 !important; }
+    html.dark .from-cyan-50 { --tw-gradient-from: #164e63 !important; }
+    html.dark .to-sky-50 { --tw-gradient-to: #0c4a6e !important; }
+    html.dark .border-blue-200 { border-color: #1e40af !important; }
+    html.dark .border-purple-200 { border-color: #6b21a8 !important; }
+    html.dark .border-amber-200 { border-color: #92400e !important; }
+    html.dark .border-green-200 { border-color: #166534 !important; }
+    html.dark .border-yellow-200 { border-color: #854d0e !important; }
+    html.dark .border-cyan-200 { border-color: #0e7490 !important; }
     .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; font-weight: 600; }
     .toggle-switch { position: relative; width: 44px; height: 24px; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
@@ -46,6 +65,7 @@ $active_page = 'settings';
     return {
       sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === '1', darkMode: false, activeTab: 'genel',
       geminiKey: '', elevenKey: '', hfKey: '', pexelsKey: '', falKey: '', pollinationsKey: '',
+      geminiKeys: [], elevenKeys: [], falKeys: [], pollinationsKeys: [],
       ttsProvider: 'elevenlabs', geminiModel: 'gemini-2.0-flash',
       imageService: 'pollinations', pollinationsModel: 'flux',
       pollinationsTextModel: 'openai-fast', scriptProvider: 'gemini',
@@ -60,6 +80,8 @@ $active_page = 'settings';
         Outline: 3,
         Shadow: 1,
         MarginV: 100,
+        MarginL: 40,
+        MarginR: 40,
         Alignment: 2,
         Bold: 1
       },
@@ -80,12 +102,165 @@ $active_page = 'settings';
       tabs: [
         { id:'genel', label:'Genel', icon:'⚙️' },
         { id:'scheduler', label:'Zamanlayıcı', icon:'⏰' },
+        { id:'bakim', label:'Bakım', icon:'🧹' },
         { id:'script', label:'Script', icon:'📝' },
         { id:'gorsel', label:'Görsel', icon:'🖼️' },
         { id:'ses', label:'Ses', icon:'🔊' },
         { id:'altyazi', label:'Altyazı', icon:'💬' },
         { id:'video', label:'Video', icon:'🎬' }
       ],
+      
+      // API Modal state
+      apiModal: null,
+      apiModalNewKey: '',
+      apiModalTestResult: null,
+      apiModalTestLoading: false,
+      apiKeyTestStatuses: {
+        gemini: {}, eleven: {}, fal: {}, pollinations: {}, huggingface: {}, pexels: {}
+      },
+      
+      // Service metadata
+      serviceInfo: {
+        gemini: { name: 'Gemini', icon: '🤖', color: 'blue', multi: true, placeholder: 'AIza...', url: 'https://aistudio.google.com/apikey' },
+        eleven: { name: 'ElevenLabs', icon: '🔊', color: 'purple', multi: true, placeholder: 'sk_...', url: 'https://elevenlabs.io/api' },
+        fal: { name: 'Fal.ai', icon: '⚡', color: 'amber', multi: true, placeholder: 'xxx-xxx:xxx', url: 'https://fal.ai/dashboard/keys' },
+        pollinations: { name: 'Pollinations', icon: '🌸', color: 'green', multi: true, placeholder: 'pk_...', url: 'https://pollinations.ai/pricing' },
+        huggingface: { name: 'HuggingFace', icon: '🤗', color: 'yellow', multi: false, placeholder: 'hf_...', url: 'https://huggingface.co/settings/tokens' },
+        pexels: { name: 'Pexels', icon: '📷', color: 'cyan', multi: false, placeholder: '...', url: 'https://www.pexels.com/api/new/' }
+      },
+      
+      // API Modal methods
+      openApiModal(service) {
+        this.apiModal = service;
+        this.apiModalNewKey = '';
+        this.apiModalTestResult = null;
+      },
+      closeApiModal() {
+        this.apiModal = null;
+        this.apiModalNewKey = '';
+        this.apiModalTestResult = null;
+      },
+      getServiceKeys(service) {
+        if (service === 'gemini') return this.geminiKeys;
+        if (service === 'eleven') return this.elevenKeys;
+        if (service === 'fal') return this.falKeys;
+        if (service === 'pollinations') return this.pollinationsKeys;
+        if (service === 'huggingface') return this.hfKey ? [this.hfKey] : [];
+        if (service === 'pexels') return this.pexelsKey ? [this.pexelsKey] : [];
+        return [];
+      },
+      addKeyToService(service) {
+        const key = this.apiModalNewKey.trim();
+        if (!key) return;
+        
+        if (service === 'gemini') this.geminiKeys.push(key);
+        else if (service === 'eleven') this.elevenKeys.push(key);
+        else if (service === 'fal') this.falKeys.push(key);
+        else if (service === 'pollinations') this.pollinationsKeys.push(key);
+        else if (service === 'huggingface') this.hfKey = key;
+        else if (service === 'pexels') this.pexelsKey = key;
+        
+        this.apiModalNewKey = '';
+        this.clearKeyTestStatus(service, key);
+        this.saveConfig();
+      },
+      removeKeyFromService(service, idx) {
+        if (!confirm('Bu anahtarı silmek istediğinizden emin misiniz?')) return;
+        const keys = this.getServiceKeys(service);
+        const removedKey = keys[idx] || '';
+        
+        if (service === 'gemini') this.geminiKeys.splice(idx, 1);
+        else if (service === 'eleven') this.elevenKeys.splice(idx, 1);
+        else if (service === 'fal') this.falKeys.splice(idx, 1);
+        else if (service === 'pollinations') this.pollinationsKeys.splice(idx, 1);
+        else if (service === 'huggingface') this.hfKey = '';
+        else if (service === 'pexels') this.pexelsKey = '';
+        
+        this.clearKeyTestStatus(service, removedKey);
+        this.saveConfig();
+      },
+      keyStatusId(key) {
+        if (!key) return '';
+        return `${key.slice(0, 6)}...${key.slice(-4)}`;
+      },
+      getKeyTestStatus(service, key) {
+        const bucket = this.apiKeyTestStatuses[service] || {};
+        return bucket[this.keyStatusId(key)] || null;
+      },
+      setKeyTestStatus(service, key, result) {
+        if (!this.apiKeyTestStatuses[service]) this.apiKeyTestStatuses[service] = {};
+        const id = this.keyStatusId(key);
+        const errorCode = result?.error_code || (result?.valid ? '200' : (result?.http_code ? String(result.http_code) : 'ERR'));
+        this.apiKeyTestStatuses[service][id] = {
+          valid: !!result?.valid,
+          errorCode,
+          errorStatus: result?.error_status || (result?.valid ? 'OK' : 'ERROR'),
+          message: result?.message || '',
+          checkedAt: new Date().toLocaleString('tr-TR')
+        };
+      },
+      clearKeyTestStatus(service, key) {
+        const bucket = this.apiKeyTestStatuses[service];
+        if (!bucket) return;
+        const id = this.keyStatusId(key);
+        if (id && bucket[id]) delete bucket[id];
+      },
+      getKeyStatusBadgeClass(service, key) {
+        const s = this.getKeyTestStatus(service, key);
+        if (!s) return 'bg-gray-100 text-gray-500';
+        if (s.valid) return 'bg-green-100 text-green-700';
+        if (s.errorCode === '403') return 'bg-red-100 text-red-700';
+        if (s.errorCode === '429') return 'bg-amber-100 text-amber-700';
+        if (s.errorCode === '503') return 'bg-orange-100 text-orange-700';
+        return 'bg-red-100 text-red-700';
+      },
+      removeKeysByErrorCode(service, errorCode) {
+        if (service !== 'gemini') return;
+        const keys = this.getServiceKeys(service);
+        const indexes = [];
+        keys.forEach((k, i) => {
+          const s = this.getKeyTestStatus(service, k);
+          if (s && s.errorCode === String(errorCode)) indexes.push(i);
+        });
+        if (indexes.length === 0) {
+          alert(`${errorCode} hatalı test edilmiş key bulunamadı.`);
+          return;
+        }
+        if (!confirm(`${indexes.length} adet ${errorCode} hatalı key silinsin mi?`)) return;
+        indexes.sort((a, b) => b - a).forEach(i => {
+          const k = this.geminiKeys[i];
+          this.geminiKeys.splice(i, 1);
+          this.clearKeyTestStatus('gemini', k);
+        });
+        this.saveConfig();
+      },
+      async testServiceKey(service, key) {
+        this.apiModalTestLoading = true;
+        this.apiModalTestResult = null;
+        
+        const providerMap = {
+          gemini: 'gemini', eleven: 'elevenlabs', fal: 'fal',
+          pollinations: 'pollinations', huggingface: 'huggingface', pexels: 'pexels'
+        };
+        
+        try {
+          const r = await fetch('/api/check.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              provider: providerMap[service],
+              key: key,
+              model: service === 'gemini' ? this.geminiModel : undefined
+            })
+          });
+          this.apiModalTestResult = await r.json();
+          this.setKeyTestStatus(service, key, this.apiModalTestResult);
+        } catch(e) {
+          this.apiModalTestResult = { valid: false, message: 'Bağlantı hatası' };
+          this.setKeyTestStatus(service, key, this.apiModalTestResult);
+        }
+        this.apiModalTestLoading = false;
+      },
       
       // Scheduler state
       schedulerStatus: {
@@ -94,6 +269,9 @@ $active_page = 'settings';
       },
       schedulerLogs: [],
       schedulerLoading: false,
+      maintenanceLoading: false,
+      maintenanceConfirmText: '',
+      maintenanceResult: null,
       
       // Scheduler methods
       async loadSchedulerStatus() {
@@ -164,6 +342,32 @@ $active_page = 'settings';
         this.schedulerLoading = false;
       },
       
+      async restartScheduler(type) {
+        if (!confirm(`${type === 'production' ? 'Üretim' : 'Paylaşım'} zamanlayıcısını yeniden başlatmak istediğinize emin misiniz?\n\nYeni kod değişiklikleri uygulanacak.`)) {
+          return;
+        }
+        
+        this.schedulerLoading = true;
+        try {
+          const r = await fetch('/api/scheduler_control.php', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({action: 'restart', type})
+          });
+          const d = await r.json();
+          if (d.success) {
+            await this.loadSchedulerStatus();
+            await this.loadSchedulerLogs();
+            alert(`✅ ${type === 'production' ? 'Üretim' : 'Paylaşım'} zamanlayıcısı yeniden başlatıldı!`);
+          } else {
+            alert(`Hata: ${d.error || 'Bilinmeyen hata'}`);
+          }
+        } catch (e) {
+          alert(`İstek hatası: ${e.message}`);
+        }
+        this.schedulerLoading = false;
+      },
+      
       async clearSchedulerLogs() {
         try {
           await fetch('/api/scheduler_control.php', {
@@ -174,6 +378,43 @@ $active_page = 'settings';
           this.schedulerLogs = [];
         } catch(e) {
           console.error('Log temizleme hatası:', e);
+        }
+      },
+      async runVideoCleanup() {
+        this.maintenanceResult = null;
+        await this.loadSchedulerStatus();
+        const prodRunning = this.schedulerStatus.production?.running;
+        const socialRunning = this.schedulerStatus.social?.running;
+        if (prodRunning || socialRunning) {
+          alert('Önce Zamanlayıcı sekmesinden Production ve Social scheduler\'ı durdurun.');
+          return;
+        }
+        if (this.maintenanceConfirmText.trim().toUpperCase() !== 'TEMIZLE') {
+          alert('Devam etmek için TEMIZLE yazın.');
+          return;
+        }
+        if (!confirm('Tüm video üretimleri ve bağlı dosyalar silinecek. Hesap/API ayarları korunur. Devam edilsin mi?')) {
+          return;
+        }
+
+        this.maintenanceLoading = true;
+        try {
+          const r = await fetch('/api/jobs.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'clear_all_videos' })
+          });
+          const d = await r.json();
+          if (!r.ok || !d.success) {
+            this.maintenanceResult = { success: false, message: d.error || 'Temizlik başarısız' };
+            return;
+          }
+          this.maintenanceResult = { success: true, message: d.message || 'Temizlik tamamlandı', stats: d.stats || {} };
+          this.maintenanceConfirmText = '';
+        } catch (e) {
+          this.maintenanceResult = { success: false, message: e.message || 'Temizlik isteği başarısız' };
+        } finally {
+          this.maintenanceLoading = false;
         }
       },
       toggleDark() {
@@ -199,6 +440,13 @@ $active_page = 'settings';
           this.falWidth = d.falWidth || 768;
           this.falHeight = d.falHeight || 768;
           this.falSteps = d.falSteps || 4;
+          
+          // Multi-key arrays: backward compatibility
+          this.geminiKeys = d.geminiKeys || (d.geminiKey ? [d.geminiKey] : []);
+          this.elevenKeys = d.elevenKeys || (d.elevenKey ? [d.elevenKey] : []);
+          this.falKeys = d.falKeys || (d.falKey ? [d.falKey] : []);
+          this.pollinationsKeys = d.pollinationsKeys || (d.pollinationsKey ? [d.pollinationsKey] : []);
+          
           if (d.subtitleStyle) {
             this.subtitleStyle = Object.assign({}, this.subtitleStyle, d.subtitleStyle);
           }
@@ -236,6 +484,7 @@ $active_page = 'settings';
           body: JSON.stringify({
             geminiKey: this.geminiKey, elevenKey: this.elevenKey, hfKey: this.hfKey, pexelsKey: this.pexelsKey,
             falKey: this.falKey, pollinationsKey: this.pollinationsKey,
+            geminiKeys: this.geminiKeys, elevenKeys: this.elevenKeys, falKeys: this.falKeys, pollinationsKeys: this.pollinationsKeys,
             ttsProvider: this.ttsProvider, geminiModel: this.geminiModel,
             imageService: this.imageService, pollinationsModel: this.pollinationsModel,
             pollinationsTextModel: this.pollinationsTextModel, scriptProvider: this.scriptProvider,
@@ -251,6 +500,10 @@ $active_page = 'settings';
           else { this.saveMsg = d.error || 'Kaydetme hatası!'; this.saveError = true; }
         })
         .catch(() => { this.saveMsg = 'Sunucuya bağlanılamadı!'; this.saveError = true; });
+      },
+      maskKey(key) {
+        if (!key || key.length < 10) return key;
+        return key.slice(0, 10) + '...' + key.slice(-4);
       },
       async testKey(provider, key, extra) {
         const keyless = ['pollinations_image','pollinations_text','edge_tts','ffmpeg','python'];
@@ -292,7 +545,7 @@ $active_page = 'settings';
   </script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js" defer></script>
 </head>
-<body class="bg-gray-100 min-h-screen" x-data="settingsApp()" x-init="loadConfig()">
+<body class="bg-gray-100 min-h-screen" x-data="settingsApp()" x-init="loadConfig(); if (activeTab === 'scheduler') { loadSchedulerStatus(); loadSchedulerLogs(); loadFailedJobs(); }">
   <div class="flex flex-col h-screen">
     <?php include __DIR__ . '/components/_header.php'; ?>
     <div class="flex flex-1 overflow-hidden">
@@ -300,7 +553,10 @@ $active_page = 'settings';
       <!-- Main Content -->
       <main class="flex-1 overflow-y-auto p-6 md:p-8">
         <div class="max-w-3xl mx-auto">
-          <h1 class="text-2xl font-bold text-gray-800 mb-4">Ayarlar</h1>
+          <!-- Save Message -->
+          <template x-if="saveMsg">
+            <div class="mb-4 p-3 rounded-lg text-sm font-semibold" :class="saveError ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'" x-text="saveMsg"></div>
+          </template>
 
           <!-- Tab Navigation -->
           <div class="flex gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
@@ -319,81 +575,60 @@ $active_page = 'settings';
             <!-- ═══════════ TAB: GENEL ═══════════ -->
             <div x-show="activeTab === 'genel'" x-transition>
 
-              <!-- API Keys -->
+              <!-- API Key Pool - Service Cards -->
               <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">🔑 API Anahtarları</h2>
+                <h2 class="text-lg font-semibold text-gray-800 mb-2">🔑 API Anahtar Havuzu</h2>
+                <p class="text-sm text-gray-500 mb-4">Servise tıklayın → API anahtarı ekleyin veya test edin</p>
 
-                <label class="block mb-1 text-sm font-semibold text-gray-700">Gemini API Key</label>
-                <div class="flex gap-2 mb-1">
-                  <input type="password" x-model="geminiKey" placeholder="AIza..." class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                  <button type="button" @click="testKey('gemini', geminiKey)" :disabled="checks.gemini.loading" class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold border border-gray-300 transition disabled:opacity-50 whitespace-nowrap">
-                    <span x-show="!checks.gemini.loading">🔍 Test</span><span x-show="checks.gemini.loading">⏳</span>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <!-- Gemini Card -->
+                  <button type="button" @click="openApiModal('gemini')" 
+                    class="flex flex-col items-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 rounded-xl transition cursor-pointer group">
+                    <span class="text-2xl mb-2">🤖</span>
+                    <span class="font-semibold text-gray-800 text-sm">Gemini</span>
+                    <span class="text-xs text-gray-500 mt-1" x-text="geminiKeys.length + ' key'"></span>
+                  </button>
+
+                  <!-- ElevenLabs Card -->
+                  <button type="button" @click="openApiModal('eleven')" 
+                    class="flex flex-col items-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border border-purple-200 rounded-xl transition cursor-pointer group">
+                    <span class="text-2xl mb-2">🔊</span>
+                    <span class="font-semibold text-gray-800 text-sm">ElevenLabs</span>
+                    <span class="text-xs text-gray-500 mt-1" x-text="elevenKeys.length + ' key'"></span>
+                  </button>
+
+                  <!-- Fal.ai Card -->
+                  <button type="button" @click="openApiModal('fal')" 
+                    class="flex flex-col items-center p-4 bg-gradient-to-br from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200 rounded-xl transition cursor-pointer group">
+                    <span class="text-2xl mb-2">⚡</span>
+                    <span class="font-semibold text-gray-800 text-sm">Fal.ai</span>
+                    <span class="text-xs text-gray-500 mt-1" x-text="falKeys.length + ' key'"></span>
+                  </button>
+
+                  <!-- Pollinations Card -->
+                  <button type="button" @click="openApiModal('pollinations')" 
+                    class="flex flex-col items-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 border border-green-200 rounded-xl transition cursor-pointer group">
+                    <span class="text-2xl mb-2">🌸</span>
+                    <span class="font-semibold text-gray-800 text-sm">Pollinations</span>
+                    <span class="text-xs text-gray-500 mt-1" x-text="pollinationsKeys.length + ' key'"></span>
+                  </button>
+
+                  <!-- HuggingFace Card (tek key) -->
+                  <button type="button" @click="openApiModal('huggingface')" 
+                    class="flex flex-col items-center p-4 bg-gradient-to-br from-yellow-50 to-lime-50 hover:from-yellow-100 hover:to-lime-100 border border-yellow-200 rounded-xl transition cursor-pointer group">
+                    <span class="text-2xl mb-2">🤗</span>
+                    <span class="font-semibold text-gray-800 text-sm">HuggingFace</span>
+                    <span class="text-xs text-gray-500 mt-1" x-text="hfKey ? '1 key' : '0 key'"></span>
+                  </button>
+
+                  <!-- Pexels Card (tek key) -->
+                  <button type="button" @click="openApiModal('pexels')" 
+                    class="flex flex-col items-center p-4 bg-gradient-to-br from-cyan-50 to-sky-50 hover:from-cyan-100 hover:to-sky-100 border border-cyan-200 rounded-xl transition cursor-pointer group">
+                    <span class="text-2xl mb-2">📷</span>
+                    <span class="font-semibold text-gray-800 text-sm">Pexels</span>
+                    <span class="text-xs text-gray-500 mt-1" x-text="pexelsKey ? '1 key' : '0 key'"></span>
                   </button>
                 </div>
-                <template x-if="checks.gemini.result">
-                  <div class="text-xs mb-3 px-1 font-medium" :class="checks.gemini.result.valid ? 'text-green-600' : 'text-red-600'" x-text="checks.gemini.result.message"></div>
-                </template>
-                <template x-if="!checks.gemini.result"><div class="mb-3"></div></template>
-
-                <label class="block mb-1 text-sm font-semibold text-gray-700">ElevenLabs API Key</label>
-                <div class="flex gap-2 mb-1">
-                  <input type="password" x-model="elevenKey" placeholder="sk_..." class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                  <button type="button" @click="testKey('elevenlabs', elevenKey)" :disabled="checks.elevenlabs.loading" class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold border border-gray-300 transition disabled:opacity-50 whitespace-nowrap">
-                    <span x-show="!checks.elevenlabs.loading">🔍 Test</span><span x-show="checks.elevenlabs.loading">⏳</span>
-                  </button>
-                </div>
-                <template x-if="checks.elevenlabs.result">
-                  <div class="text-xs mb-3 px-1 font-medium" :class="checks.elevenlabs.result.valid ? 'text-green-600' : 'text-red-600'" x-text="checks.elevenlabs.result.message"></div>
-                </template>
-                <template x-if="!checks.elevenlabs.result"><div class="mb-3"></div></template>
-
-                <label class="block mb-1 text-sm font-semibold text-gray-700">HuggingFace API Token</label>
-                <div class="flex gap-2 mb-1">
-                  <input type="password" x-model="hfKey" placeholder="hf_..." class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                  <button type="button" @click="testKey('huggingface', hfKey)" :disabled="checks.huggingface.loading" class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold border border-gray-300 transition disabled:opacity-50 whitespace-nowrap">
-                    <span x-show="!checks.huggingface.loading">🔍 Test</span><span x-show="checks.huggingface.loading">⏳</span>
-                  </button>
-                </div>
-                <template x-if="checks.huggingface.result">
-                  <div class="text-xs mb-3 px-1 font-medium" :class="checks.huggingface.result.valid ? 'text-green-600' : 'text-red-600'" x-text="checks.huggingface.result.message"></div>
-                </template>
-                <template x-if="!checks.huggingface.result"><div class="mb-3"></div></template>
-
-                <label class="block mb-1 text-sm font-semibold text-gray-700">Pexels API Key</label>
-                <div class="flex gap-2 mb-1">
-                  <input type="password" x-model="pexelsKey" placeholder="..." class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                  <button type="button" @click="testKey('pexels', pexelsKey)" :disabled="checks.pexels.loading" class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold border border-gray-300 transition disabled:opacity-50 whitespace-nowrap">
-                    <span x-show="!checks.pexels.loading">🔍 Test</span><span x-show="checks.pexels.loading">⏳</span>
-                  </button>
-                </div>
-                <template x-if="checks.pexels.result">
-                  <div class="text-xs mb-3 px-1 font-medium" :class="checks.pexels.result.valid ? 'text-green-600' : 'text-red-600'" x-text="checks.pexels.result.message"></div>
-                </template>
-                <template x-if="!checks.pexels.result"><div class="mb-3"></div></template>
-
-                <label class="block mb-1 text-sm font-semibold text-gray-700">🌸 Pollinations API Key <span class="text-xs text-green-600 font-normal">(Önerilen - Hızlı & Güvenilir)</span></label>
-                <div class="flex gap-2 mb-1">
-                  <input type="password" x-model="pollinationsKey" placeholder="pk_..." class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                  <button type="button" @click="testKey('pollinations', pollinationsKey)" :disabled="checks.pollinations.loading" class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold border border-gray-300 transition disabled:opacity-50 whitespace-nowrap">
-                    <span x-show="!checks.pollinations.loading">🔍 Test</span><span x-show="checks.pollinations.loading">⏳</span>
-                  </button>
-                </div>
-                <template x-if="checks.pollinations.result">
-                  <div class="text-xs mb-1 px-1 font-medium" :class="checks.pollinations.result.valid ? 'text-green-600' : 'text-red-600'" x-text="checks.pollinations.result.message"></div>
-                </template>
-                <p class="text-xs text-gray-500 mb-3">API key: <a href="https://pollinations.ai/pricing" target="_blank" class="text-blue-600 underline">pollinations.ai/pricing</a> • Model: FLUX (hızlı görsel üretim)</p>
-
-                <label class="block mb-1 text-sm font-semibold text-gray-700">⚡ Fal.ai API Key <span class="text-xs text-blue-600 font-normal">(Alternatif - Ucuz)</span></label>
-                <div class="flex gap-2 mb-1">
-                  <input type="password" x-model="falKey" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:xxxxxxxx" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                  <button type="button" @click="testKey('fal', falKey)" :disabled="checks.fal.loading" class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold border border-gray-300 transition disabled:opacity-50 whitespace-nowrap">
-                    <span x-show="!checks.fal.loading">🔍 Test</span><span x-show="checks.fal.loading">⏳</span>
-                  </button>
-                </div>
-                <template x-if="checks.fal.result">
-                  <div class="text-xs mb-1 px-1 font-medium" :class="checks.fal.result.valid ? 'text-green-600' : 'text-red-600'" x-text="checks.fal.result.message"></div>
-                </template>
-                <p class="text-xs text-gray-500 mb-3">API key: <a href="https://fal.ai/dashboard/keys" target="_blank" class="text-blue-600 underline">fal.ai/dashboard/keys</a> • Bakiye: <a href="https://fal.ai/dashboard/billing" target="_blank" class="text-blue-600 underline">fal.ai/dashboard/billing</a></p>
               </div>
 
               <!-- Sistem Araçları -->
@@ -514,7 +749,7 @@ $active_page = 'settings';
               </div>
               
               <!-- Logs -->
-              <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+              <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 mb-6">
                 <div class="flex items-center justify-between mb-4">
                   <h2 class="text-lg font-semibold text-gray-800 dark:text-white">📋 Scheduler Logları</h2>
                   <div class="flex gap-2">
@@ -539,6 +774,134 @@ $active_page = 'settings';
                 </div>
               </div>
               
+              <!-- Job Logs Viewer -->
+              <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h2 class="text-lg font-semibold text-gray-800 dark:text-white">🔍 İş Logları</h2>
+                  <button 
+                    @click="loadFailedJobs()"
+                    class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition"
+                  >🔄 Yenile</button>
+                </div>
+                
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Hatalı veya Duraklatılmış İşleri Görüntüle:
+                  </label>
+                  <select 
+                    @change="loadJobLogs($event.target.value)" 
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- İş Seçin --</option>
+                    <template x-for="job in failedJobs" :key="job.id">
+                      <option :value="job.id" x-text="`${job.id} - ${job.title || 'Video'} (${job.status})`"></option>
+                    </template>
+                  </select>
+                  
+                  <template x-if="failedJobs.length === 0">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      ✅ Hiç hatalı veya duraklatılmış iş yok
+                    </p>
+                  </template>
+                </div>
+                
+                <div x-show="selectedJobId" class="bg-gray-900 rounded-lg p-4 h-64 overflow-y-auto font-mono text-xs">
+                  <template x-if="jobLogs.length === 0">
+                    <p class="text-gray-500 text-center py-8">Log yükleniyor...</p>
+                  </template>
+                  <template x-for="(log, idx) in jobLogs" :key="idx">
+                    <div 
+                      class="mb-1" 
+                      :class="{
+                        'text-green-400': log.includes('✅') || log.includes('[SUCCESS]'),
+                        'text-red-400': log.includes('❌') || log.includes('[ERROR]'),
+                        'text-yellow-400': log.includes('⚠️') || log.includes('[WARNING]'),
+                        'text-blue-400': log.includes('ℹ️') || log.includes('[INFO]'),
+                        'text-purple-400': log.includes('🔍') || log.includes('[DEBUG]'),
+                        'text-gray-300': !log.includes('✅') && !log.includes('❌') && !log.includes('⚠️') && !log.includes('ℹ️') && !log.includes('🔍') && !log.includes('[SUCCESS]') && !log.includes('[ERROR]') && !log.includes('[WARNING]') && !log.includes('[INFO]') && !log.includes('[DEBUG]')
+                      }"
+                      x-text="log">
+                    </div>
+                  </template>
+                </div>
+                
+                <div x-show="selectedJobId" class="mt-3 flex items-center justify-between">
+                  <div class="flex items-center gap-4 text-xs text-gray-500">
+                    <span class="text-green-400">✅ Success</span>
+                    <span class="text-red-400">❌ Error</span>
+                    <span class="text-yellow-400">⚠️ Warning</span>
+                    <span class="text-blue-400">ℹ️ Info</span>
+                  </div>
+                  <a 
+                    x-show="selectedJobId" 
+                    :href="'view_log.php?id=' + selectedJobId" 
+                    target="_blank"
+                    class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  >📄 Tam Sayfa Görünümü →</a>
+                </div>
+              </div>
+              
+            </div>
+
+            <!-- ═══════════ TAB: BAKIM ═══════════ -->
+            <div x-show="activeTab === 'bakim'" x-transition>
+              <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-2">🧹 Bakım Modu</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  Sadece video üretim verileri temizlenir. Hesaplar, API ayarları, scriptler ve credential dosyaları korunur.
+                </p>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800 mb-4">
+                  Temizlik kapsamı: <strong>data/jobs</strong>, <strong>output/job_*</strong>, kuyruklardaki video referansları ve içerik havuzu job bağlantıları.
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                  <div class="p-3 rounded-lg border border-gray-200 dark:border-slate-600">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Production Scheduler</p>
+                    <p class="font-semibold" :class="schedulerStatus.production?.running ? 'text-red-600' : 'text-green-600'" x-text="schedulerStatus.production?.running ? 'Çalışıyor' : 'Durduruldu'"></p>
+                  </div>
+                  <div class="p-3 rounded-lg border border-gray-200 dark:border-slate-600">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Social Scheduler</p>
+                    <p class="font-semibold" :class="schedulerStatus.social?.running ? 'text-red-600' : 'text-green-600'" x-text="schedulerStatus.social?.running ? 'Çalışıyor' : 'Durduruldu'"></p>
+                  </div>
+                </div>
+
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Onay için <span class="font-bold">TEMIZLE</span> yazın
+                </label>
+                <input
+                  type="text"
+                  x-model="maintenanceConfirmText"
+                  placeholder="TEMIZLE"
+                  class="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2.5 mb-4 bg-white dark:bg-slate-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-red-500 outline-none"
+                >
+
+                <button
+                  type="button"
+                  @click="runVideoCleanup()"
+                  :disabled="maintenanceLoading"
+                  class="px-4 py-2.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 transition"
+                >
+                  <span x-show="!maintenanceLoading">Videoları Temizle</span>
+                  <span x-show="maintenanceLoading">Temizleniyor...</span>
+                </button>
+              </div>
+
+              <template x-if="maintenanceResult">
+                <div class="rounded-xl border p-4"
+                  :class="maintenanceResult.success ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-700'">
+                  <p class="font-semibold" x-text="maintenanceResult.message"></p>
+                  <template x-if="maintenanceResult.success && maintenanceResult.stats">
+                    <div class="mt-2 text-sm space-y-1">
+                      <p>Jobs silindi: <span class="font-semibold" x-text="maintenanceResult.stats.jobs_deleted ?? 0"></span></p>
+                      <p>Output klasörü silindi: <span class="font-semibold" x-text="maintenanceResult.stats.output_dirs_deleted ?? 0"></span></p>
+                      <p>Kuyruk referansı temizlendi: <span class="font-semibold" x-text="maintenanceResult.stats.queues_videos_removed ?? 0"></span></p>
+                      <p>Social queue temizlendi: <span class="font-semibold" x-text="maintenanceResult.stats.social_queue_removed ?? 0"></span></p>
+                      <p>Production queue temizlendi: <span class="font-semibold" x-text="maintenanceResult.stats.production_queue_removed ?? 0"></span></p>
+                    </div>
+                  </template>
+                </div>
+              </template>
             </div>
 
             <!-- ═══════════ TAB: SCRIPT ═══════════ -->
@@ -723,13 +1086,24 @@ $active_page = 'settings';
                     <div>
                       <label class="block mb-1 text-sm font-semibold text-gray-700">Pollinations Model</label>
                       <select x-model="pollinationsModel" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-gray-700">
-                        <option value="flux">Flux (Önerilen)</option>
-                        <option value="turbo">Turbo (Hızlı)</option>
-                        <option value="flux-realism">Flux Realism</option>
-                        <option value="flux-anime">Flux Anime</option>
-                        <option value="flux-3d">Flux 3D</option>
+                        <optgroup label="🆓 Ücretsiz Modeller">
+                          <option value="flux">Flux Schnell (Hızlı, Önerilen)</option>
+                          <option value="zimage">Z-Image Turbo (2x Upscale)</option>
+                          <option value="gptimage">GPT Image 1 Mini</option>
+                          <option value="grok-imagine">🔥 Grok Imagine (xAI)</option>
+                          <option value="qwen-image">Qwen Image Plus (Alibaba)</option>
+                        </optgroup>
+                        <optgroup label="💎 Premium Modeller">
+                          <option value="grok-imagine-pro">⭐ Grok Aurora Pro (xAI)</option>
+                          <option value="gptimage-large">GPT Image 1.5 Large</option>
+                          <option value="nanobanana">NanoBanana (Gemini 2.5)</option>
+                          <option value="nanobanana-2">NanoBanana 2 (Gemini 3.1)</option>
+                          <option value="nanobanana-pro">NanoBanana Pro (4K)</option>
+                          <option value="seedream5">Seedream 5.0 (ByteDance)</option>
+                          <option value="kontext">FLUX Kontext (Edit)</option>
+                        </optgroup>
                       </select>
-                      <p class="text-xs text-gray-500 mt-1">Haber videoları için <strong>flux</strong> veya <strong>flux-realism</strong> önerilir.</p>
+                      <p class="text-xs text-gray-500 mt-1">Haber videoları için <strong>flux</strong>, <strong>grok-imagine</strong> veya <strong>gptimage</strong> önerilir.</p>
                     </div>
                   </template>
                 </div>
@@ -928,6 +1302,14 @@ $active_page = 'settings';
                       <input type="number" x-model.number="subtitleStyle.MarginV" min="20" max="300" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
                       <p class="text-xs text-gray-500 mt-1">Altyazının ekranın altından uzaklığı (piksel)</p>
                     </div>
+                    <div>
+                      <label class="block mb-2 text-sm font-semibold text-gray-700">Sol Boşluk (MarginL)</label>
+                      <input type="number" x-model.number="subtitleStyle.MarginL" min="0" max="300" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    </div>
+                    <div>
+                      <label class="block mb-2 text-sm font-semibold text-gray-700">Sağ Boşluk (MarginR)</label>
+                      <input type="number" x-model.number="subtitleStyle.MarginR" min="0" max="300" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    </div>
 
                     <div>
                       <label class="flex items-center gap-2 cursor-pointer">
@@ -972,10 +1354,10 @@ $active_page = 'settings';
                       <div class="mt-4">
                         <label class="block mb-2 text-sm font-semibold text-gray-700">Hazır Stiller</label>
                         <div class="grid grid-cols-2 gap-2">
-                          <button type="button" @click="subtitleStyle = {FontName:'Arial',FontSize:20,PrimaryColour:'#FFFFFF',OutlineColour:'#000000',BorderStyle:3,Outline:2,Shadow:0,MarginV:80,Alignment:2,Bold:0}" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-xs font-semibold text-gray-700 transition">Klasik</button>
-                          <button type="button" @click="subtitleStyle = {FontName:'Arial',FontSize:24,PrimaryColour:'#FFFFFF',OutlineColour:'#000000',BorderStyle:3,Outline:3,Shadow:1,MarginV:100,Alignment:2,Bold:1}" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-xs font-semibold text-gray-700 transition">Kalın</button>
-                          <button type="button" @click="subtitleStyle = {FontName:'Arial',FontSize:22,PrimaryColour:'#FFFF00',OutlineColour:'#000000',BorderStyle:1,Outline:2,Shadow:1,MarginV:80,Alignment:2,Bold:1}" class="px-3 py-2 bg-yellow-100 hover:bg-yellow-200 rounded text-xs font-semibold text-yellow-700 transition">Sarı</button>
-                          <button type="button" @click="subtitleStyle = {FontName:'Arial',FontSize:26,PrimaryColour:'#FFFFFF',OutlineColour:'#FF0000',BorderStyle:3,Outline:3,Shadow:0,MarginV:120,Alignment:2,Bold:1}" class="px-3 py-2 bg-red-100 hover:bg-red-200 rounded text-xs font-semibold text-red-700 transition">TikTok</button>
+                          <button type="button" @click="subtitleStyle = {FontName:'Arial',FontSize:20,PrimaryColour:'#FFFFFF',OutlineColour:'#000000',BorderStyle:3,Outline:2,Shadow:0,MarginV:80,MarginL:40,MarginR:40,Alignment:2,Bold:0}" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-xs font-semibold text-gray-700 transition">Klasik</button>
+                          <button type="button" @click="subtitleStyle = {FontName:'Arial',FontSize:24,PrimaryColour:'#FFFFFF',OutlineColour:'#000000',BorderStyle:3,Outline:3,Shadow:1,MarginV:100,MarginL:40,MarginR:40,Alignment:2,Bold:1}" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-xs font-semibold text-gray-700 transition">Kalın</button>
+                          <button type="button" @click="subtitleStyle = {FontName:'Arial',FontSize:22,PrimaryColour:'#FFFF00',OutlineColour:'#000000',BorderStyle:1,Outline:2,Shadow:1,MarginV:80,MarginL:40,MarginR:40,Alignment:2,Bold:1}" class="px-3 py-2 bg-yellow-100 hover:bg-yellow-200 rounded text-xs font-semibold text-yellow-700 transition">Sarı</button>
+                          <button type="button" @click="subtitleStyle = {FontName:'Arial',FontSize:26,PrimaryColour:'#FFFFFF',OutlineColour:'#FF0000',BorderStyle:3,Outline:3,Shadow:0,MarginV:120,MarginL:40,MarginR:40,Alignment:2,Bold:1}" class="px-3 py-2 bg-red-100 hover:bg-red-200 rounded text-xs font-semibold text-red-700 transition">TikTok</button>
                         </div>
                       </div>
                     </div>
@@ -1049,22 +1431,120 @@ $active_page = 'settings';
               </div>
             </div>
 
-            <!-- Save & Test All (global) -->
-            <div class="flex gap-3">
-              <button type="button" @click="testAllInTab()" class="flex-1 bg-gray-700 hover:bg-gray-800 text-white py-2.5 rounded-lg font-semibold transition text-sm">🔍 Bu Sekmedeki Araçları Test Et</button>
-              <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-semibold transition text-sm">💾 Tüm Ayarları Kaydet</button>
-            </div>
-
-            <template x-if="saveMsg">
-              <div class="p-3 rounded-lg text-sm font-semibold" :class="saveError ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'" x-text="saveMsg"></div>
-            </template>
           </form>
         </div>
       </main>
     </div>
-
-    </div>
     <?php include __DIR__ . '/components/_footer.php'; ?>
   </div>
+
+  <!-- API Key Modal -->
+  <template x-if="apiModal">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="closeApiModal()">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl" x-text="serviceInfo[apiModal]?.icon"></span>
+            <div>
+              <h3 class="font-bold text-gray-800 dark:text-white" x-text="serviceInfo[apiModal]?.name + ' API Keys'"></h3>
+              <p class="text-xs text-gray-500">Birden fazla key ekleyin - kotası dolan atlanır</p>
+            </div>
+          </div>
+          <button @click="closeApiModal()" class="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition">
+            <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6">
+          <!-- Existing Keys -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 block">Mevcut Anahtarlar</label>
+              <button
+                type="button"
+                x-show="apiModal === 'gemini'"
+                @click="removeKeysByErrorCode('gemini', '403')"
+                class="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-700 hover:bg-red-200 transition"
+              >
+                403 Keyleri Sil
+              </button>
+            </div>
+            <div class="space-y-2 max-h-40 overflow-y-auto">
+              <template x-if="getServiceKeys(apiModal).length === 0">
+                <p class="text-sm text-gray-500 italic p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">Henüz anahtar eklenmedi</p>
+              </template>
+              <template x-for="(key, idx) in getServiceKeys(apiModal)" :key="idx">
+                <div class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                  <div class="flex-1 min-w-0">
+                    <span class="font-mono text-xs text-gray-700 dark:text-gray-300 truncate block" x-text="maskKey(key)"></span>
+                    <template x-if="getKeyTestStatus(apiModal, key)">
+                      <div class="mt-1 flex items-center gap-2">
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold" :class="getKeyStatusBadgeClass(apiModal, key)" x-text="'Kod: ' + getKeyTestStatus(apiModal, key).errorCode"></span>
+                        <span class="text-[10px] text-gray-500 truncate" x-text="getKeyTestStatus(apiModal, key).checkedAt"></span>
+                      </div>
+                    </template>
+                  </div>
+                  <button type="button" @click="testServiceKey(apiModal, key)" class="px-2 py-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded text-xs font-semibold">
+                    🔍 Test
+                  </button>
+                  <button type="button" @click="removeKeyFromService(apiModal, idx)" class="px-2 py-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-xs font-semibold">
+                    🗑️
+                  </button>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Test Result -->
+          <template x-if="apiModalTestResult">
+            <div class="mb-4 p-3 rounded-lg text-sm" :class="apiModalTestResult.valid ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'">
+              <span x-text="apiModalTestResult.valid ? '✓ ' : '✗ '"></span>
+              <span x-text="apiModalTestResult.message"></span>
+              <template x-if="apiModalTestResult.error_code || apiModalTestResult.http_code">
+                <div class="mt-1 text-xs font-semibold">
+                  <span x-text="'Hata Kodu: ' + (apiModalTestResult.error_code || apiModalTestResult.http_code)"></span>
+                  <span x-show="apiModalTestResult.error_status" x-text="' (' + apiModalTestResult.error_status + ')'"></span>
+                </div>
+              </template>
+            </div>
+          </template>
+
+          <!-- Add New Key -->
+          <div class="border-t border-gray-200 dark:border-slate-700 pt-4">
+            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">Yeni Anahtar Ekle</label>
+            <div class="flex gap-2">
+              <input 
+                type="password" 
+                x-model="apiModalNewKey" 
+                :placeholder="serviceInfo[apiModal]?.placeholder"
+                class="flex-1 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                @keydown.enter="addKeyToService(apiModal)"
+              >
+              <button 
+                type="button" 
+                @click="addKeyToService(apiModal)" 
+                :disabled="!apiModalNewKey.trim()"
+                class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-semibold transition"
+              >
+                + Ekle
+              </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+              Key al: <a :href="serviceInfo[apiModal]?.url" target="_blank" class="text-blue-600 hover:underline" x-text="serviceInfo[apiModal]?.url?.replace('https://', '')"></a>
+            </p>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-gray-50 dark:bg-slate-700/50 border-t border-gray-200 dark:border-slate-700">
+          <button @click="closeApiModal()" class="w-full py-2.5 bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-500 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-semibold transition">
+            Kapat
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
 </body>
 </html>
