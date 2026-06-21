@@ -42,9 +42,21 @@ function isProcessRunning($pid) {
     
     if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
         $output = [];
-        exec("tasklist /FI \"PID eq $pid\" 2>NUL", $output);
+        $returnCode = 0;
+        exec("tasklist /FI \"PID eq $pid\" 2>NUL", $output, $returnCode);
         foreach ($output as $line) {
             if (strpos($line, (string)$pid) !== false) {
+                return true;
+            }
+        }
+
+        // Some locked-down Windows environments deny tasklist. PowerShell's
+        // Get-Process often still works and keeps the web UI status accurate.
+        $psOutput = [];
+        $psCode = 0;
+        exec('powershell -NoProfile -Command "if (Get-Process -Id ' . intval($pid) . ' -ErrorAction SilentlyContinue) { Write-Output RUNNING }" 2>NUL', $psOutput, $psCode);
+        foreach ($psOutput as $line) {
+            if (trim($line) === 'RUNNING') {
                 return true;
             }
         }
@@ -53,7 +65,6 @@ function isProcessRunning($pid) {
         return file_exists("/proc/$pid");
     }
 }
-
 // Helper: Get recent logs
 function getRecentLogs($lines = 100) {
     global $SCHEDULER_LOG_FILE;
@@ -351,3 +362,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 http_response_code(405);
 echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+

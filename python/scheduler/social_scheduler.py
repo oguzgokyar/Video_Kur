@@ -440,8 +440,14 @@ class SocialMediaScheduler:
                         # Check platform_status for today's publishes
                         platform_status = video.get('platform_status', {})
                         for platform, status_info in platform_status.items():
-                            if status_info.get('status') == 'published':
+                            if isinstance(status_info, dict):
+                                status_value = status_info.get('status')
                                 published_at = status_info.get('published_at', '')
+                            else:
+                                status_value = status_info
+                                published_at = ''
+
+                            if str(status_value).lower() in ('published', 'success'):
                                 if published_at:
                                     try:
                                         published_date = datetime.fromisoformat(published_at.replace('Z', '+00:00')).date()
@@ -450,6 +456,11 @@ class SocialMediaScheduler:
                                             break  # Count each video once
                                     except Exception:
                                         pass
+                                else:
+                                    # Legacy string statuses may not include published_at.
+                                    # Count conservatively so daily-limit checks don't crash.
+                                    count += 1
+                                    break
             
             return count
             
@@ -601,14 +612,17 @@ class SocialMediaScheduler:
         
         try:
             uploader = self.uploaders[platform]
+            queue_data = self._get_queue_settings(
+                item.get('queue_id'),
+                original_queue_id=item.get('original_queue_id')
+            )
+            if not isinstance(queue_data, dict):
+                queue_data = {}
+            queue_platform_settings = queue_data.get('platform_settings', {})
+            if not isinstance(queue_platform_settings, dict):
+                queue_platform_settings = {}
             
             if platform == 'youtube':
-                # Get queue settings to check for channel_id
-                queue_data = self._get_queue_settings(
-                    item.get('queue_id'),
-                    original_queue_id=item.get('original_queue_id')
-                )
-                
                 # Multi-project mode: get best available project
                 selected_project = None
                 if uploader == 'multi_project' and self.youtube_project_manager:
@@ -691,6 +705,7 @@ class SocialMediaScheduler:
                 # Get playlist_id, category and privacy settings from queue settings
                 playlist_id = None
                 category_id = '28'  # Default: Science & Technology
+                channel_id = None
                 if queue_data:
                     platform_settings = queue_data.get('platform_settings', {}).get('youtube', {})
                     playlist_id = platform_settings.get('playlistId')
@@ -842,10 +857,60 @@ class SocialMediaScheduler:
             
             else:
                 # TikTok, Instagram, Facebook
+                platform_settings = queue_platform_settings.get(platform, {})
+                if not isinstance(platform_settings, dict):
+                    platform_settings = {}
+
+                upload_kwargs = {}
+                if platform == 'instagram':
+                    account_id = platform_settings.get('accountId') or platform_settings.get('account_id')
+                    if account_id:
+                        upload_kwargs['account_id'] = account_id
+                        print(f"   [IG] Hesap: {account_id}")
+                    share_to_feed_raw = platform_settings.get('shareToFeed')
+                    if share_to_feed_raw is None:
+                        share_to_feed_raw = platform_settings.get('share_to_feed')
+                    if share_to_feed_raw is None:
+                        share_to_feed = platform_settings.get('type', 'reel') != 'story'
+                    elif isinstance(share_to_feed_raw, str):
+                        share_to_feed = share_to_feed_raw.strip().lower() in ('1', 'true', 'yes', 'on', 'enabled')
+                    else:
+                        share_to_feed = bool(share_to_feed_raw)
+                    upload_kwargs['share_to_feed'] = share_to_feed
+                elif platform == 'facebook':
+                    page_id = platform_settings.get('pageId') or platform_settings.get('page_id')
+                    if page_id:
+                        upload_kwargs['account_id'] = page_id
+                        print(f"   [FB] Sayfa: {page_id}")
+                    fb_type = str(platform_settings.get('type', 'reel')).lower()
+                    publish_as_status_raw = platform_settings.get('publishAsStatus')
+                    if publish_as_status_raw is None:
+                        publish_as_status_raw = platform_settings.get('publish_as_status')
+                    if isinstance(publish_as_status_raw, str):
+                        publish_as_status = publish_as_status_raw.strip().lower() in ('1', 'true', 'yes', 'on', 'enabled')
+                    else:
+                        publish_as_status = bool(publish_as_status_raw)
+
+                    upload_kwargs['as_reels'] = (fb_type != 'video') and (not publish_as_status)
+                    if publish_as_status and fb_type != 'video':
+                        print("   [FB] Durum yayını aktif: Reels yerine Video modu kullanılacak")
+                elif platform == 'tiktok':
+                    privacy_map = {
+                        'public': 'PUBLIC_TO_EVERYONE',
+                        'public_to_everyone': 'PUBLIC_TO_EVERYONE',
+                        'friends': 'MUTUAL_FOLLOW_FRIENDS',
+                        'mutual_follow_friends': 'MUTUAL_FOLLOW_FRIENDS',
+                        'private': 'SELF_ONLY',
+                        'self_only': 'SELF_ONLY'
+                    }
+                    privacy_raw = str(platform_settings.get('privacy', 'public_to_everyone')).lower()
+                    upload_kwargs['privacy_level'] = privacy_map.get(privacy_raw, 'PUBLIC_TO_EVERYONE')
+
                 result = uploader.upload_video(
                     video_path=video_path,
                     caption=platform_meta.get('caption', base_metadata.get('title', '')),
-                    hashtags=platform_meta.get('hashtags', [])
+                    hashtags=platform_meta.get('hashtags', []),
+                    **upload_kwargs
                 )
                 
                 if result.success:

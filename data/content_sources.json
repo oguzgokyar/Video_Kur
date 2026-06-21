@@ -78,12 +78,25 @@
             "keywords": [],
             "auto_approve": false,
             "created_at": "2026-03-30T22:00:11Z"
+        },
+        {
+            "id": "source_101caa24f33f",
+            "name": "Onedio - Gündem",
+            "url": "https:\/\/onedio.com\/Publisher\/publisher-gundem.rss",
+            "type": "rss",
+            "category": "genel",
+            "enabled": true,
+            "check_interval_minutes": 30,
+            "last_checked": null,
+            "keywords": [],
+            "auto_approve": false,
+            "created_at": "2026-04-15T07:29:07Z"
         }
     ],
     "metadata": {
         "created_at": "2026-03-21T15:40:00Z",
-        "last_updated": "2026-03-30T22:00:11Z",
-        "total_sources": 6,
+        "last_updated": "2026-04-15T07:29:07Z",
+        "total_sources": 7,
         "version": "1.0"
     }
 }

@@ -74,3 +74,5 @@ ehthumbs.db
 Thumbs.db
 *.pickle.backup
 seison.md
+data/youtube_credentials/*.json
+sesion.md

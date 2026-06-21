@@ -36,6 +36,8 @@ function checkApi($url, $headers = [], $timeout = 20) {
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_PROXY, '');
+        curl_setopt($ch, CURLOPT_NOPROXY, '*');
         if (!empty($headers)) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         }
@@ -80,6 +82,8 @@ function checkApiPost($url, $payload, $headers = [], $timeout = 30) {
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_PROXY, '');
+        curl_setopt($ch, CURLOPT_NOPROXY, '*');
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         $allHeaders = array_merge(['Content-Type: application/json'], $headers);
@@ -373,3 +377,4 @@ switch ($provider) {
         echo json_encode(['valid' => false, 'message' => 'Bilinmeyen provider: ' . $provider]);
         break;
 }
+

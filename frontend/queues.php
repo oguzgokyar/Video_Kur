@@ -59,6 +59,18 @@
       
       // YouTube Channels for dropdown
       youtubeChannels: [],
+      metaAccounts: {
+        instagram: [],
+        facebook: []
+      },
+      metaDiagnostics: {
+        enabled: false,
+        active_connection_count: 0,
+        active_connection_labels: [],
+        instagram_count: 0,
+        facebook_count: 0,
+        message: null
+      },
       
       // Queue Stats
       queueStats: null,
@@ -119,6 +131,9 @@
           },
           instagram: {
             enabled: false,
+            accountId: '',
+            type: 'reel',
+            shareToFeed: true,
             scheduleType: 'specific',
             intervalHours: 3,
             specificTimes: ['10:00', '16:00', '20:00'],
@@ -143,6 +158,8 @@
             intervalHours: 6,
             specificTimes: ['11:00', '17:00'],
             pageId: '',
+            type: 'reel',
+            publishAsStatus: false,
             privacy: 'EVERYONE'
           }
         }
@@ -193,8 +210,8 @@
       
       platformOptions: [
         { id: 'youtube', name: 'YouTube', icon: '📺', color: 'red' },
-        { id: 'instagram', name: 'Instagram', icon: '📸', color: 'pink' }
-        // TikTok ve Facebook şimdilik devre dışı
+        { id: 'instagram', name: 'Instagram', icon: '📸', color: 'pink' },
+        { id: 'facebook', name: 'Facebook', icon: '📘', color: 'blue' }
       ],
       
       scheduleOptions: [
@@ -210,6 +227,42 @@
         } else {
           this.form.platforms.push(platformId);
         }
+      },
+
+      toBool(value, defaultValue = false) {
+        if (value === undefined || value === null) return defaultValue;
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'number') return value !== 0;
+        if (typeof value === 'string') {
+          const v = value.trim().toLowerCase();
+          if (['1', 'true', 'yes', 'on', 'enabled'].includes(v)) return true;
+          if (['0', 'false', 'no', 'off', 'disabled', ''].includes(v)) return false;
+        }
+        return defaultValue;
+      },
+
+      normalizeAccountList(rawList = []) {
+        return (rawList || [])
+          .map(item => {
+            const id = String(item?.id || item?.account_id || '').trim();
+            if (!id) return null;
+            return { ...item, id };
+          })
+          .filter(Boolean);
+      },
+
+      hasMetaAccount(platform, id) {
+        const targetId = String(id || '').trim();
+        if (!targetId) return false;
+        const list = platform === 'instagram'
+          ? (this.metaAccounts.instagram || [])
+          : (this.metaAccounts.facebook || []);
+        return list.some(acc => String(acc?.id || acc?.account_id || '').trim() === targetId);
+      },
+
+      noCacheUrl(url) {
+        const sep = url.includes('?') ? '&' : '?';
+        return `${url}${sep}_t=${Date.now()}`;
       },
       
       openCreateModal() {
@@ -270,7 +323,12 @@
             },
             instagram: {
               enabled: queue.platforms.includes('instagram'),
+              accountId: String(ps.instagram?.accountId || ps.instagram?.account_id || ''),
               type: ps.instagram?.type || 'reel',
+              shareToFeed: this.toBool(
+                ps.instagram?.shareToFeed ?? ps.instagram?.share_to_feed,
+                (ps.instagram?.type || 'reel') !== 'story'
+              ),
               scheduleType: ps.instagram?.scheduleType || 'interval',
               intervalHours: ps.instagram?.intervalHours || 2,
               intervalMinutes: ps.instagram?.intervalMinutes || 120,
@@ -279,6 +337,12 @@
             },
             facebook: {
               enabled: queue.platforms.includes('facebook'),
+              pageId: String(ps.facebook?.pageId || ps.facebook?.page_id || ''),
+              type: ps.facebook?.type || 'reel',
+              publishAsStatus: this.toBool(
+                ps.facebook?.publishAsStatus ?? ps.facebook?.publish_as_status,
+                false
+              ),
               privacy: ps.facebook?.privacy || 'public',
               scheduleType: ps.facebook?.scheduleType || 'interval',
               intervalHours: ps.facebook?.intervalHours || 2,
@@ -296,7 +360,7 @@
         this.detailModal = true;
         
         try {
-          const r = await fetch('/api/queues.php?action=get&id=' + queue.id);
+          const r = await fetch(this.noCacheUrl('/api/queues.php?action=get&id=' + queue.id), { cache: 'no-store' });
           const d = await r.json();
           if (d.success) {
             this.selectedQueue = d.queue;
@@ -319,7 +383,7 @@
         this.activeTab = queue.id;
         this.editingQueue = false;
         try {
-          const r = await fetch('/api/queues.php?action=get&id=' + queue.id);
+          const r = await fetch(this.noCacheUrl('/api/queues.php?action=get&id=' + queue.id), { cache: 'no-store' });
           const d = await r.json();
           if (d.success) {
             this.selectedQueue = d.queue;
@@ -351,7 +415,7 @@
         if (!this.selectedQueue) return;
         this.loadingStats = true;
         try {
-          const r = await fetch('/api/queues.php?action=get_queue_stats&id=' + this.selectedQueue.id);
+          const r = await fetch(this.noCacheUrl('/api/queues.php?action=get_queue_stats&id=' + this.selectedQueue.id), { cache: 'no-store' });
           const d = await r.json();
           if (d.success) {
             this.queueStats = d.stats;
@@ -402,7 +466,8 @@
       },
       
       // Open queue settings modal
-      openQueueSettingsModal() {
+      async openQueueSettingsModal() {
+        await this.loadMetaAccounts();
         if (!this.selectedQueue) return;
         const vs = this.selectedQueue.video_settings || {};
         const ps = this.selectedQueue.platform_settings || {};
@@ -446,15 +511,24 @@
               descriptionTemplate: '{description}\n\n#shorts',
               tagsTemplate: 'shorts,haber'
             },
-            instagram: ps.instagram || {
-              enabled: this.selectedQueue.platforms?.includes('instagram') || false,
+            instagram: {
               scheduleType: 'specific',
               intervalHours: 3,
               specificTimes: ['10:00', '16:00', '20:00'],
               hashtagStrategy: 'auto',
               hashtags: '#reels,#haber',
               captionTemplate: '{title}\n\n{description}',
-              allowComments: true
+              allowComments: true,
+              ...(ps.instagram || {}),
+              enabled: typeof ps.instagram?.enabled === 'boolean'
+                ? ps.instagram.enabled
+                : (this.selectedQueue.platforms?.includes('instagram') || false),
+              accountId: String(ps.instagram?.accountId || ps.instagram?.account_id || ''),
+              type: ps.instagram?.type || 'reel',
+              shareToFeed: this.toBool(
+                ps.instagram?.shareToFeed ?? ps.instagram?.share_to_feed,
+                (ps.instagram?.type || 'reel') !== 'story'
+              )
             },
             tiktok: ps.tiktok || {
               enabled: this.selectedQueue.platforms?.includes('tiktok') || false,
@@ -466,13 +540,21 @@
               allowStitch: true,
               captionTemplate: '{title} #fyp'
             },
-            facebook: ps.facebook || {
-              enabled: this.selectedQueue.platforms?.includes('facebook') || false,
+            facebook: {
               scheduleType: 'now',
               intervalHours: 6,
               specificTimes: ['11:00', '17:00'],
-              pageId: '',
-              privacy: 'EVERYONE'
+              privacy: 'EVERYONE',
+              ...(ps.facebook || {}),
+              enabled: typeof ps.facebook?.enabled === 'boolean'
+                ? ps.facebook.enabled
+                : (this.selectedQueue.platforms?.includes('facebook') || false),
+              pageId: String(ps.facebook?.pageId || ps.facebook?.page_id || ''),
+              type: ps.facebook?.type || 'reel',
+              publishAsStatus: this.toBool(
+                ps.facebook?.publishAsStatus ?? ps.facebook?.publish_as_status,
+                false
+              )
             }
           }
         };
@@ -500,10 +582,64 @@
       
       // Save queue settings from modal
       async saveQueueSettings() {
+        const platformSettings = JSON.parse(JSON.stringify(this.form.platformSettings || {}));
+        if (platformSettings.instagram && typeof platformSettings.instagram === 'object') {
+          platformSettings.instagram.accountId = String(
+            platformSettings.instagram.accountId || platformSettings.instagram.account_id || ''
+          );
+          platformSettings.instagram.type = platformSettings.instagram.type === 'story' ? 'story' : 'reel';
+          platformSettings.instagram.shareToFeed = this.toBool(
+            platformSettings.instagram.shareToFeed ?? platformSettings.instagram.share_to_feed,
+            platformSettings.instagram.type !== 'story'
+          );
+          delete platformSettings.instagram.account_id;
+          delete platformSettings.instagram.share_to_feed;
+        }
+        if (platformSettings.facebook && typeof platformSettings.facebook === 'object') {
+          platformSettings.facebook.pageId = String(
+            platformSettings.facebook.pageId || platformSettings.facebook.page_id || ''
+          );
+          platformSettings.facebook.type = platformSettings.facebook.type === 'video' ? 'video' : 'reel';
+          platformSettings.facebook.publishAsStatus = this.toBool(
+            platformSettings.facebook.publishAsStatus ?? platformSettings.facebook.publish_as_status,
+            false
+          );
+          delete platformSettings.facebook.page_id;
+          delete platformSettings.facebook.publish_as_status;
+        }
+
         // YouTube platformu aktifse kanal zorunlu
-        if (this.form.platformSettings.youtube.enabled) {
-          if (!this.form.platformSettings.youtube.channelId) {
+        if (platformSettings.youtube?.enabled) {
+          if (!platformSettings.youtube.channelId) {
             alert('YouTube için kanal seçimi zorunludur!');
+            return;
+          }
+        }
+
+        // Instagram aktifse Meta'dan hesap gelmeli
+        if (platformSettings.instagram?.enabled && this.metaAccounts.instagram.length === 0) {
+          alert('Instagram için seçilebilir hesap bulunamadı. ' + this.getMetaAccountHint('instagram'));
+          return;
+        }
+
+        // Instagram aktifse hesap seçimi zorunlu (hesap listesi varsa)
+        if (platformSettings.instagram?.enabled && this.metaAccounts.instagram.length > 0) {
+          if (!platformSettings.instagram.accountId) {
+            alert('Instagram için hesap seçimi zorunludur!');
+            return;
+          }
+        }
+
+        // Facebook aktifse Meta'dan sayfa gelmeli
+        if (platformSettings.facebook?.enabled && this.metaAccounts.facebook.length === 0) {
+          alert('Facebook için seçilebilir sayfa bulunamadı. ' + this.getMetaAccountHint('facebook'));
+          return;
+        }
+
+        // Facebook aktifse sayfa seçimi zorunlu (sayfa listesi varsa)
+        if (platformSettings.facebook?.enabled && this.metaAccounts.facebook.length > 0) {
+          if (!platformSettings.facebook.pageId) {
+            alert('Facebook için sayfa seçimi zorunludur!');
             return;
           }
         }
@@ -512,10 +648,10 @@
         
         // Build platforms array from enabled platform settings
         const enabledPlatforms = [];
-        if (this.form.platformSettings.youtube.enabled) enabledPlatforms.push('youtube');
-        if (this.form.platformSettings.instagram.enabled) enabledPlatforms.push('instagram');
-        if (this.form.platformSettings.tiktok.enabled) enabledPlatforms.push('tiktok');
-        if (this.form.platformSettings.facebook.enabled) enabledPlatforms.push('facebook');
+        if (platformSettings.youtube?.enabled) enabledPlatforms.push('youtube');
+        if (platformSettings.instagram?.enabled) enabledPlatforms.push('instagram');
+        if (platformSettings.tiktok?.enabled) enabledPlatforms.push('tiktok');
+        if (platformSettings.facebook?.enabled) enabledPlatforms.push('facebook');
         
         try {
           const response = await fetch('/api/queues.php', {
@@ -537,12 +673,15 @@
                   timezone: 'Europe/Istanbul'
                 },
                 video_settings: this.buildVideoSettings(),
-                platform_settings: this.form.platformSettings
+                platform_settings: platformSettings
               }
             })
           });
           const result = await response.json();
           if (result.success) {
+            if (this.selectedQueue) {
+              this.selectedQueue.platform_settings = JSON.parse(JSON.stringify(platformSettings));
+            }
             this.queueSettingsModal = false;
             await this.loadQueues();
             await this.selectQueueTab({ id: this.selectedQueue.id });
@@ -553,6 +692,21 @@
           alert('Hata: ' + error.message);
         }
         this.submitting = false;
+      },
+
+      getMetaAccountHint(platform) {
+        const hasAccounts = platform === 'instagram'
+          ? this.metaAccounts.instagram.length > 0
+          : this.metaAccounts.facebook.length > 0;
+
+        if (hasAccounts) return '';
+        if (this.metaDiagnostics?.message) return this.metaDiagnostics.message;
+
+        if ((this.metaDiagnostics?.enabled ?? false) && (this.metaDiagnostics?.active_connection_count || 0) > 0) {
+          return 'Meta bağlantısı var ancak hesap listesi boş. Hesaplar > Meta ekranında bağlantıyı yenileyin ve Facebook Page + Instagram Business bağlantısını kontrol edin.';
+        }
+
+        return 'Önce Hesaplar > Meta ekranından Meta OAuth ile hesap/sayfa bağlayın.';
       },
       
       // Video metadata editing
@@ -977,7 +1131,7 @@
       
       async loadQueues() {
         try {
-          const r = await fetch('/api/queues.php?action=list');
+          const r = await fetch(this.noCacheUrl('/api/queues.php?action=list'), { cache: 'no-store' });
           const d = await r.json();
           this.queues = d.queues || [];
           
@@ -986,7 +1140,7 @@
             await this.selectQueueTab(this.queues[0]);
           } else if (this.activeTab && this.selectedQueue) {
             // Seçili kuyruğu güncelle (canlı refresh için)
-            const r2 = await fetch('/api/queues.php?action=get&id=' + this.activeTab);
+            const r2 = await fetch(this.noCacheUrl('/api/queues.php?action=get&id=' + this.activeTab), { cache: 'no-store' });
             const d2 = await r2.json();
             if (d2.success) {
               this.selectedQueue = d2.queue;
@@ -1409,6 +1563,7 @@
         document.documentElement.classList.toggle('dark', this.darkMode);
         this.loadQueues();
         this.loadYoutubeChannels();
+        this.loadMetaAccounts();
         // 15 saniyede bir canlı güncelleme
         setInterval(() => { if (this.selectedQueue) this.loadQueues(); }, 15000);
       },
@@ -1422,6 +1577,46 @@
           }
         } catch(e) {
           console.error('YouTube kanalları yüklenemedi:', e);
+        }
+      },
+
+      async loadMetaAccounts() {
+        let socialLoaded = false;
+        try {
+          const r = await fetch(this.noCacheUrl('/api/social.php?action=get_accounts'), { cache: 'no-store' });
+          const d = await r.json();
+          if (d.success && d.accounts) {
+            this.metaAccounts.instagram = this.normalizeAccountList(d.accounts.instagram || []);
+            this.metaAccounts.facebook = this.normalizeAccountList(d.accounts.facebook || []);
+            this.metaDiagnostics = d.meta_diagnostics || {
+              enabled: false,
+              active_connection_count: 0,
+              active_connection_labels: [],
+              instagram_count: 0,
+              facebook_count: 0,
+              message: null
+            };
+            socialLoaded = true;
+          }
+        } catch (e) {
+          console.error('Meta hesapları yüklenemedi:', e);
+        }
+
+        if (!socialLoaded || (this.metaAccounts.instagram.length === 0 && this.metaAccounts.facebook.length === 0)) {
+          try {
+            const r = await fetch(this.noCacheUrl('/api/meta_accounts.php?action=list_accounts'), { cache: 'no-store' });
+            const d = await r.json();
+            if (d.success && d.accounts) {
+              const fallbackInstagram = this.normalizeAccountList(d.accounts.instagram || []);
+              const fallbackFacebook = this.normalizeAccountList(d.accounts.facebook || []);
+              if (fallbackInstagram.length > 0 || fallbackFacebook.length > 0) {
+                this.metaAccounts.instagram = fallbackInstagram;
+                this.metaAccounts.facebook = fallbackFacebook;
+              }
+            }
+          } catch (e) {
+            console.error('Meta hesap fallback yüklenemedi:', e);
+          }
         }
       },
       
@@ -2158,8 +2353,15 @@
                       class="w-4 h-4 text-pink-600 rounded">
                     <span>📸 Instagram</span>
                   </label>
-                  
-                  <!-- TikTok ve Facebook şimdilik devre dışı -->
+
+                  <label class="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition"
+                    :class="form.platforms.includes('facebook') ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-slate-600'">
+                    <input type="checkbox" value="facebook"
+                      :checked="form.platforms.includes('facebook')"
+                      @change="$event.target.checked ? form.platforms.push('facebook') : form.platforms = form.platforms.filter(p => p !== 'facebook')"
+                      class="w-4 h-4 text-blue-600 rounded">
+                    <span>📘 Facebook</span>
+                  </label>
                 </div>
               </div>
               
@@ -2245,8 +2447,12 @@
                 <input type="checkbox" x-model="form.platformSettings.instagram.enabled" class="w-4 h-4 text-pink-600 rounded">
                 <span>📸 Instagram</span>
               </label>
-              
-              <!-- TikTok ve Facebook şimdilik devre dışı -->
+
+              <label class="flex items-center gap-2 p-2.5 border-2 rounded-lg cursor-pointer transition text-sm"
+                :class="form.platformSettings.facebook.enabled ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-slate-600'">
+                <input type="checkbox" x-model="form.platformSettings.facebook.enabled" class="w-4 h-4 text-blue-600 rounded">
+                <span>📘 Facebook</span>
+              </label>
             </div>
           </div>
 
@@ -2664,7 +2870,19 @@
                 <span x-show="!form.platformSettings.instagram.enabled" class="text-[10px] opacity-60">●</span>
                 <span x-show="getPlatformFailedCount('instagram') > 0" class="ml-1 px-1.5 py-0.5 text-[10px] bg-red-500 text-white rounded-full" x-text="getPlatformFailedCount('instagram')"></span>
               </button>
-              <!-- TikTok ve Facebook tabs şimdilik devre dışı -->
+              <button
+                type="button"
+                @click="activePlatformTab = 'facebook'"
+                class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition whitespace-nowrap"
+                :class="activePlatformTab === 'facebook'
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 ring-2 ring-blue-500'
+                  : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600'"
+              >
+                <span>📘</span>
+                <span>Facebook</span>
+                <span x-show="!form.platformSettings.facebook.enabled" class="text-[10px] opacity-60">●</span>
+                <span x-show="getPlatformFailedCount('facebook') > 0" class="ml-1 px-1.5 py-0.5 text-[10px] bg-red-500 text-white rounded-full" x-text="getPlatformFailedCount('facebook')"></span>
+              </button>
             </div>
 
             <!-- YouTube Tab Content -->
@@ -2826,6 +3044,32 @@
               <template x-if="form.platformSettings.instagram.enabled">
                 <div class="space-y-3 pt-2 border-t border-pink-200 dark:border-pink-900/50">
                   <div>
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">👤 Instagram Hesabı</label>
+                    <select x-model="form.platformSettings.instagram.accountId" class="w-full px-2.5 py-1.5 text-xs border border-gray-200 dark:border-slate-600 dark:bg-slate-900 dark:text-white rounded-lg">
+                      <option value="">-- Hesap Seçin --</option>
+                      <template x-if="form.platformSettings.instagram.accountId && !hasMetaAccount('instagram', form.platformSettings.instagram.accountId)">
+                        <option :value="form.platformSettings.instagram.accountId" x-text="'Kayıtlı hesap (' + form.platformSettings.instagram.accountId + ')'"></option>
+                      </template>
+                      <template x-for="acc in metaAccounts.instagram" :key="acc.id">
+                        <option :value="String(acc.id)" x-text="'@' + (acc.username || acc.id)"></option>
+                      </template>
+                    </select>
+                    <p class="text-[10px] text-amber-700 dark:text-amber-300 mt-0.5" x-show="metaAccounts.instagram.length === 0" x-text="getMetaAccountHint('instagram')">
+                    </p>
+                  </div>
+
+                  <div>
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">📰 Durum / Akış Yayını</label>
+                    <label class="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+                      <input type="checkbox" x-model="form.platformSettings.instagram.shareToFeed" class="rounded border-gray-300 text-pink-600 focus:ring-pink-500">
+                      <span>Akışta da yayınla</span>
+                    </label>
+                    <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                      Açık olduğunda Reels gönderisi Instagram profil akışında da görünür.
+                    </p>
+                  </div>
+
+                  <div>
                     <label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">⏰ Zamanlama</label>
                     <select x-model="form.platformSettings.instagram.scheduleType" class="w-full px-2.5 py-1.5 text-xs border border-gray-200 dark:border-slate-600 dark:bg-slate-900 dark:text-white rounded-lg">
                       <option value="now">Hemen</option>
@@ -2849,7 +3093,7 @@
                     <div class="flex items-center gap-3 text-xs">
                       <span class="text-green-600 dark:text-green-400">✓ <span x-text="getPlatformPublishedCount('instagram')"></span> yayında</span>
                       <span class="text-yellow-600 dark:text-yellow-400">⏳ <span x-text="getPlatformPendingCount('instagram')"></span> bekliyor</span>
-                      <span class="text-red-600 dark:text-red-400" x-show="getPlatformFailedCount('instagram') > 0">✕ <span x-text="getPlatformFailedCount('instagram')"></span> hata</span>
+                      <span class="text-red-600 dark:text-red-400" x-show="getPlatformFailedCount('instagram') > 0">✕ <span x-text="getPlatformFailedCount('instagram')"></span> video hata</span>
                     </div>
                   </div>
                   
@@ -2870,7 +3114,84 @@
               </template>
             </div>
 
-            <!-- TikTok ve Facebook Tab Content - Şimdilik devre dışı -->
+            <!-- Facebook Tab Content -->
+            <div x-show="activePlatformTab === 'facebook'" class="space-y-3 p-3 bg-blue-50/30 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/30">
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Platform Durumu</label>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="form.platformSettings.facebook.enabled" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  <span class="ml-2 text-xs font-medium" :class="form.platformSettings.facebook.enabled ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'" x-text="form.platformSettings.facebook.enabled ? 'Aktif' : 'Pasif'"></span>
+                </label>
+              </div>
+
+              <template x-if="form.platformSettings.facebook.enabled">
+                <div class="space-y-3 pt-2 border-t border-blue-200 dark:border-blue-900/50">
+                  <div>
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">📄 Facebook Sayfası</label>
+                    <select x-model="form.platformSettings.facebook.pageId" class="w-full px-2.5 py-1.5 text-xs border border-gray-200 dark:border-slate-600 dark:bg-slate-900 dark:text-white rounded-lg">
+                      <option value="">-- Sayfa Seçin --</option>
+                      <template x-if="form.platformSettings.facebook.pageId && !hasMetaAccount('facebook', form.platformSettings.facebook.pageId)">
+                        <option :value="form.platformSettings.facebook.pageId" x-text="'Kayıtlı sayfa (' + form.platformSettings.facebook.pageId + ')'"></option>
+                      </template>
+                      <template x-for="page in metaAccounts.facebook" :key="page.id">
+                        <option :value="String(page.id)" x-text="(page.name || 'Unnamed Page') + ' (' + page.id + ')'"></option>
+                      </template>
+                    </select>
+                    <p class="text-[10px] text-amber-700 dark:text-amber-300 mt-0.5" x-show="metaAccounts.facebook.length === 0" x-text="getMetaAccountHint('facebook')">
+                    </p>
+                  </div>
+
+                  <div>
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">🎬 Upload Tipi</label>
+                    <select x-model="form.platformSettings.facebook.type" class="w-full px-2.5 py-1.5 text-xs border border-gray-200 dark:border-slate-600 dark:bg-slate-900 dark:text-white rounded-lg">
+                      <option value="reel">Reels</option>
+                      <option value="video">Video (Durum / Akış)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">📰 Durum Yayını</label>
+                    <label class="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+                      <input type="checkbox" x-model="form.platformSettings.facebook.publishAsStatus" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                      <span>Durum/Akış gönderisi olarak yayınla</span>
+                    </label>
+                    <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1" x-show="form.platformSettings.facebook.type === 'video'">
+                      Video tipi zaten durum/akış gönderisi olarak yayınlanır.
+                    </p>
+                    <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1" x-show="form.platformSettings.facebook.type === 'reel' && form.platformSettings.facebook.publishAsStatus">
+                      Açıkken Reels seçili olsa bile yayın Video (durum) modunda yapılır.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 block">⏰ Zamanlama</label>
+                    <select x-model="form.platformSettings.facebook.scheduleType" class="w-full px-2.5 py-1.5 text-xs border border-gray-200 dark:border-slate-600 dark:bg-slate-900 dark:text-white rounded-lg">
+                      <option value="now">Hemen</option>
+                      <option value="interval">Aralıklı</option>
+                      <option value="specific">Belirli Saatler</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">👁️ Görünürlük</label>
+                    <select x-model="form.platformSettings.facebook.privacy" class="w-full px-2.5 py-1.5 text-xs border border-gray-200 dark:border-slate-600 dark:bg-slate-900 dark:text-white rounded-lg">
+                      <option value="EVERYONE">Herkese Açık</option>
+                      <option value="FRIENDS">Arkadaşlar</option>
+                      <option value="SELF">Sadece Ben</option>
+                    </select>
+                  </div>
+
+                  <div class="pt-2 border-t border-blue-200 dark:border-blue-900/50">
+                    <div class="flex items-center gap-3 text-xs">
+                      <span class="text-green-600 dark:text-green-400">✓ <span x-text="getPlatformPublishedCount('facebook')"></span> yayında</span>
+                      <span class="text-yellow-600 dark:text-yellow-400">⏳ <span x-text="getPlatformPendingCount('facebook')"></span> bekliyor</span>
+                      <span class="text-red-600 dark:text-red-400" x-show="getPlatformFailedCount('facebook') > 0">✕ <span x-text="getPlatformFailedCount('facebook')"></span> video hata</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
 
           </div>
           

@@ -17,7 +17,6 @@ $defaults = [
     'pexelsKey' => '',
     'falKey' => '',
     'pollinationsKey' => '',
-    // Multi-key arrays
     'geminiKeys' => [],
     'elevenKeys' => [],
     'falKeys' => [],
@@ -60,10 +59,22 @@ $defaults = [
         'MarginR' => 40,
         'Alignment' => 2,
         'Bold' => 1
+    ],
+    'metaWebUiEnabled' => false,
+    'socialStaging' => [
+        'enabled' => false,
+        'provider' => 'r2',
+        'bucket' => '',
+        'region' => 'auto',
+        'endpointUrl' => '',
+        'accessKeyId' => '',
+        'secretAccessKey' => '',
+        'publicBaseUrl' => '',
+        'prefix' => 'instagram',
+        'cleanupAfterUpload' => true
     ]
 ];
 
-// GET: Config oku
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (file_exists($configFile)) {
         $saved = json_decode(file_get_contents($configFile), true) ?: [];
@@ -74,14 +85,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     exit;
 }
 
-// POST: Config kaydet
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     if (!$input) {
         echo json_encode(['success' => false, 'error' => 'Geçersiz JSON verisi']);
         exit;
     }
-    // subtitleStyle'ı düzgün şekilde parse et
+
+    $existing = [];
+    if (file_exists($configFile)) {
+        $existing = json_decode(file_get_contents($configFile), true) ?: [];
+    }
+
     $subtitleStyle = null;
     if (isset($input['subtitleStyle']) && is_array($input['subtitleStyle'])) {
         $subtitleStyle = [
@@ -100,18 +115,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
     }
 
-    $config = [
-        'geminiKey' => $input['geminiKey'] ?? '',
-        'elevenKey' => $input['elevenKey'] ?? '',
-        'hfKey' => $input['hfKey'] ?? '',
-        'pexelsKey' => $input['pexelsKey'] ?? '',
-        'falKey' => $input['falKey'] ?? '',
-        'pollinationsKey' => $input['pollinationsKey'] ?? '',
-        // Multi-key arrays for API pool
-        'geminiKeys' => array_values(array_filter($input['geminiKeys'] ?? [])),
-        'elevenKeys' => array_values(array_filter($input['elevenKeys'] ?? [])),
-        'falKeys' => array_values(array_filter($input['falKeys'] ?? [])),
-        'pollinationsKeys' => array_values(array_filter($input['pollinationsKeys'] ?? [])),
+    $normalizeKeys = function($keys) {
+        if (!is_array($keys)) {
+            return [];
+        }
+        $clean = [];
+        foreach ($keys as $key) {
+            $key = trim((string)$key);
+            if ($key !== '' && !in_array($key, $clean, true)) {
+                $clean[] = $key;
+            }
+        }
+        return $clean;
+    };
+
+    $geminiKeys = $normalizeKeys($input['geminiKeys'] ?? []);
+    $elevenKeys = $normalizeKeys($input['elevenKeys'] ?? []);
+    $falKeys = $normalizeKeys($input['falKeys'] ?? []);
+    $pollinationsKeys = $normalizeKeys($input['pollinationsKeys'] ?? []);
+
+    $knownConfig = [
+        'geminiKey' => $geminiKeys[0] ?? '',
+        'elevenKey' => $elevenKeys[0] ?? trim((string)($input['elevenKey'] ?? '')),
+        'hfKey' => trim((string)($input['hfKey'] ?? '')),
+        'pexelsKey' => trim((string)($input['pexelsKey'] ?? '')),
+        'falKey' => $falKeys[0] ?? trim((string)($input['falKey'] ?? '')),
+        'pollinationsKey' => $pollinationsKeys[0] ?? trim((string)($input['pollinationsKey'] ?? '')),
+        'geminiKeys' => $geminiKeys,
+        'elevenKeys' => $elevenKeys,
+        'falKeys' => $falKeys,
+        'pollinationsKeys' => $pollinationsKeys,
         'ttsProvider' => $input['ttsProvider'] ?? 'elevenlabs',
         'geminiModel' => $input['geminiModel'] ?? 'gemini-2.0-flash',
         'imageService' => $input['imageService'] ?? 'pollinations',
@@ -139,6 +172,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ],
         'subtitleStyle' => $subtitleStyle ?? $defaults['subtitleStyle']
     ];
+    $config = array_replace_recursive($existing, $knownConfig);
+
+    if (array_key_exists('metaWebUiEnabled', $input)) {
+        $config['metaWebUiEnabled'] = (bool)$input['metaWebUiEnabled'];
+    }
+    if (array_key_exists('socialStaging', $input) && is_array($input['socialStaging'])) {
+        $baseStaging = is_array($config['socialStaging'] ?? null) ? $config['socialStaging'] : $defaults['socialStaging'];
+        $config['socialStaging'] = array_replace($baseStaging, $input['socialStaging']);
+    }
+
     $written = file_put_contents($configFile, json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     if ($written === false) {
         echo json_encode(['success' => false, 'error' => 'Dosya yazılamadı: ' . $configFile]);

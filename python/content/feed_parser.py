@@ -10,6 +10,7 @@ import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 import time
+import os
 
 class FeedParser:
     """RSS feed parsing ve içerik toplama sınıfı"""
@@ -17,6 +18,16 @@ class FeedParser:
     def __init__(self, config_path='data/content_sources.json', pool_path='data/content_pool.json'):
         self.config_path = Path(config_path)
         self.pool_path = Path(pool_path)
+        self.errors = []
+        self._disable_dead_local_proxy()
+
+    def _disable_dead_local_proxy(self):
+        """Ignore the local blackhole proxy injected into this desktop shell."""
+        proxy_keys = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'https_proxy', 'all_proxy']
+        for key in proxy_keys:
+            value = os.environ.get(key, '')
+            if '127.0.0.1:9' in value or 'localhost:9' in value:
+                os.environ.pop(key, None)
         
     def load_sources(self):
         """RSS kaynaklarını yükle"""
@@ -66,9 +77,14 @@ class FeedParser:
             # Feed'i çek
             feed = feedparser.parse(source['url'])
             
-            if feed.bozo:
-                print(f"[WARN]  Feed parse hatası: {source['name']}")
+            if feed.bozo and not feed.entries:
+                error = getattr(feed, 'bozo_exception', None)
+                self.errors.append(f"{source['name']}: {error}")
+                print(f"[WARN]  Feed parse hatası: {source['name']} - {error}")
                 return []
+            if feed.bozo:
+                error = getattr(feed, 'bozo_exception', None)
+                print(f"[WARN]  Feed parse uyarısı: {source['name']} - {error}")
             
             # Yeni içerikleri topla
             new_contents = []
@@ -114,6 +130,7 @@ class FeedParser:
             return new_contents
             
         except Exception as e:
+            self.errors.append(f"{source['name']}: {str(e)}")
             print(f"[ERROR] Feed parse hatası ({source['name']}): {str(e)}")
             return []
     
@@ -214,7 +231,15 @@ if __name__ == '__main__':
             exit(1)
     
     new_count = parser.fetch_all_feeds(source_id=args.source_id, limit=args.limit)
+
+    if parser.errors:
+        print("[ERROR] Feed errors:")
+        for error in parser.errors:
+            print(f"  - {error}")
+        if args.source_id:
+            exit(2)
     
     print("="*50)
     print(f"Added {new_count} new items")
+
 

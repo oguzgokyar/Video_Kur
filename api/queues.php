@@ -31,7 +31,66 @@ function loadQueues() {
 // Kuyruk verilerini kaydet
 function saveQueues($data) {
     global $queuesFile;
-    file_put_contents($queuesFile, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    if ($json === false) {
+        return false;
+    }
+    return file_put_contents($queuesFile, $json, LOCK_EX) !== false;
+}
+
+function normalizeBooleanSetting($value, $default = false) {
+    if ($value === null) return $default;
+    if (is_bool($value)) return $value;
+    if (is_int($value) || is_float($value)) return ((int)$value) !== 0;
+    if (is_string($value)) {
+        $v = strtolower(trim($value));
+        if (in_array($v, ['1', 'true', 'yes', 'on', 'enabled'], true)) return true;
+        if (in_array($v, ['0', 'false', 'no', 'off', 'disabled', ''], true)) return false;
+    }
+    return $default;
+}
+
+function normalizePlatformSettings($platformSettings) {
+    if (!is_array($platformSettings)) {
+        return [];
+    }
+
+    foreach ($platformSettings as $platform => &$settings) {
+        if (!is_array($settings)) {
+            continue;
+        }
+
+        if ($platform === 'instagram') {
+            $accountId = $settings['accountId'] ?? $settings['account_id'] ?? null;
+            if ($accountId !== null) {
+                $settings['accountId'] = (string)$accountId;
+            }
+            unset($settings['account_id']);
+
+            $type = strtolower((string)($settings['type'] ?? 'reel'));
+            $settings['type'] = $type === 'story' ? 'story' : 'reel';
+
+            $shareToFeedRaw = $settings['shareToFeed'] ?? $settings['share_to_feed'] ?? null;
+            $settings['shareToFeed'] = normalizeBooleanSetting($shareToFeedRaw, $settings['type'] !== 'story');
+            unset($settings['share_to_feed']);
+        } elseif ($platform === 'facebook') {
+            $pageId = $settings['pageId'] ?? $settings['page_id'] ?? null;
+            if ($pageId !== null) {
+                $settings['pageId'] = (string)$pageId;
+            }
+            unset($settings['page_id']);
+
+            $type = strtolower((string)($settings['type'] ?? 'reel'));
+            $settings['type'] = $type === 'video' ? 'video' : 'reel';
+
+            $publishAsStatusRaw = $settings['publishAsStatus'] ?? $settings['publish_as_status'] ?? null;
+            $settings['publishAsStatus'] = normalizeBooleanSetting($publishAsStatusRaw, false);
+            unset($settings['publish_as_status']);
+        }
+    }
+    unset($settings);
+
+    return $platformSettings;
 }
 
 // Job bilgisini yükle
@@ -890,6 +949,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $socialStatus = loadSocialPlatformStatus(); // Gerçek platform durumları
             $queuesWithDetails = [];
             foreach ($data['queues'] as $queue) {
+                if (isset($queue['platform_settings'])) {
+                    $queue['platform_settings'] = normalizePlatformSettings($queue['platform_settings']);
+                }
                 $videosWithDetails = [];
                 foreach ($queue['videos'] ?? [] as $video) {
                     $job = loadJob($video['job_id']);
@@ -944,6 +1006,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 }
             }
             if ($queue) {
+                if (isset($queue['platform_settings'])) {
+                    $queue['platform_settings'] = normalizePlatformSettings($queue['platform_settings']);
+                }
                 // Video detaylarını ekle
                 $socialStatus = loadSocialPlatformStatus(); // Gerçek platform durumları
                 $videosWithDetails = [];
@@ -1080,7 +1145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (isset($updates['platforms'])) $queue['platforms'] = $updates['platforms'];
                     if (isset($updates['is_active'])) $queue['is_active'] = $updates['is_active'];
                     if (isset($updates['video_settings'])) $queue['video_settings'] = $updates['video_settings'];
-                    if (isset($updates['platform_settings'])) $queue['platform_settings'] = $updates['platform_settings'];
+                    if (isset($updates['platform_settings'])) $queue['platform_settings'] = normalizePlatformSettings($updates['platform_settings']);
                     if (isset($updates['strict_mode'])) $queue['strict_mode'] = $updates['strict_mode'];
                     if (isset($updates['fail_threshold'])) $queue['fail_threshold'] = $updates['fail_threshold'];
                     
@@ -1255,7 +1320,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 
                                 // Queue'daki platform_status'u da güncelle
                                 if (!isset($video['platform_status'][$platform]) || is_string($video['platform_status'][$platform])) {
-                                    $video['platform_status'][$platform] = 'pending';
+                                    $video['platform_status'][$platform] = [
+                                        'status' => 'pending',
+                                        'error' => null,
+                                        'post_id' => null,
+                                        'post_url' => null,
+                                        'uploaded_at' => null
+                                    ];
                                 } else {
                                     $video['platform_status'][$platform]['status'] = 'pending';
                                     $video['platform_status'][$platform]['error'] = null;
@@ -1481,7 +1552,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Platform durumlarını oluştur
                     $platformStatus = [];
                     foreach ($queue['platforms'] as $platform) {
-                        $platformStatus[$platform] = 'pending';
+                        $platformStatus[$platform] = [
+                            'status' => 'pending',
+                            'error' => null,
+                            'post_id' => null,
+                            'post_url' => null,
+                            'uploaded_at' => null
+                        ];
                     }
                     
                     // Position hesapla - SADECE pending/queued videoları say (published olanları atla)

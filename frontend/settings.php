@@ -91,6 +91,18 @@ $active_page = 'settings';
         gemini_script: true, pollinations_text: true,
         elevenlabs_tts: true, edge_tts: true
       },
+      socialStaging: {
+        enabled: false,
+        provider: 'r2',
+        bucket: '',
+        region: 'auto',
+        endpointUrl: '',
+        accessKeyId: '',
+        secretAccessKey: '',
+        publicBaseUrl: '',
+        prefix: 'instagram',
+        cleanupAfterUpload: true
+      },
       saveMsg: '', saveError: false,
       checks: {
         gemini: {loading:false,result:null}, elevenlabs: {loading:false,result:null},
@@ -153,7 +165,7 @@ $active_page = 'settings';
         const key = this.apiModalNewKey.trim();
         if (!key) return;
         
-        if (service === 'gemini') this.geminiKeys.push(key);
+        if (service === 'gemini') { this.geminiKeys.push(key); this.geminiKey = this.geminiKeys[0] || ''; }
         else if (service === 'eleven') this.elevenKeys.push(key);
         else if (service === 'fal') this.falKeys.push(key);
         else if (service === 'pollinations') this.pollinationsKeys.push(key);
@@ -169,7 +181,7 @@ $active_page = 'settings';
         const keys = this.getServiceKeys(service);
         const removedKey = keys[idx] || '';
         
-        if (service === 'gemini') this.geminiKeys.splice(idx, 1);
+        if (service === 'gemini') { this.geminiKeys.splice(idx, 1); this.geminiKey = this.geminiKeys[0] || ''; }
         else if (service === 'eleven') this.elevenKeys.splice(idx, 1);
         else if (service === 'fal') this.falKeys.splice(idx, 1);
         else if (service === 'pollinations') this.pollinationsKeys.splice(idx, 1);
@@ -230,6 +242,7 @@ $active_page = 'settings';
         indexes.sort((a, b) => b - a).forEach(i => {
           const k = this.geminiKeys[i];
           this.geminiKeys.splice(i, 1);
+          this.geminiKey = this.geminiKeys[0] || '';
           this.clearKeyTestStatus('gemini', k);
         });
         this.saveConfig();
@@ -442,7 +455,8 @@ $active_page = 'settings';
           this.falSteps = d.falSteps || 4;
           
           // Multi-key arrays: backward compatibility
-          this.geminiKeys = d.geminiKeys || (d.geminiKey ? [d.geminiKey] : []);
+          this.geminiKeys = [...new Set((d.geminiKeys || (d.geminiKey ? [d.geminiKey] : [])).filter(Boolean))];
+          this.geminiKey = this.geminiKeys[0] || '';
           this.elevenKeys = d.elevenKeys || (d.elevenKey ? [d.elevenKey] : []);
           this.falKeys = d.falKeys || (d.falKey ? [d.falKey] : []);
           this.pollinationsKeys = d.pollinationsKeys || (d.pollinationsKey ? [d.pollinationsKey] : []);
@@ -470,6 +484,11 @@ $active_page = 'settings';
               edge_tts: d.servicesEnabled.edge_tts !== false
             };
           }
+          if (d.socialStaging) {
+            this.socialStaging = Object.assign({}, this.socialStaging, d.socialStaging);
+            this.socialStaging.enabled = !!this.socialStaging.enabled;
+            this.socialStaging.cleanupAfterUpload = this.socialStaging.cleanupAfterUpload !== false;
+          }
         }).catch(() => {});
         
         // Scheduler durumu yükle
@@ -482,7 +501,7 @@ $active_page = 'settings';
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            geminiKey: this.geminiKey, elevenKey: this.elevenKey, hfKey: this.hfKey, pexelsKey: this.pexelsKey,
+            geminiKey: this.geminiKeys[0] || '', elevenKey: this.elevenKey, hfKey: this.hfKey, pexelsKey: this.pexelsKey,
             falKey: this.falKey, pollinationsKey: this.pollinationsKey,
             geminiKeys: this.geminiKeys, elevenKeys: this.elevenKeys, falKeys: this.falKeys, pollinationsKeys: this.pollinationsKeys,
             ttsProvider: this.ttsProvider, geminiModel: this.geminiModel,
@@ -491,7 +510,19 @@ $active_page = 'settings';
             falWidth: this.falWidth, falHeight: this.falHeight, falSteps: this.falSteps,
             subtitleStyle: this.subtitleStyle,
             toolsEnabled: this.toolsEnabled,
-            servicesEnabled: this.servicesEnabled
+            servicesEnabled: this.servicesEnabled,
+            socialStaging: {
+              enabled: !!this.socialStaging.enabled,
+              provider: this.socialStaging.provider || 'r2',
+              bucket: (this.socialStaging.bucket || '').trim(),
+              region: (this.socialStaging.region || 'auto').trim(),
+              endpointUrl: (this.socialStaging.endpointUrl || '').trim(),
+              accessKeyId: (this.socialStaging.accessKeyId || '').trim(),
+              secretAccessKey: (this.socialStaging.secretAccessKey || '').trim(),
+              publicBaseUrl: (this.socialStaging.publicBaseUrl || '').trim(),
+              prefix: (this.socialStaging.prefix || 'instagram').trim() || 'instagram',
+              cleanupAfterUpload: this.socialStaging.cleanupAfterUpload !== false
+            }
           })
         })
         .then(r => r.json())
@@ -525,7 +556,7 @@ $active_page = 'settings';
           this.testKey('python'); this.testKey('ffmpeg');
           this.testKey('fal', this.falKey);
         } else if (this.activeTab === 'script') {
-          this.testKey('gemini', this.geminiKey);
+          this.testKey('gemini', this.geminiKeys[0] || '');
           this.testKey('pollinations_text', '', {model: this.pollinationsTextModel});
         } else if (this.activeTab === 'gorsel') {
           this.testKey('fal', this.falKey);
@@ -552,7 +583,7 @@ $active_page = 'settings';
       <?php include __DIR__ . '/components/_sidebar.php'; ?>
       <!-- Main Content -->
       <main class="flex-1 overflow-y-auto p-6 md:p-8">
-        <div class="max-w-5xl mx-auto">
+        <div class="max-w-6xl mx-auto space-y-6">
           <!-- Save Message -->
           <template x-if="saveMsg">
             <div class="mb-4 p-3 rounded-lg text-sm font-semibold" :class="saveError ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'" x-text="saveMsg"></div>
@@ -664,6 +695,72 @@ $active_page = 'settings';
                 <template x-if="checks.ffmpeg.result">
                   <div class="text-xs mt-1 px-1 font-medium" :class="checks.ffmpeg.result.valid ? 'text-green-600' : 'text-red-600'" x-text="checks.ffmpeg.result.message"></div>
                 </template>
+              </div>
+
+              <!-- Instagram Staging -->
+              <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
+                <div class="flex items-center justify-between mb-2">
+                  <h2 class="text-lg font-semibold text-gray-800">📦 Instagram Staging</h2>
+                  <label class="toggle-switch">
+                    <input type="checkbox" x-model="socialStaging.enabled">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <p class="text-xs text-gray-500 mb-4">Instagram için yerel videoyu önce object storage'a yükleyip public URL ile paylaşır.</p>
+
+                <div :class="!socialStaging.enabled && 'opacity-40 pointer-events-none'" class="space-y-3">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label class="block mb-1 text-sm font-semibold text-gray-700">Provider</label>
+                      <select x-model="socialStaging.provider" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm">
+                        <option value="r2">Cloudflare R2</option>
+                        <option value="s3">Amazon S3</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block mb-1 text-sm font-semibold text-gray-700">Bucket</label>
+                      <input type="text" x-model="socialStaging.bucket" placeholder="my-bucket" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm">
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label class="block mb-1 text-sm font-semibold text-gray-700">Region</label>
+                      <input type="text" x-model="socialStaging.region" placeholder="auto / eu-central-1" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm">
+                    </div>
+                    <div>
+                      <label class="block mb-1 text-sm font-semibold text-gray-700">Prefix</label>
+                      <input type="text" x-model="socialStaging.prefix" placeholder="instagram" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm">
+                    </div>
+                  </div>
+
+                  <div x-show="socialStaging.provider === 'r2'">
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">R2 Endpoint URL</label>
+                    <input type="text" x-model="socialStaging.endpointUrl" placeholder="https://<account>.r2.cloudflarestorage.com" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm">
+                  </div>
+
+                  <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Public Base URL</label>
+                    <input type="text" x-model="socialStaging.publicBaseUrl" placeholder="https://cdn.example.com" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm">
+                    <p class="text-xs text-gray-500 mt-1">Instagram'ın erişeceği herkese açık URL tabanı.</p>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label class="block mb-1 text-sm font-semibold text-gray-700">Access Key ID</label>
+                      <input type="password" x-model="socialStaging.accessKeyId" placeholder="AKIA... / R2 key" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm">
+                    </div>
+                    <div>
+                      <label class="block mb-1 text-sm font-semibold text-gray-700">Secret Access Key</label>
+                      <input type="password" x-model="socialStaging.secretAccessKey" placeholder="********" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm">
+                    </div>
+                  </div>
+
+                  <label class="flex items-center gap-2 cursor-pointer pt-1">
+                    <input type="checkbox" x-model="socialStaging.cleanupAfterUpload" class="w-4 h-4 accent-blue-600">
+                    <span class="text-sm text-gray-700">Yükleme sonrası staged dosyayı bucket'tan sil</span>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -987,7 +1084,7 @@ $active_page = 'settings';
                         <span class="ml-2 text-xs font-medium" :class="checks.gemini.result.valid ? 'text-green-600' : 'text-red-600'" x-text="checks.gemini.result.message"></span>
                       </template>
                     </div>
-                    <button type="button" @click="testKey('gemini', geminiKey)" :disabled="checks.gemini.loading" class="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs font-semibold transition disabled:opacity-50">
+                    <button type="button" @click="testKey('gemini', geminiKeys[0] || '')" :disabled="checks.gemini.loading" class="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs font-semibold transition disabled:opacity-50">
                       <span x-show="!checks.gemini.loading">Test Et</span><span x-show="checks.gemini.loading">⏳</span>
                     </button>
                   </div>
@@ -1548,3 +1645,4 @@ $active_page = 'settings';
   </template>
 </body>
 </html>
+

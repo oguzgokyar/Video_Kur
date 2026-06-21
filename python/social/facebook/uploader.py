@@ -44,6 +44,48 @@ class FacebookUploader(BaseSocialUploader):
     
     # Facebook Graph API
     GRAPH_URL = "https://graph.facebook.com/v18.0"
+
+    @staticmethod
+    def _truncate_text(value: str, max_len: int = 400) -> str:
+        text = (value or '').strip()
+        if len(text) <= max_len:
+            return text
+        return text[:max_len].rstrip() + '...'
+
+    def _format_response_error(self, response, fallback_message: str) -> str:
+        """Build a readable error string from Graph API/HTTP response."""
+        status = getattr(response, 'status_code', 'unknown')
+        detail = ''
+        code = ''
+        subcode = ''
+        trace = ''
+
+        try:
+            data = response.json()
+        except Exception:
+            data = None
+
+        if isinstance(data, dict):
+            err = data.get('error')
+            if isinstance(err, dict):
+                detail = str(err.get('message', '')).strip()
+                code = str(err.get('code', '')).strip()
+                subcode = str(err.get('error_subcode', '')).strip()
+                trace = str(err.get('fbtrace_id', '')).strip()
+            else:
+                detail = str(data.get('message', '')).strip()
+
+        if not detail:
+            detail = self._truncate_text(getattr(response, 'text', '')) or 'No response body'
+
+        error_parts = [f"{fallback_message} (HTTP {status})", detail]
+        if code:
+            error_parts.append(f"code={code}")
+        if subcode:
+            error_parts.append(f"subcode={subcode}")
+        if trace:
+            error_parts.append(f"trace={trace}")
+        return " | ".join(error_parts)
     
     def __init__(self, credentials_dir: str):
         """
@@ -240,7 +282,12 @@ class FacebookUploader(BaseSocialUploader):
                     'access_token': access_token
                 }
             )
-            
+            if response.status_code not in [200, 201]:
+                return {
+                    'success': False,
+                    'error': self._format_response_error(response, "Reels start failed")
+                }
+
             data = response.json()
             
             if 'video_id' not in data:
@@ -260,6 +307,11 @@ class FacebookUploader(BaseSocialUploader):
                     'access_token': access_token
                 }
             )
+            if response.status_code not in [200, 201]:
+                return {
+                    'success': False,
+                    'error': self._format_response_error(response, "Reels transfer failed")
+                }
             
             # Finish upload
             response = requests.post(
@@ -268,9 +320,15 @@ class FacebookUploader(BaseSocialUploader):
                     'upload_phase': 'finish',
                     'video_id': video_id,
                     'description': caption,
+                    'video_state': 'PUBLISHED',
                     'access_token': access_token
                 }
             )
+            if response.status_code not in [200, 201]:
+                return {
+                    'success': False,
+                    'error': self._format_response_error(response, "Reels finish failed")
+                }
             
             data = response.json()
             
@@ -311,7 +369,12 @@ class FacebookUploader(BaseSocialUploader):
                     'access_token': access_token
                 }
             )
-            
+            if response.status_code not in [200, 201]:
+                return {
+                    'success': False,
+                    'error': self._format_response_error(response, "Reels start failed")
+                }
+
             data = response.json()
             
             if 'video_id' not in data:
@@ -329,19 +392,27 @@ class FacebookUploader(BaseSocialUploader):
             
             # Upload file
             with open(video_path, 'rb') as f:
+                binary_video = f.read()
                 response = requests.post(
                     upload_url,
                     headers={
                         'Authorization': f'OAuth {access_token}',
-                        'file_size': str(file_size)
+                        'offset': '0',
+                        'file_size': str(file_size),
+                        'Content-Type': 'application/octet-stream'
                     },
-                    data=f
+                    data=binary_video
                 )
             
             if response.status_code not in [200, 201]:
+                reels_error = self._format_response_error(response, "Reels transfer failed")
+                self._log(f"{reels_error} → normal video fallback deneniyor", error=True)
+                fallback_result = self._upload_video(page_id, access_token, video_path, caption)
+                if fallback_result.get('success'):
+                    return fallback_result
                 return {
                     'success': False,
-                    'error': f"Upload failed: {response.status_code}"
+                    'error': f"{reels_error} | Fallback video upload failed: {fallback_result.get('error', 'unknown')}"
                 }
             
             # Finish upload
@@ -351,10 +422,16 @@ class FacebookUploader(BaseSocialUploader):
                     'upload_phase': 'finish',
                     'video_id': video_id,
                     'description': caption,
+                    'video_state': 'PUBLISHED',
                     'access_token': access_token
                 }
             )
-            
+            if response.status_code not in [200, 201]:
+                return {
+                    'success': False,
+                    'error': self._format_response_error(response, "Reels finish failed")
+                }
+
             data = response.json()
             
             if data.get('success') or 'video_id' in str(data):
@@ -399,7 +476,12 @@ class FacebookUploader(BaseSocialUploader):
                             'source': f
                         }
                     )
-                
+                if response.status_code not in [200, 201]:
+                    return {
+                        'success': False,
+                        'error': self._format_response_error(response, "Video upload failed")
+                    }
+
                 data = response.json()
                 
                 if 'id' in data:
@@ -443,7 +525,12 @@ class FacebookUploader(BaseSocialUploader):
                     'access_token': access_token
                 }
             )
-            
+            if response.status_code not in [200, 201]:
+                return {
+                    'success': False,
+                    'error': self._format_response_error(response, "Resumable start failed")
+                }
+
             data = response.json()
             
             if 'upload_session_id' not in data:
@@ -474,7 +561,12 @@ class FacebookUploader(BaseSocialUploader):
                             'video_file_chunk': chunk
                         }
                     )
-                    
+                    if response.status_code not in [200, 201]:
+                        return {
+                            'success': False,
+                            'error': self._format_response_error(response, "Resumable transfer failed")
+                        }
+
                     data = response.json()
                     offset = int(data.get('end_offset', offset + len(chunk)))
                     
@@ -491,7 +583,12 @@ class FacebookUploader(BaseSocialUploader):
                     'access_token': access_token
                 }
             )
-            
+            if response.status_code not in [200, 201]:
+                return {
+                    'success': False,
+                    'error': self._format_response_error(response, "Resumable finish failed")
+                }
+
             data = response.json()
             
             if data.get('success') or 'id' in data:

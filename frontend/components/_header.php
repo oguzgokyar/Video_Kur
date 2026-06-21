@@ -8,7 +8,9 @@ $page_titles = [
   'content' => '📥 İçerikler',
   'scripts' => '📝 Script Yönetimi',
   'settings' => '⚙️ Ayarlar',
-  'accounts' => '🔗 Hesaplar'
+  'accounts' => '🔗 Hesaplar',
+  'accounts_youtube' => '📺 YouTube Hesapları',
+  'accounts_meta' => '📘 Meta Hesapları'
 ];
 $current_title = $page_titles[$active_page ?? ''] ?? 'Dashboard';
 ?>

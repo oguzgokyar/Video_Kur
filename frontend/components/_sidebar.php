@@ -106,18 +106,45 @@ $active_page = $active_page ?? 'videos';
       </div>
     </a>
     
-    <a 
-      href="accounts.php" 
-      class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group <?= $active_page === 'accounts' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700' ?>"
-      :class="sidebarCollapsedState ? 'justify-center' : ''"
-      :title="sidebarCollapsedState ? 'Hesaplar' : ''"
-    >
-      <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-      <span x-show="!sidebarCollapsedState" class="whitespace-nowrap">Hesaplar</span>
-      <div x-show="sidebarCollapsedState" class="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">
-        Hesaplar
+    <div class="border-t border-gray-100 dark:border-slate-700 mt-2 pt-2 space-y-1">
+      <div
+        class="flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-wide font-semibold rounded-lg group <?= in_array($active_page, ['accounts_youtube', 'accounts_meta'], true) ? 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-500 dark:text-gray-400' ?>"
+        :class="sidebarCollapsedState ? 'justify-center' : ''"
+        :title="sidebarCollapsedState ? 'Hesaplar' : ''"
+      >
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+        <span x-show="!sidebarCollapsedState" class="whitespace-nowrap">Hesaplar</span>
+        <div x-show="sidebarCollapsedState" class="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">
+          Hesaplar
+        </div>
       </div>
-    </a>
+
+      <a
+        href="accounts_youtube.php"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg transition-all group <?= $active_page === 'accounts_youtube' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700' ?>"
+        :class="sidebarCollapsedState ? 'justify-center' : 'ml-2'"
+        :title="sidebarCollapsedState ? 'YouTube' : ''"
+      >
+        <span class="text-sm">📺</span>
+        <span x-show="!sidebarCollapsedState" class="text-sm whitespace-nowrap">YouTube</span>
+        <div x-show="sidebarCollapsedState" class="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">
+          YouTube
+        </div>
+      </a>
+
+      <a
+        href="accounts_meta.php"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg transition-all group <?= $active_page === 'accounts_meta' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700' ?>"
+        :class="sidebarCollapsedState ? 'justify-center' : 'ml-2'"
+        :title="sidebarCollapsedState ? 'Meta' : ''"
+      >
+        <span class="text-sm">📘</span>
+        <span x-show="!sidebarCollapsedState" class="text-sm whitespace-nowrap">Meta</span>
+        <div x-show="sidebarCollapsedState" class="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">
+          Meta
+        </div>
+      </a>
+    </div>
     
     <a 
       href="settings.php" 

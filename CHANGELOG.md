@@ -4,6 +4,21 @@ Bu dosya, projedeki tüm önemli değişiklikleri kronolojik sırayla takip eder
 
 ---
 
+## [2.5.1] - 2026-04-13 - Meta Hesap Kaynağı Birleştirme
+
+### 🧹 Kaldırılanlar
+- Kuyruk hesap listesinde `social_accounts.json` kaynaklı legacy Instagram/Facebook fallback kaldırıldı.
+- `api/accounts.php` içinde legacy Instagram yönetimi devre dışı bırakıldı (Instagram artık yalnızca Meta Accounts V2).
+
+### 🔧 Değişiklikler
+- `api/social.php`: `get_accounts` ve `get_platforms` akışları Meta V2 (`meta_connections.json` / `meta_accounts.json`) odaklı hale getirildi.
+- `api/social.php`: Meta V2 aktifken legacy `social_accounts.json` içindeki Instagram/Facebook kayıtları otomatik temizleniyor.
+- `api/social.php`: `get_accounts` yanıtına `meta_diagnostics` eklendi (aktif bağlantı var ama hesap listesi boş durumunu teşhis eder).
+- `api/accounts.php`: Legacy endpoint sadece TikTok için aktif, Instagram çağrıları yönlendirici hata mesajı döndürüyor.
+- `frontend/queues.php`: Instagram/Facebook hesap listesi boşken teşhis mesajı gösterimi ve hesap/sayfa yoksa kaydı engelleyen doğrulama eklendi.
+
+---
+
 ## [2.5.0] - 2026-03-30 - Sistem Temizliği ve Dark Mode İyileştirmesi
 
 ### 🗑️ Kaldırılanlar

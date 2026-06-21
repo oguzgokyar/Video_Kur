@@ -39,16 +39,12 @@ YouTube API zaten yapılandırılmış. Ek işlem gerekmez.
 1. Settings → Basic
 2. App ID ve App Secret'ı kopyalayın
 
-#### Adım 5: Kimlik Doğrulama
-```bash
-cd python
-python -c "
-from social.instagram.auth import MetaAuth
-auth = MetaAuth('../data/social_credentials/meta')
-auth.save_config('YOUR_APP_ID', 'YOUR_APP_SECRET')
-auth.authenticate()
-"
-```
+#### Adım 5: Kimlik Doğrulama (Web UI)
+1. **http://localhost:8000/accounts_meta.php** sayfasını açın
+2. **Meta App Ayarları** sekmesinde App ID / App Secret / Redirect URI girip kaydedin
+3. Kayıt satırındaki **OAuth Bağla** butonuna tıklayın
+4. Meta login/izin adımlarını tamamlayın
+5. İşlem sonrası aynı sayfada bağlantılar ve hesaplar otomatik görünür
 
 ### 3. TikTok (Content Posting API)
 
@@ -83,8 +79,8 @@ auth.authenticate()
 
 ### Web Arayüzü
 
-1. **http://localhost:8000/accounts.php** adresini açın
-2. Bağlı platform hesaplarını bu ekrandan yönetin
+1. **http://localhost:8000/accounts_youtube.php** ile YouTube hesaplarını yönetin
+2. **http://localhost:8000/accounts_meta.php** ile Meta App, OAuth bağlantıları ve hesap varsayılanlarını yönetin
 3. Dashboard'dan video seçip "Çoklu Platform Paylaşımı" yapın
 
 ### Scheduler Başlatma
@@ -153,16 +149,22 @@ Video_Kur/
 │   │   ├── meta/
 │   │   │   ├── meta_config.json
 │   │   │   ├── meta_token.json
-│   │   │   └── meta_accounts.json
+│   │   │   ├── meta_accounts.json
+│   │   │   ├── meta_apps.json
+│   │   │   ├── meta_connections.json
+│   │   │   └── meta_settings.json
 │   │   └── tiktok/
 │   │       ├── tiktok_config.json
 │   │       └── tiktok_token.json
 │   ├── social_queue.json
 │   └── social_history.json
 ├── api/
-│   └── social.php
+│   ├── social.php
+│   ├── meta_accounts.php
+│   └── meta_oauth.php
 ├── frontend/
-│   └── social.php
+│   ├── accounts_youtube.php    # YouTube hesap yönetimi
+│   └── accounts_meta.php       # Meta (Instagram/Facebook) hesap yönetimi
 └── start_social_scheduler.bat
 ```
 
@@ -186,6 +188,14 @@ Her platform için optimize edilmiş metadata otomatik oluşturulur:
 - Tartışma teşviki
 - Max 10 hashtag
 
+## ⚙️ Kuyruk Platform Yayın Seçenekleri
+
+Queue ayarlarında Instagram/Facebook için aşağıdaki yayın seçenekleri desteklenir:
+
+- `platform_settings.instagram.shareToFeed`: Reels içeriğini profil akışında da yayınlar (`true/false`).
+- `platform_settings.facebook.type`: Facebook hedefini seçer (`reel` veya `video`).
+- `platform_settings.facebook.publishAsStatus`: Durum/akış gönderisi zorlaması (`true` ise `type=reel` seçili olsa bile video moduna düşer).
+
 ## ⚠️ Önemli Notlar
 
 ### API Limitleri
@@ -207,17 +217,32 @@ Her platform için optimize edilmiş metadata otomatik oluşturulur:
 - Token'ları .gitignore'a ekleyin
 - App Secret'ları güvenli tutun
 
+### Instagram Local Video (S3/R2 Staging)
+Instagram API local dosya yerine public URL istediği için sistem, `data/config.json` içindeki `socialStaging` ayarı varsa videoyu otomatik object storage'a yükler.
+
+```json
+{
+  "socialStaging": {
+    "enabled": true,
+    "provider": "r2",
+    "bucket": "video-kur-social",
+    "region": "auto",
+    "endpointUrl": "https://<accountid>.r2.cloudflarestorage.com",
+    "accessKeyId": "R2_ACCESS_KEY",
+    "secretAccessKey": "R2_SECRET_KEY",
+    "publicBaseUrl": "https://cdn.ornek.com/instagram",
+    "prefix": "instagram",
+    "cleanupAfterUpload": true
+  }
+}
+```
+
 ## 🆘 Sorun Giderme
 
 ### "Token expired" hatası
-```bash
-# Meta için yeniden authenticate
-python -c "
-from social.instagram.auth import MetaAuth
-auth = MetaAuth('../data/social_credentials/meta')
-auth.authenticate()
-"
-```
+1. **accounts_meta.php** ekranında ilgili bağlantıda **Senkronize** deneyin
+2. Gerekirse aynı app için tekrar **OAuth Bağla** çalıştırın
+3. Hâlâ hata varsa bağlantıyı kapatıp yeniden OAuth ile bağlayın
 
 ### "Permission denied" hatası
 - Meta App'te gerekli izinlerin eklendiğinden emin olun

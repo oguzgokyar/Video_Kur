@@ -1,7 +1,7 @@
 <?php
 /**
- * Social Media Accounts API Endpoint
- * Handles Instagram and TikTok account management
+ * Legacy Social Accounts API Endpoint
+ * TikTok account management only (Instagram moved to Meta Accounts V2)
  */
 
 header('Content-Type: application/json; charset=utf-8');
@@ -47,6 +47,15 @@ function saveAccounts($file, $data) {
     file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 }
 
+function pruneLegacyInstagramData($file) {
+    $data = loadAccounts($file);
+    if (!isset($data['instagram']) || !is_array($data['instagram']) || count($data['instagram']) === 0) {
+        return;
+    }
+    $data['instagram'] = [];
+    saveAccounts($file, $data);
+}
+
 /**
  * Generate unique account ID
  */
@@ -64,11 +73,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST)) {
 $action = $_GET['action'] ?? $_POST['action'] ?? ($jsonInput['action'] ?? '');
 $platform = $_GET['platform'] ?? $_POST['platform'] ?? ($jsonInput['platform'] ?? '');
 
+// Instagram legacy kayıtlarını temiz tut: Meta V2 dışına yazılmasın
+pruneLegacyInstagramData($accountsFile);
+
 // ==================== GET: List accounts ====================
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'list') {
     $data = loadAccounts($accountsFile);
+    $data['instagram'] = [];
     
     if ($platform && isset($data[$platform])) {
+        if ($platform === 'instagram') {
+            echo json_encode([
+                'accounts' => [],
+                'notice' => 'Instagram hesapları artık Meta Accounts V2 üzerinden yönetiliyor.'
+            ]);
+            exit;
+        }
         echo json_encode(['accounts' => $data[$platform]]);
     } else {
         echo json_encode(['accounts' => $data]);
@@ -87,8 +107,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'connect') {
         exit;
     }
     
-    if (!in_array($platform, ['instagram', 'tiktok'])) {
-        echo json_encode(['success' => false, 'error' => 'Geçersiz platform']);
+    if ($platform === 'instagram') {
+        echo json_encode(['success' => false, 'error' => 'Instagram hesaplarını Hesaplar > Meta ekranından yönetin.']);
+        exit;
+    }
+
+    if (!in_array($platform, ['tiktok'], true)) {
+        echo json_encode(['success' => false, 'error' => 'Geçersiz platform (yalnızca tiktok desteklenir)']);
         exit;
     }
     
@@ -159,6 +184,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'disconnect') {
         exit;
     }
     
+    if ($platform === 'instagram') {
+        echo json_encode(['success' => false, 'error' => 'Instagram hesaplarını Hesaplar > Meta ekranından yönetin.']);
+        exit;
+    }
+
     $data = loadAccounts($accountsFile);
     
     if (!isset($data[$platform])) {
@@ -214,6 +244,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'set_default') {
         exit;
     }
     
+    if ($platform === 'instagram') {
+        echo json_encode(['success' => false, 'error' => 'Instagram hesaplarını Hesaplar > Meta ekranından yönetin.']);
+        exit;
+    }
+
     $data = loadAccounts($accountsFile);
     
     if (!isset($data[$platform])) {
@@ -258,6 +293,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update') {
         exit;
     }
     
+    if ($platform === 'instagram') {
+        echo json_encode(['success' => false, 'error' => 'Instagram hesaplarını Hesaplar > Meta ekranından yönetin.']);
+        exit;
+    }
+
     $data = loadAccounts($accountsFile);
     
     if (!isset($data[$platform])) {
@@ -302,7 +342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'summary') {
     
     $summary = [
         'instagram' => [
-            'count' => count($data['instagram']),
+            'count' => 0,
             'default' => null
         ],
         'tiktok' => [
@@ -310,13 +350,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'summary') {
             'default' => null
         ]
     ];
-    
-    foreach ($data['instagram'] as $account) {
-        if ($account['is_default'] ?? false) {
-            $summary['instagram']['default'] = $account['username'];
-            break;
-        }
-    }
     
     foreach ($data['tiktok'] as $account) {
         if ($account['is_default'] ?? false) {

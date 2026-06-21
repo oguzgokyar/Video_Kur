@@ -4,6 +4,8 @@
  * Handles multi-platform social media operations
  */
 
+require_once __DIR__ . '/meta_helpers.php';
+
 header('Content-Type: application/json; charset=utf-8');
 
 // Load config
@@ -48,11 +50,11 @@ switch ($action) {
         break;
     
     case 'get_platforms':
-        getPlatforms($dataDir);
+        getPlatforms($dataDir, $config);
         break;
     
     case 'get_accounts':
-        getAccounts($dataDir);
+        getAccounts($dataDir, $config);
         break;
     
     case 'optimize_metadata':
@@ -70,6 +72,46 @@ switch ($action) {
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);
+}
+
+function resolveMetaWebUiEnabled($dataDir, $config = []) {
+    if (array_key_exists('metaWebUiEnabled', $config)) {
+        return (bool)$config['metaWebUiEnabled'];
+    }
+    return meta_is_web_ui_enabled($dataDir);
+}
+
+function pruneLegacyMetaAccounts($dataDir, $metaWebUiEnabled) {
+    if (!$metaWebUiEnabled) {
+        return false;
+    }
+
+    $legacyFile = $dataDir . '/social_accounts.json';
+    if (!file_exists($legacyFile)) {
+        return false;
+    }
+
+    $legacy = json_decode(file_get_contents($legacyFile), true);
+    if (!is_array($legacy)) {
+        return false;
+    }
+
+    $changed = false;
+    foreach (['instagram', 'facebook'] as $platform) {
+        if (!isset($legacy[$platform])) {
+            continue;
+        }
+        if (!empty($legacy[$platform])) {
+            $legacy[$platform] = [];
+            $changed = true;
+        }
+    }
+
+    if ($changed) {
+        file_put_contents($legacyFile, json_encode($legacy, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
+    return $changed;
 }
 
 /**
@@ -290,9 +332,34 @@ function getJobStatus($input, $dataDir) {
 /**
  * Get available platforms and their status
  */
-function getPlatforms($dataDir) {
+function getPlatforms($dataDir, $config = []) {
     $credsDir = $dataDir . '/social_credentials';
     $youtubeConfigured = false;
+    $metaTokenExists = file_exists($credsDir . '/meta/meta_token.json');
+    $metaAccountsFile = $dataDir . '/social_credentials/meta/meta_accounts.json';
+    $metaConnectionsFile = $dataDir . '/social_credentials/meta/meta_connections.json';
+    $metaConfiguredByAccounts = false;
+    $metaConfiguredByConnections = false;
+    $metaWebUiEnabled = resolveMetaWebUiEnabled($dataDir, $config);
+
+    pruneLegacyMetaAccounts($dataDir, $metaWebUiEnabled);
+
+    if ($metaWebUiEnabled && file_exists($metaConnectionsFile)) {
+        $connections = json_decode(file_get_contents($metaConnectionsFile), true) ?: [];
+        foreach (($connections['connections'] ?? []) as $connection) {
+            if (($connection['is_active'] ?? true) && !empty($connection['access_token'])) {
+                $metaConfiguredByConnections = true;
+                break;
+            }
+        }
+    }
+
+    if (file_exists($metaAccountsFile)) {
+        $metaData = json_decode(file_get_contents($metaAccountsFile), true) ?: [];
+        $metaConfiguredByAccounts = !empty($metaData['instagram']) || !empty($metaData['facebook']);
+    }
+
+    $metaConfigured = $metaTokenExists || $metaConfiguredByConnections || $metaConfiguredByAccounts;
     $youtubeChannelsFile = $dataDir . '/youtube_channels.json';
     
     if (file_exists($youtubeChannelsFile)) {
@@ -329,13 +396,13 @@ function getPlatforms($dataDir) {
         'instagram' => [
             'name' => 'Instagram',
             'icon' => '📸',
-            'configured' => file_exists($credsDir . '/meta/meta_token.json'),
+            'configured' => $metaConfigured,
             'description' => 'Instagram Reels'
         ],
         'facebook' => [
             'name' => 'Facebook',
             'icon' => '📘',
-            'configured' => file_exists($credsDir . '/meta/meta_token.json'),
+            'configured' => $metaConfigured,
             'description' => 'Facebook Reels'
         ]
     ];
@@ -349,13 +416,51 @@ function getPlatforms($dataDir) {
 /**
  * Get connected accounts for each platform
  */
-function getAccounts($dataDir) {
+function getAccounts($dataDir, $config = []) {
     $accounts = [
         'youtube' => [],
         'tiktok' => [],
         'instagram' => [],
         'facebook' => []
     ];
+
+    $seen = [
+        'instagram' => [],
+        'facebook' => [],
+        'tiktok' => []
+    ];
+    $pushUnique = function (&$target, $platform, $entry) use (&$seen) {
+        $id = $entry['id'] ?? null;
+        if (!$id) return;
+        if (isset($seen[$platform][$id])) return;
+        $seen[$platform][$id] = true;
+        $target[] = $entry;
+    };
+
+    $metaWebUiEnabled = resolveMetaWebUiEnabled($dataDir, $config);
+    $metaConnectionsFile = $dataDir . '/social_credentials/meta/meta_connections.json';
+    $legacyMetaPruned = pruneLegacyMetaAccounts($dataDir, $metaWebUiEnabled);
+    $connectionsData = ['connections' => []];
+    if (file_exists($metaConnectionsFile)) {
+        $connectionsData = meta_load_connections($dataDir);
+    }
+
+    $metaDiagnostics = [
+        'enabled' => $metaWebUiEnabled,
+        'active_connection_count' => 0,
+        'active_connection_labels' => [],
+        'instagram_count' => 0,
+        'facebook_count' => 0,
+        'message' => null
+    ];
+
+    foreach (($connectionsData['connections'] ?? []) as $connection) {
+        if (($connection['is_active'] ?? true) === false) {
+            continue;
+        }
+        $metaDiagnostics['active_connection_count']++;
+        $metaDiagnostics['active_connection_labels'][] = $connection['label'] ?? ($connection['owner_name'] ?? ($connection['id'] ?? 'Meta'));
+    }
     
     // YouTube channels
     $channelsFile = $dataDir . '/youtube_channels.json';
@@ -365,18 +470,84 @@ function getAccounts($dataDir) {
     }
     
     // Meta accounts (Instagram + Facebook)
+    if ($metaWebUiEnabled && !empty($connectionsData['connections'])) {
+        $settings = meta_load_settings($dataDir);
+        $rebuilt = meta_rebuild_aggregated_accounts($dataDir, $connectionsData, $settings);
+
+        foreach (($rebuilt['instagram'] ?? []) as $ig) {
+            $pushUnique($accounts['instagram'], 'instagram', [
+                'id' => $ig['id'] ?? null,
+                'username' => $ig['username'] ?? null,
+                'name' => $ig['name'] ?? null,
+                'followers' => $ig['followers'] ?? null,
+                'page_id' => $ig['page_id'] ?? null
+            ]);
+        }
+        foreach (($rebuilt['facebook'] ?? []) as $fb) {
+            $pushUnique($accounts['facebook'], 'facebook', [
+                'id' => $fb['id'] ?? null,
+                'name' => $fb['name'] ?? null,
+                'type' => $fb['type'] ?? 'page'
+            ]);
+        }
+    }
+
+    // Meta accounts (legacy/main file)
     $metaAccountsFile = $dataDir . '/social_credentials/meta/meta_accounts.json';
     if (file_exists($metaAccountsFile)) {
         $data = json_decode(file_get_contents($metaAccountsFile), true);
-        $accounts['instagram'] = $data['instagram'] ?? [];
-        $accounts['facebook'] = $data['facebook'] ?? [];
+        foreach (($data['instagram'] ?? []) as $ig) {
+            $pushUnique($accounts['instagram'], 'instagram', [
+                'id' => $ig['id'] ?? null,
+                'username' => $ig['username'] ?? null,
+                'name' => $ig['name'] ?? null,
+                'followers' => $ig['followers'] ?? null,
+                'page_id' => $ig['page_id'] ?? null
+            ]);
+        }
+        foreach (($data['facebook'] ?? []) as $fb) {
+            $pushUnique($accounts['facebook'], 'facebook', [
+                'id' => $fb['id'] ?? null,
+                'name' => $fb['name'] ?? null,
+                'type' => $fb['type'] ?? 'page'
+            ]);
+        }
     }
     
-    // TikTok - TODO: Add when implemented
+    // Legacy social_accounts.json fallback (only tiktok)
+    $legacyFile = $dataDir . '/social_accounts.json';
+    if (file_exists($legacyFile)) {
+        $legacy = json_decode(file_get_contents($legacyFile), true) ?: [];
+
+        foreach (($legacy['tiktok'] ?? []) as $tt) {
+            $legacyId = $tt['account_id'] ?? ($tt['id'] ?? null);
+            $pushUnique($accounts['tiktok'], 'tiktok', [
+                'id' => $legacyId,
+                'username' => $tt['username'] ?? null,
+                'name' => $tt['username'] ?? null
+            ]);
+        }
+    }
     
+    $normalizedAccounts = meta_normalize_social_accounts_contract($accounts);
+    // YouTube and TikTok shapes are already stable and consumed elsewhere.
+    $normalizedAccounts['youtube'] = $accounts['youtube'];
+    $normalizedAccounts['tiktok'] = $accounts['tiktok'];
+    $metaDiagnostics['instagram_count'] = count($normalizedAccounts['instagram'] ?? []);
+    $metaDiagnostics['facebook_count'] = count($normalizedAccounts['facebook'] ?? []);
+
+    if ($metaWebUiEnabled && $metaDiagnostics['active_connection_count'] > 0 && $metaDiagnostics['instagram_count'] === 0 && $metaDiagnostics['facebook_count'] === 0) {
+        $metaDiagnostics['message'] = 'Meta bağlantısı aktif ancak erişilebilir Instagram/Facebook hesabı bulunamadı. Hesaplar > Meta ekranından bağlantıyı yenileyin ve Facebook Page + Instagram Business bağlantısını kontrol edin.';
+    } elseif ($metaWebUiEnabled && $metaDiagnostics['active_connection_count'] === 0) {
+        $metaDiagnostics['message'] = 'Meta bağlantısı bulunamadı. Hesaplar > Meta ekranından OAuth bağlantısını tamamlayın.';
+    }
+
     echo json_encode([
         'success' => true,
-        'accounts' => $accounts
+        'accounts' => $normalizedAccounts,
+        'meta_source' => $metaWebUiEnabled ? 'meta_v2' : 'legacy',
+        'legacy_meta_pruned' => $legacyMetaPruned,
+        'meta_diagnostics' => $metaDiagnostics
     ]);
 }
 

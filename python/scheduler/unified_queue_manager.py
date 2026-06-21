@@ -52,10 +52,87 @@ class UnifiedQueueManager:
             print(f"❌ Error loading queues.json: {e}")
             return {'queues': []}
     
-    def _save_queues(self, data: dict):
-        """Save queues.json"""
+    def _save_queues(self, data: dict, preserve_latest: bool = False):
+        """
+        Save queues.json.
+
+        When preserve_latest=True, queue-level settings from the latest disk state
+        are kept and only runtime video state is merged from `data`. This avoids
+        scheduler writes accidentally reverting UI-updated platform settings.
+        """
+        payload = data
+
+        if preserve_latest:
+            latest = self._load_queues()
+            latest_queues = latest.get('queues', []) if isinstance(latest, dict) else []
+            incoming_queues = data.get('queues', []) if isinstance(data, dict) else []
+
+            incoming_by_id = {q.get('id'): q for q in incoming_queues if isinstance(q, dict) and q.get('id')}
+            merged_queues = []
+
+            for latest_queue in latest_queues:
+                queue_id = latest_queue.get('id') if isinstance(latest_queue, dict) else None
+                incoming_queue = incoming_by_id.get(queue_id)
+
+                if not queue_id or not isinstance(latest_queue, dict) or not isinstance(incoming_queue, dict):
+                    merged_queues.append(latest_queue)
+                    continue
+
+                merged_queue = dict(latest_queue)
+                latest_videos = latest_queue.get('videos', []) if isinstance(latest_queue.get('videos', []), list) else []
+                incoming_videos = incoming_queue.get('videos', []) if isinstance(incoming_queue.get('videos', []), list) else []
+
+                incoming_video_map = {}
+                for video in incoming_videos:
+                    if not isinstance(video, dict):
+                        continue
+                    job_id = video.get('job_id')
+                    if job_id:
+                        incoming_video_map[job_id] = video
+
+                merged_videos = []
+                used_job_ids = set()
+
+                for latest_video in latest_videos:
+                    if not isinstance(latest_video, dict):
+                        merged_videos.append(latest_video)
+                        continue
+
+                    job_id = latest_video.get('job_id')
+                    incoming_video = incoming_video_map.get(job_id)
+                    if not incoming_video:
+                        merged_videos.append(latest_video)
+                        continue
+
+                    merged_video = dict(latest_video)
+                    for key in ('platform_status', 'status', 'last_error', 'retry_count'):
+                        if key in incoming_video:
+                            merged_video[key] = incoming_video.get(key)
+                    merged_videos.append(merged_video)
+                    used_job_ids.add(job_id)
+
+                for incoming_video in incoming_videos:
+                    if not isinstance(incoming_video, dict):
+                        continue
+                    job_id = incoming_video.get('job_id')
+                    if not job_id or job_id in used_job_ids:
+                        continue
+                    merged_videos.append(incoming_video)
+
+                merged_queue['videos'] = merged_videos
+                merged_queues.append(merged_queue)
+
+            latest_ids = {q.get('id') for q in latest_queues if isinstance(q, dict) and q.get('id')}
+            for incoming_queue in incoming_queues:
+                if not isinstance(incoming_queue, dict):
+                    continue
+                if incoming_queue.get('id') not in latest_ids:
+                    merged_queues.append(incoming_queue)
+
+            payload = {'queues': merged_queues}
+
         with open(self.queues_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+            json.dump(payload, f, indent=2, ensure_ascii=False)
     
     def _load_history(self) -> dict:
         """Load social_history.json"""
@@ -226,7 +303,10 @@ class UnifiedQueueManager:
                                 platform_status[plat]['status'] = 'pending'
                                 platform_status[plat]['error'] = None
                             else:
-                                platform_status[plat] = 'pending'
+                                platform_status[plat] = {
+                                    'status': 'pending',
+                                    'error': None
+                                }
                             queues_changed = True
                 
                 if not pending_platforms:
@@ -263,7 +343,7 @@ class UnifiedQueueManager:
         
         # Persist failure state updates from missing video checks
         if queues_changed:
-            self._save_queues(queues_data)
+            self._save_queues(queues_data, preserve_latest=True)
 
         # Sort by priority (high to low) and scheduled time
         # Immediate mode items go first
@@ -332,7 +412,7 @@ class UnifiedQueueManager:
                 break
         
         if updated:
-            self._save_queues(queues_data)
+            self._save_queues(queues_data, preserve_latest=True)
             print(f"✅ Updated {job_id} → {platform}: {status}")
         else:
             print(f"⚠️  Video not found in queues: {job_id}")
@@ -407,7 +487,7 @@ class UnifiedQueueManager:
                         'updated_at': datetime.now(timezone.utc).isoformat()
                     }
                     
-                    self._save_queues(data)
+                    self._save_queues(data, preserve_latest=True)
                     return
     
     def mark_platform_published(self, queue_id: str, platform: str, video_url: str = None, original_queue_id: str = None, job_id: str = None):
@@ -445,7 +525,12 @@ class UnifiedQueueManager:
                     all_completed = True
                     for enabled_platform in enabled_platforms:
                         platform_status = video['platform_status'].get(enabled_platform, {})
-                        if platform_status.get('status') != 'published':
+                        if isinstance(platform_status, dict):
+                            platform_status_value = str(platform_status.get('status', 'pending')).lower()
+                        else:
+                            platform_status_value = str(platform_status or 'pending').lower()
+
+                        if platform_status_value not in ('published', 'success'):
                             all_completed = False
                             break
                     
@@ -453,7 +538,7 @@ class UnifiedQueueManager:
                     if all_completed:
                         video['status'] = 'completed'
                     
-                    self._save_queues(data)
+                    self._save_queues(data, preserve_latest=True)
                     return
     
     def mark_platform_failed(self, queue_id: str, platform: str, error: str, retry: bool = True, original_queue_id: str = None, job_id: str = None):
@@ -485,7 +570,7 @@ class UnifiedQueueManager:
                         'failed_at': datetime.now(timezone.utc).isoformat()
                     }
                     
-                    self._save_queues(data)
+                    self._save_queues(data, preserve_latest=True)
                     return
     
     def get_job_status(self, job_id: str) -> Optional[Dict]:

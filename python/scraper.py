@@ -1,9 +1,19 @@
+import os
+
 import requests
 from newspaper import Article
 from bs4 import BeautifulSoup
 
+def _disable_dead_local_proxy():
+    proxy_keys = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'https_proxy', 'all_proxy']
+    for key in proxy_keys:
+        value = os.environ.get(key, '')
+        if '127.0.0.1:9' in value or 'localhost:9' in value:
+            os.environ.pop(key, None)
+
 def scrape_news(url: str) -> dict:
     """Haber URL'sinden başlık, metin ve görselleri çeker."""
+    _disable_dead_local_proxy()
     try:
         article = Article(url, language='tr')
         article.download()
@@ -39,3 +49,4 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         result = scrape_news(sys.argv[1])
         print(json.dumps(result, ensure_ascii=False, indent=2))
+
